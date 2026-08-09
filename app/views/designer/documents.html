@@ -1,0 +1,73 @@
+{#
+  The edit branch: everything the designer has in the hub, whatever state it is
+  in. No order is implied — they pick whatever they want to work on.
+
+  A designer moves a document from Draft to Awaiting approval. Only an owner can
+  move it to Published, in a journey that is not designed yet.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageName = "Your documents" %}
+
+{% set statusColours = {
+  "Draft": "govuk-tag--grey",
+  "Awaiting approval": "govuk-tag--yellow",
+  "Published": "govuk-tag--green"
+} %}
+
+{% set rows = [] %}
+{% for document in library.documents %}
+  {% set nameCell %}
+    <a class="govuk-link" href="/designer/documents/edit">{{ document.name }}</a>
+  {% endset %}
+  {% set statusCell %}
+    {{ govukTag({ text: document.status, classes: statusColours[document.status] }) }}
+  {% endset %}
+  {% set checksCell %}
+    {% if document.issues %}
+      {{ document.issues }} to fix
+    {% else %}
+      No issues
+    {% endif %}
+  {% endset %}
+  {% set rows = (rows.push([
+    { html: nameCell },
+    { text: document.pages, format: "numeric" },
+    { html: statusCell },
+    { html: checksCell }
+  ]), rows) %}
+{% endfor %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Your documents</h1>
+
+    <p class="govuk-body">
+      A document stays a draft until you send it for approval. An owner approves
+      it and publishes it.
+    </p>
+
+    {{ govukTable({
+      head: [
+        { text: "Document" },
+        { text: "Pages", format: "numeric" },
+        { text: "Status" },
+        { text: "Quality checks" }
+      ],
+      rows: rows
+    }) }}
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="{{ migrateHref }}">Migrate a Word document</a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

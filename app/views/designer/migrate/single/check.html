@@ -1,0 +1,59 @@
+{#
+  Option A, step 2: check one document before converting it.
+
+  Converting one at a time leaves room to show what was found in this specific
+  document, which Option B cannot do for a whole upload at once.
+
+  Quality checks run after converting and do not block it, so this page sets
+  that expectation rather than warning the designer about something they have to
+  fix first.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageName = "Check the document" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Check the document before you migrate it</h1>
+
+    {{ govukSummaryList({
+      rows: [
+        {
+          key: { text: "File" },
+          value: { text: library.current.name + ".docx" },
+          actions: { items: [{ href: "/designer/migrate/single/upload", text: "Change", visuallyHiddenText: "the file" }] }
+        },
+        {
+          key: { text: "Length" },
+          value: { text: library.current.pages + " pages" }
+        },
+        {
+          key: { text: "Time to convert" },
+          value: { text: "About 2 minutes" }
+        },
+        {
+          key: { text: "Status after converting" },
+          value: { text: "Draft" }
+        }
+      ]
+    }) }}
+
+    {{ govukInsetText({
+      text: "The hub runs quality checks once the document is markdown. Anything it finds will not stop the conversion — you can fix issues in the editor afterwards."
+    }) }}
+
+    <form method="post" action="{{ nextHref }}">
+      {{ govukButton({ text: "Migrate document" }) }}
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

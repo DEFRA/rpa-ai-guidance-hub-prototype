@@ -1,6 +1,81 @@
 {#
-For guidance on how to use layouts see:
-https://prototype-kit.service.gov.uk/docs/how-to-use-layouts
+  Defra-branded layout for internal services.
+
+  This extends the Prototype Kit's GOV.UK layout to keep the kit's stylesheets,
+  scripts and "Manage your prototype" tooling, but replaces the GOV.UK header,
+  footer, page title and favicons with Defra equivalents.
+
+  Internal services on non-GOV.UK domains must not use the GOV.UK header, the
+  Crown logo, the GOV.UK footer or the "New Transport" typeface.
+  https://digital.defra.gov.uk/design/branding
+
+  For guidance on how to use layouts see:
+  https://prototype-kit.service.gov.uk/docs/how-to-use-layouts
 #}
 
 {% extends "govuk-prototype-kit/layouts/govuk-branded.njk" %}
+
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% block pageTitle %}
+  {% if pageName %}{{ pageName }} - {% endif %}{{ serviceName }}
+{% endblock %}
+
+{# The GOV.UK template's default icons are Crown-branded, so replace them. #}
+{% block headIcons %}
+  <link rel="icon" href="/public/images/defra-logo.svg" type="image/svg+xml">
+{% endblock %}
+
+{% block header %}
+  {% include "partials/defra-header.njk" %}
+{% endblock %}
+
+{#
+  On a journey step the banner says which version the participant is looking at
+  and where they are in the sequence, so a research session can be recorded
+  against the right version. Both come from app/data/prototypes.js.
+#}
+{% block beforeContent %}
+  {% set bannerHtml %}
+    {% if journey %}
+      {{ journeyVersion.name }} &middot; {{ journey.name }}
+      {%- if journey.variant %} ({{ journey.variant }}){% endif %} &middot;
+      {% if journeyStep %}
+        step {{ journeyStep.number }} of {{ journey.stepCount }}
+      {% else %}
+        {{ journeyAlternative.name | lower }}
+      {% endif %} &middot;
+      <a class="govuk-link" href="/">All versions</a>
+    {% else %}
+      This is a prototype for user research. Nothing you enter is saved.
+    {% endif %}
+  {% endset %}
+
+  {{ govukPhaseBanner({
+    tag: { text: "Prototype" },
+    html: bannerHtml
+  }) }}
+
+  {% if backHref %}
+    {{ govukBackLink({ text: "Back", href: backHref }) }}
+  {% endif %}
+{% endblock %}
+
+{% block footer %}
+  {% include "partials/defra-footer.njk" %}
+{% endblock %}
+
+{#
+  The quality checks are loaded before the kit's own scripts, because
+  application.js uses them and the kit's include is what pulls that in.
+
+  The same file is required by app/routes.js on the server, so the rules from
+  the authoring requirements are written once and the issue list cannot drift
+  between the pages that render it and the editor that updates it live.
+#}
+{% block scripts %}
+  <script src="/public/javascripts/quality-checks.js"></script>
+  {% include "govuk-prototype-kit/includes/scripts.njk" %}
+  {% block pageScripts %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,46 @@
+{#
+  The document on its own, opened in a new tab from the editor.
+
+  Two reasons a designer wants this rather than the pane: to read a long
+  document at a proper measure without the markdown next to it, and to put it on
+  a second screen while they edit on the first.
+
+  It shows unsaved changes. The editor writes the current markdown to local
+  storage as the link is followed, and this page uses that if it is there,
+  falling back to the saved draft. Otherwise the preview would quietly show an
+  older version than the one being edited, which is worse than not offering it.
+#}
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Preview" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <div class="app-preview-notice">
+      <p class="govuk-body-s govuk-!-margin-bottom-0">
+        Preview of a draft. This is how the guidance will look once an owner
+        publishes it — nobody outside the hub can see it yet.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <div
+      class="app-markdown-preview app-markdown-preview--page"
+      data-module="app-standalone-preview"></div>
+
+    {# Holds the saved draft, used when the page is opened directly rather than
+       from the editor. A textarea keeps the markdown intact without escaping. #}
+    <textarea hidden data-preview-source>{{ document.markdown }}</textarea>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,97 @@
+{#
+  Option B, step 2: the documents the designer has picked up this time.
+
+  An ad hoc selection, not a set list to get through. Nothing here counts what
+  is left elsewhere.
+
+  Quality checks have not run at this point: the documents are still Word files.
+  So there is nothing to report beyond what was added.
+
+  Follows the GOV.UK "add another thing" pattern.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageName = "Documents you have added" %}
+
+{#
+  A file the scan rejected. It is reported here rather than left out silently —
+  the designer chose it, so they need to know it is not in the set and why.
+#}
+{% set rejectedHtml %}
+  <h3 class="govuk-notification-banner__heading">1 file was not uploaded</h3>
+  <p class="govuk-body">
+    {{ library.rejected.reason }}:
+    <strong>{{ library.rejected.name }}</strong>. Nothing was added to the hub
+    and the file has been deleted.
+  </p>
+  <p class="govuk-body">
+    Check the file using Defra antivirus, then upload a fresh copy. The other
+    files are unaffected.
+  </p>
+{% endset %}
+
+{% set rows = [] %}
+{% for document in library.batch %}
+  {% set actionCell %}
+    <a class="govuk-link" href="#">Remove<span class="govuk-visually-hidden"> {{ document.name }}</span></a>
+  {% endset %}
+  {% set rows = (rows.push([
+    { text: document.name + ".docx" },
+    { text: document.pages, format: "numeric" },
+    { html: actionCell }
+  ]), rows) %}
+{% endfor %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ govukNotificationBanner({ html: rejectedHtml }) }}
+
+    <h1 class="govuk-heading-l">You have added {{ library.batch.length }} documents</h1>
+
+    <p class="govuk-body">
+      {{ library.batchPages }} pages in total. Remove anything you did not mean
+      to include before you continue.
+    </p>
+
+    {{ govukTable({
+      head: [
+        { text: "Document" },
+        { text: "Pages", format: "numeric" },
+        { text: "Action" }
+      ],
+      rows: rows
+    }) }}
+
+    <form method="post" action="{{ nextHref }}">
+
+      {{ govukRadios({
+        name: "addAnother",
+        classes: "govuk-radios--inline",
+        fieldset: {
+          legend: {
+            text: "Do you need to add another document?",
+            classes: "govuk-fieldset__legend--m"
+          }
+        },
+        items: [
+          { value: "yes", text: "Yes" },
+          { value: "no", text: "No" }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

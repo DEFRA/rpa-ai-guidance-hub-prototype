@@ -1,0 +1,86 @@
+// A journey and its step breakdown on the prototype index.
+
+.app-journey {
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid $govuk-mid-grey;
+  border-left: 5px solid $defra-green;
+  background-color: $govuk-white;
+}
+
+.app-journey__name {
+  margin-bottom: 5px;
+}
+
+// Marks a journey as one of two alternative designs of the same thing.
+.app-journey__variant {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid $defra-green;
+  border-radius: 3px;
+  color: $defra-green;
+  font-size: 14px;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.app-persona__name {
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid $govuk-mid-grey;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $govuk-secondary-text-colour;
+}
+
+.app-journey__description {
+  margin-bottom: 10px;
+}
+
+.app-journey__progress {
+  margin-bottom: 15px;
+  color: $govuk-secondary-text-colour;
+}
+
+.app-journey__steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid $govuk-light-grey;
+}
+
+.app-journey__step {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid $govuk-light-grey;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.app-journey__step-number {
+  flex: 0 0 auto;
+  min-width: 24px;
+  color: $govuk-secondary-text-colour;
+  font-variant-numeric: tabular-nums;
+}
+
+// Steps with no view file yet are not links, so mute them against the ones that are.
+.app-journey__step-name {
+  color: $govuk-secondary-text-colour;
+}
+
+.app-journey__step-tag {
+  margin-left: auto;
+}
+
+// A version that is no longer current.
+.app-version {
+  margin-bottom: 30px;
+}
+
+.app-version__meta {
+  color: $govuk-secondary-text-colour;
+}

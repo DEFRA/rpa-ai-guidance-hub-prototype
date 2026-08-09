@@ -1,0 +1,49 @@
+{#
+  The same wait, for several files at once.
+
+  Scanning a batch takes longer than scanning one file, and some of the batch
+  may be rejected while the rest are fine — which is why the page after this one
+  has to report what was not accepted rather than silently listing fewer
+  documents than were chosen.
+#}
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Checking your files" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Checking your files</h1>
+
+    <p class="govuk-body">
+      We scan every file for viruses before it goes into the hub. This usually
+      takes a few seconds for each file.
+    </p>
+
+    <div
+      class="app-progress"
+      data-module="app-progress"
+      data-next="{{ nextHref }}"
+      data-count="{{ library.batch.length + 1 }}">
+
+      <p class="app-progress__status" data-progress-status role="status">
+        Uploading {{ library.batch.length + 1 }} files
+      </p>
+
+      <div class="app-progress__track">
+        <div class="app-progress__bar" data-progress-bar></div>
+      </div>
+
+    </div>
+
+    <p class="govuk-body">
+      Do not close this page. If nothing happens,
+      <a class="govuk-link" href="{{ nextHref }}">continue to your documents</a>.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

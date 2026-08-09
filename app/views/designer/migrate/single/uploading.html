@@ -1,0 +1,54 @@
+{#
+  The wait between choosing a file and the hub having it.
+
+  CDP Uploader — the platform service Single Front Door uploads through — takes
+  a file, scans it, and only then reports success (DEFRA/cdp-uploader:
+  POST /initiate, POST /upload-and-scan/{uploadId}, then poll GET /status).
+  Nothing can happen to the document until that finishes, so the journey needs a
+  page for it rather than pretending the file is ready the moment it is chosen.
+
+  The status is in an aria-live region so it is announced rather than only seen,
+  and there is a plain link on the page so the journey still works without
+  JavaScript.
+#}
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Checking your file" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Checking your file</h1>
+
+    <p class="govuk-body">
+      We scan every file for viruses before it goes into the hub. This usually
+      takes a few seconds.
+    </p>
+
+    <div
+      class="app-progress"
+      data-module="app-progress"
+      data-next="{{ nextHref }}"
+      data-rejected="/designer/migrate/single/rejected">
+
+      <p class="app-progress__status" data-progress-status role="status">
+        Uploading {{ library.current.name }}.docx
+      </p>
+
+      <div class="app-progress__track">
+        <div class="app-progress__bar" data-progress-bar></div>
+      </div>
+
+    </div>
+
+    <p class="govuk-body">
+      Do not close this page. If nothing happens,
+      <a class="govuk-link" href="{{ nextHref }}">continue to check your document</a>.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

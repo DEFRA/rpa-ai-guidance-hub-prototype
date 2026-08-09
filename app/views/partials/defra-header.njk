@@ -1,0 +1,44 @@
+{#
+  Defra header for internal services.
+
+  Internal services on non-GOV.UK domains must use the Defra header and logo,
+  and must not use the GOV.UK header or the Crown logo.
+  https://digital.defra.gov.uk/design/branding
+
+  The crest is decorative and hidden from screen readers — the service name link
+  carries the accessible name instead.
+
+  Set `navigation` in app/routes.js to show the service navigation bar.
+#}
+<header class="defra-header" role="banner">
+  <div class="govuk-width-container">
+    <div class="defra-header__inner">
+      <div class="defra-header__brand-group">
+        <img
+          src="/public/images/defra-logo.svg"
+          alt=""
+          role="presentation"
+          class="defra-header__logo"
+        />
+        <a href="/" class="defra-header__service-name">
+          <span class="govuk-visually-hidden">Department for Environment, Food and Rural Affairs: </span>{{ serviceName }}
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+{% if navigation and navigation.length %}
+  <nav class="defra-service-navigation" aria-label="Service navigation">
+    <div class="govuk-width-container">
+      <ul class="defra-service-navigation__list">
+        {% for item in navigation %}
+          <li class="defra-service-navigation__item">
+            <a class="defra-service-navigation__link" href="{{ item.href }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.text }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </nav>
+{% else %}
+  <div class="defra-header__brand-border"></div>
+{% endif %}

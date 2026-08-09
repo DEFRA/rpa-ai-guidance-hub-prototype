@@ -1,0 +1,97 @@
+{#
+  The end of the step-through sub-journey: every finding has a verdict.
+
+  Deliberately not a "well done, all fixed" panel. Most of these verdicts will
+  be "won't fix" or "false positive", and the summary should say plainly what
+  was actually decided so it can be read back later.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageName = "Review complete" %}
+
+{% set rows = [] %}
+{% for finding in document.resolved %}
+  {% set verdictCell %}
+    {{ govukTag(finding.verdictTag) }}
+  {% endset %}
+  {% set rows = (rows.push([
+    { text: finding.ruleId },
+    { text: finding.title },
+    { html: verdictCell },
+    { text: finding.comment or "—" }
+  ]), rows) %}
+{% endfor %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ govukPanel({
+      titleText: "Review complete",
+      html: document.resolved.length + " findings reviewed"
+    }) }}
+
+    <h2 class="govuk-heading-m">What you decided</h2>
+
+    <ul class="govuk-list govuk-list--bullet">
+      <li><strong>{{ document.verdictCounts.fixed }}</strong> fixed</li>
+      <li><strong>{{ document.verdictCounts.wont_fix }}</strong> will not be fixed</li>
+      <li><strong>{{ document.verdictCounts.false_positive }}</strong> marked as a false positive</li>
+    </ul>
+
+    <p class="govuk-body">
+      False positives are sent back to the team that maintains the quality
+      checks, so the rules improve rather than being ignored.
+    </p>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    {{ govukTable({
+      head: [
+        { text: "Rule" },
+        { text: "Finding" },
+        { text: "Verdict" },
+        { text: "Comment" }
+      ],
+      rows: rows
+    }) }}
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <p class="govuk-body">
+      This document is a draft. Sending it for approval passes it to an owner,
+      who is the only person who can publish it.
+    </p>
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Send for approval", href: "/designer/documents" }) }}
+      {{ govukButton({
+        text: "Open the editor",
+        href: "/designer/documents/edit",
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/designer/documents/review-reset">Clear these verdicts and start again</a>
+      — for running the prototype through again.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

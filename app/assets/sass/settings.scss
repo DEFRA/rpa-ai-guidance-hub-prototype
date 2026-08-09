@@ -1,0 +1,29 @@
+//
+// Sass settings. The Prototype Kit imports this file BEFORE GOV.UK Frontend
+// and any plugins, so anything set here overrides their `!default` values.
+//
+// For guidance on how to add CSS and SCSS see:
+// https://prototype-kit.service.gov.uk/docs/adding-css-javascript-and-images
+//
+
+// This is an internal Defra service on a non-GOV.UK domain, so it must not use
+// the "New Transport" typeface. Defra branding guidance requires a Helvetica or
+// Arial CSS font stack instead.
+// https://digital.defra.gov.uk/design/branding
+$govuk-font-family: Arial, Helvetica, sans-serif;
+
+// Defra brand colours.
+//
+// Defra Green is #00a33b. It only reaches WCAG 2.2 AA against white for large
+// text (3:1), so we use the darker #008531 anywhere text is involved — it hits
+// 4.77:1 against white, and white on it hits the same, which keeps the green
+// navigation bar and the service name AA at every breakpoint.
+$defra-green: #008531;
+$defra-green-brand: #00a33b;
+$defra-light-green: #eefdf4;
+
+$govuk-white: #ffffff;
+$govuk-black: #0b0c0c;
+$govuk-light-grey: #f3f2f1;
+$govuk-mid-grey: #b1b4b6;
+$govuk-yellow: #ffdd00;

@@ -1,8 +1,8 @@
 {
-  "serviceName": "rpa-ai-guidance-hub-prototype",
+  "serviceName": "RPA AI Guidance Hub",
   "plugins": {
     "govuk-frontend": {
-      "rebrand": true
+      "rebrand": false
     }
   }
 }

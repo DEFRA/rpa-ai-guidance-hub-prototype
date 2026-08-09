@@ -1,0 +1,64 @@
+{#
+  Renders one journey and its step breakdown, used by the prototype index.
+
+  Steps that have no view file yet are tagged rather than linked, so a planned
+  journey can be written down before it is built.
+
+  Every link carries ?j=<journey id> so that pages shared between variants —
+  sign in, the landing page — keep the participant on the variant they were
+  started on.
+#}
+
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% macro journeyBreakdown(journey) %}
+<div class="app-journey">
+  <h4 class="govuk-heading-s app-journey__name">
+    {{ journey.name }}
+    {% if journey.variant %}
+      <span class="app-journey__variant">{{ journey.variant }}</span>
+    {% endif %}
+  </h4>
+
+  {% if journey.description %}
+    <p class="govuk-body-s app-journey__description">{{ journey.description }}</p>
+  {% endif %}
+
+  <p class="govuk-body-s app-journey__progress">
+    {{ journey.builtCount }} of {{ journey.stepCount }} steps built
+    {%- if journey.startHref %} &middot;
+      <a class="govuk-link govuk-link--no-visited-state" href="{{ journey.startHref }}?j={{ journey.id }}">Start journey</a>
+    {%- endif %}
+  </p>
+
+  <ol class="app-journey__steps">
+    {% for step in journey.steps %}
+      <li class="app-journey__step">
+        <span class="app-journey__step-number">{{ step.number }}</span>
+        {% if step.exists %}
+          <a class="govuk-link" href="{{ step.path }}?j={{ journey.id }}">{{ step.name }}</a>
+        {% else %}
+          <span class="app-journey__step-name">{{ step.name }}</span>
+          {{ govukTag({ text: "Not built", classes: "govuk-tag--grey app-journey__step-tag" }) }}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+
+  {% if journey.alternatives.length %}
+    <p class="app-journey__alternatives-heading">Other outcomes</p>
+    <ul class="app-journey__alternatives">
+      {% for alternative in journey.alternatives %}
+        <li class="app-journey__step">
+          {% if alternative.exists %}
+            <a class="govuk-link" href="{{ alternative.path }}?j={{ journey.id }}">{{ alternative.name }}</a>
+          {% else %}
+            <span class="app-journey__step-name">{{ alternative.name }}</span>
+            {{ govukTag({ text: "Not built", classes: "govuk-tag--grey app-journey__step-tag" }) }}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+{% endmacro %}

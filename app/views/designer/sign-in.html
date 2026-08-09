@@ -1,0 +1,48 @@
+{#
+  Step 1 of every designer journey.
+
+  This is an internal service, so the realistic sign in is single sign on with
+  an existing Defra account rather than a username and password form — there is
+  no separate credential for a designer to create or remember. If research shows
+  a different model is needed, this is the page to change.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageName = "Sign in" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Sign in to the {{ serviceName }}</h1>
+
+    <p class="govuk-body">
+      Use the hub to write, review and publish RPA guidance. You need a Defra
+      account to sign in.
+    </p>
+
+    {{ govukButton({
+      text: "Sign in with your Defra account",
+      href: nextHref,
+      isStartButton: true
+    }) }}
+
+    {{ govukInsetText({
+      text: "This prototype does not sign you in. Selecting the button takes you to the landing page."
+    }) }}
+
+    <h2 class="govuk-heading-m">If you cannot sign in</h2>
+
+    <p class="govuk-body">
+      Email the AI Capability and Enablement team at
+      <a class="govuk-link" href="mailto:AICapabilityAndEnablement@defra.gov.uk">AICapabilityAndEnablement@defra.gov.uk</a>.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}
