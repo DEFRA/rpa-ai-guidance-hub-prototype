@@ -1,0 +1,52 @@
+// The wait while a file uploads and is scanned.
+
+.app-progress {
+  padding: govuk-spacing(4);
+  margin-bottom: govuk-spacing(6);
+  border-left: 5px solid $defra-green;
+  background-color: $govuk-light-grey;
+}
+
+.app-progress__status {
+  margin: 0 0 govuk-spacing(3);
+  font-family: $govuk-font-family;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.app-progress__track {
+  height: 8px;
+  background-color: $govuk-mid-grey;
+}
+
+.app-progress__bar {
+  width: 0;
+  height: 100%;
+  background-color: $defra-green;
+  transition: width 800ms ease-in-out;
+}
+
+// Respect a preference for less movement — the status text carries the meaning,
+// the bar is only reinforcing it.
+@media (prefers-reduced-motion: reduce) {
+  .app-progress__bar {
+    transition: none;
+  }
+}
+
+// Outcomes listed under a journey on the prototype index that are not part of
+// the numbered sequence.
+.app-journey__alternatives-heading {
+  margin: govuk-spacing(3) 0 0;
+  font-family: $govuk-font-family;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $govuk-secondary-text-colour;
+}
+
+.app-journey__alternatives {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

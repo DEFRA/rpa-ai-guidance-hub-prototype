@@ -1,6 +1,30 @@
 //
 // For guidance on how to add CSS and SCSS see:
 // https://prototype-kit.service.gov.uk/docs/adding-css-javascript-and-images
-// 
+//
+// Brand variables and the GDS Transport override live in settings.scss, which
+// the kit imports before GOV.UK Frontend.
+
+// GOV.UK Frontend sets the typeface on each component rather than on the page,
+// so any markup that is not a govuk-* component falls back to the browser
+// default serif. Setting it here keeps custom markup on the Defra font stack.
+body {
+  font-family: $govuk-font-family;
+}
+
+// Defra branding for internal, non-GOV.UK services
+// https://digital.defra.gov.uk/design/branding
+@import "components/defra-header";
+@import "components/defra-service-navigation";
+@import "components/defra-footer";
+
+// Prototype index
+@import "components/app-journey";
+
+// Service pages
+@import "components/app-card";
+@import "components/app-editor";
+@import "components/app-issues";
+@import "components/app-progress";
 
 // Add extra styles here

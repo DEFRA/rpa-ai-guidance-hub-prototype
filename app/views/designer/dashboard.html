@@ -1,0 +1,52 @@
+{#
+  Step 2 of every designer journey — the branch point.
+
+  Built as a landing page with two actions rather than a "what do you want to
+  do?" radio question, on the assumption that a designer comes back to the hub
+  regularly and wants to see the state of their work. Worth testing against a
+  question page if research suggests the choice is not obvious.
+
+  `migrateHref` and `editHref` come from app/routes.js, so the migrate card
+  follows whichever upload variant the participant was started on.
+#}
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Landing page" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">Signed in as Sarah Philips</span>
+    <h1 class="govuk-heading-l">Guidance documents</h1>
+
+    <p class="govuk-body">
+      Edit the guidance already in the hub, or bring in a Word document and
+      convert it to markdown.
+    </p>
+
+    <div class="app-card">
+      <h2 class="govuk-heading-m app-card__title">
+        <a class="govuk-link app-card__link" href="{{ editHref }}">Edit existing documents</a>
+      </h2>
+      <p class="govuk-body app-card__description">
+        Update guidance that is already in the hub. You have 12 documents, 3 of
+        them in draft.
+      </p>
+    </div>
+
+    <div class="app-card">
+      <h2 class="govuk-heading-m app-card__title">
+        <a class="govuk-link app-card__link" href="{{ migrateHref }}">Migrate documents</a>
+      </h2>
+      <p class="govuk-body app-card__description">
+        Convert a Word document to markdown so you can edit and publish it in
+        the hub.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,91 @@
+// The Defra-branded header: the Defra logo and the service name on white.
+// Internal services must not use the GOV.UK header or the Crown logo.
+// https://digital.defra.gov.uk/design/branding
+
+.defra-header {
+  background-color: $govuk-white;
+}
+
+.defra-header__inner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.defra-header__brand-group {
+  display: contents;
+}
+
+.defra-header__logo {
+  height: 60px;
+  width: auto;
+}
+
+// Shown instead of the service navigation bar when a page has no navigation,
+// so the Defra green is always present in the header.
+.defra-header__brand-border {
+  height: 10px;
+  background-color: $defra-green;
+}
+
+.defra-header__service-name {
+  justify-self: center;
+  font-family: $govuk-font-family;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+
+  &,
+  &:link,
+  &:visited {
+    color: $defra-green;
+  }
+
+  &:hover {
+    color: $defra-green;
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 0.15em;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 2px;
+    background-color: $govuk-yellow;
+    color: $govuk-black;
+    box-shadow: none;
+    text-decoration: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .defra-header__inner {
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+  }
+
+  .defra-header__service-name {
+    font-size: 18px;
+    justify-self: start;
+  }
+
+  .defra-header__logo {
+    height: 45px;
+  }
+}
+
+@media (max-width: 480px) {
+  .defra-header__service-name {
+    font-size: 16px;
+  }
+
+  .defra-header__logo {
+    height: 40px;
+  }
+}

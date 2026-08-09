@@ -1,0 +1,77 @@
+{#
+  Option B, step 5: what came out of the conversion.
+
+  This is where Option B differs most from Option A. Converting several
+  documents at once leaves the designer with several drafts on the go rather
+  than one finished piece of work, so they need somewhere to choose what to pick
+  up — in whatever order they like.
+
+  Listed in the order they were uploaded, not ranked. Ranking by issue count
+  would imply the hub has an opinion about which to do first, and it does not.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageName = "Converted documents" %}
+
+{% set rows = [] %}
+{% for document in library.batch %}
+  {% set checksCell %}
+    {% if document.issues %}
+      {{ govukTag({ text: document.issues + " issues" if document.issues > 1 else "1 issue", classes: "govuk-tag--yellow" }) }}
+    {% else %}
+      {{ govukTag({ text: "No issues", classes: "govuk-tag--green" }) }}
+    {% endif %}
+  {% endset %}
+  {% set actionCell %}
+    <a class="govuk-link" href="{{ nextHref }}">{{ "Fix issues" if document.issues else "Review" }}<span class="govuk-visually-hidden"> in {{ document.name }}</span></a>
+  {% endset %}
+  {% set rows = (rows.push([
+    { text: document.name },
+    { text: document.pages, format: "numeric" },
+    { html: checksCell },
+    { html: actionCell }
+  ]), rows) %}
+{% endfor %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Converted documents</h1>
+
+    <p class="govuk-body">
+      All {{ library.batch.length }} documents are in the hub as drafts. Only
+      you can see them. Pick up whichever you want to work on — there is no set
+      order.
+    </p>
+
+    <p class="govuk-body">
+      Quality checks found {{ library.batchIssues }} issues across
+      {{ library.batchWithIssues }} of them. None of it stops a document being
+      sent for approval.
+    </p>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ govukTable({
+      head: [
+        { text: "Document" },
+        { text: "Pages", format: "numeric" },
+        { text: "Quality checks" },
+        { text: "Action" }
+      ],
+      rows: rows
+    }) }}
+
+  </div>
+</div>
+
+{% endblock %}

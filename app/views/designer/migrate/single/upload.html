@@ -1,0 +1,49 @@
+{#
+  Option A, step 1: one document at a time.
+
+  The whole journey handles a single document, so everything after this page can
+  talk about "the document" and show its details directly. Compare with Option B,
+  which needs a list-management step.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Upload a Word document" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <form method="post" action="{{ nextHref }}" enctype="multipart/form-data">
+
+      <h1 class="govuk-heading-l">Upload a Word document</h1>
+
+      <p class="govuk-body">
+        The hub converts your document to markdown so you can edit and publish
+        it here. Your original file does not change.
+      </p>
+
+      {{ govukFileUpload({
+        id: "document",
+        name: "document",
+        label: {
+          text: "Select a Word document",
+          classes: "govuk-label--s"
+        },
+        hint: {
+          text: "The file must be a Word document (DOC or DOCX) and be smaller than 20MB."
+        },
+        attributes: { accept: ".doc,.docx" }
+      }) }}
+
+      {{ govukButton({ text: "Upload document" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,19 +1,115 @@
 {% extends "layouts/main.html" %}
 
-{% set pageName="Home" %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "partials/journey.njk" import journeyBreakdown %}
+
+{% set pageName = "Prototype index" %}
+
+{% set statusClasses = {
+  current: "govuk-tag--green",
+  superseded: "govuk-tag--grey",
+  archived: "govuk-tag--grey"
+} %}
 
 {% block content %}
 
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    {% include "govuk-prototype-kit/includes/homepage-top.njk" %}
+    <span class="govuk-caption-l">{{ serviceName }}</span>
+    <h1 class="govuk-heading-l">Prototype index</h1>
 
-    <h1 class="govuk-heading-xl">
-      {{ serviceName }}
-    </h1>
+    <p class="govuk-body">
+      Every version of this prototype and the journeys inside it. Use this page
+      to pick a journey for a research session, jump straight to a particular
+      step, or compare a version against the one that replaced it.
+    </p>
 
-    {% include "govuk-prototype-kit/includes/homepage-bottom.njk" %}
+    <p class="govuk-body">
+      Versions and journeys are defined in
+      <code>app/data/prototypes.js</code>. Steps with no page built yet are
+      listed but not linked.
+    </p>
+
+    {% if currentVersion %}
+      <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l">
+
+      <h2 class="govuk-heading-m">
+        {{ currentVersion.name }}
+        {{ govukTag({ text: "Current", classes: statusClasses[currentVersion.status] }) }}
+      </h2>
+
+      <p class="govuk-body-s app-version__meta">
+        Updated {{ currentVersion.date }} &middot;
+        {{ currentVersion.journeyCount }} journey{{ "s" if currentVersion.journeyCount != 1 }} &middot;
+        {{ currentVersion.builtCount }} of {{ currentVersion.stepCount }} steps built
+      </p>
+
+      {% if currentVersion.summary %}
+        <p class="govuk-body">{{ currentVersion.summary }}</p>
+      {% endif %}
+
+      {% if currentVersion.changes.length %}
+        {% set changesHtml %}
+          <ul class="govuk-list govuk-list--bullet govuk-body-s">
+            {% for change in currentVersion.changes %}
+              <li>{{ change }}</li>
+            {% endfor %}
+          </ul>
+        {% endset %}
+        {{ govukDetails({ summaryText: "What changed in this version", html: changesHtml }) }}
+      {% endif %}
+
+      {% for persona in currentVersion.personas %}
+        <h3 class="govuk-heading-s app-persona__name">{{ persona.name }}</h3>
+        {% for journey in persona.journeys %}
+          {{ journeyBreakdown(journey) }}
+        {% endfor %}
+      {% endfor %}
+    {% else %}
+      <p class="govuk-body">
+        No version is marked as <code>current</code> in
+        <code>app/data/prototypes.js</code>.
+      </p>
+    {% endif %}
+
+    {% if previousVersions.length %}
+      <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l">
+
+      <h2 class="govuk-heading-m">Previous versions</h2>
+
+      <p class="govuk-body">
+        Kept so earlier rounds of research can be replayed and compared.
+      </p>
+
+      {% for version in previousVersions %}
+        {% set versionHtml %}
+          <p class="govuk-body-s app-version__meta">
+            Updated {{ version.date }} &middot;
+            {{ version.journeyCount }} journey{{ "s" if version.journeyCount != 1 }} &middot;
+            {{ version.builtCount }} of {{ version.stepCount }} steps built
+          </p>
+          {% if version.summary %}
+            <p class="govuk-body-s">{{ version.summary }}</p>
+          {% endif %}
+          {% for persona in version.personas %}
+            <h3 class="govuk-heading-s app-persona__name">{{ persona.name }}</h3>
+            {% for journey in persona.journeys %}
+              {{ journeyBreakdown(journey) }}
+            {% endfor %}
+          {% endfor %}
+        {% endset %}
+
+        <div class="app-version">
+          {{ govukDetails({
+            summaryText: version.name + " (" + version.status + ")",
+            html: versionHtml
+          }) }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
   </div>
 </div>
 

@@ -1,0 +1,51 @@
+{#
+  Option B, step 4.
+
+  Converting several documents of this length is not instant, so this is a "we
+  have started, we will tell you" page rather than a "done" panel. That is a
+  real difference from Option A, where one document converts fast enough for the
+  designer to wait.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Conversion started" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ govukPanel({
+      titleText: "Conversion started",
+      html: library.batch.length + " documents, " + library.batchPages + " pages"
+    }) }}
+
+    <h2 class="govuk-heading-m">What happens next</h2>
+
+    <p class="govuk-body">
+      Converting this many pages takes about 20 minutes. You do not need to stay
+      on this page — we will email you at sarah.philips@example.com when it has
+      finished.
+    </p>
+
+    <p class="govuk-body">
+      Each document arrives in the hub as a draft that only you can see. An
+      owner has to approve a document before it can be published.
+    </p>
+
+    {{ govukButton({
+      text: "See the converted documents",
+      href: nextHref
+    }) }}
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/designer/dashboard">Return to guidance documents</a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

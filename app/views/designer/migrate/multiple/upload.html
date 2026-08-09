@@ -1,0 +1,50 @@
+{#
+  Option B, step 1: several documents at once.
+
+  Uses the `multiple` attribute so the file picker allows a selection. The cost
+  of this option is the extra step that follows — once there is more than one
+  file, the designer needs somewhere to see and correct the set before
+  committing to it.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Upload your Word documents" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <form method="post" action="{{ nextHref }}" enctype="multipart/form-data">
+
+      <h1 class="govuk-heading-l">Upload your Word documents</h1>
+
+      <p class="govuk-body">
+        The hub converts your documents to markdown so you can edit and publish
+        them here. Your original files do not change.
+      </p>
+
+      {{ govukFileUpload({
+        id: "documents",
+        name: "documents",
+        label: {
+          text: "Select your Word documents",
+          classes: "govuk-label--s"
+        },
+        hint: {
+          text: "You can select more than one file. Each file must be a Word document (DOC or DOCX) and be smaller than 20MB."
+        },
+        attributes: { multiple: true, accept: ".doc,.docx" }
+      }) }}
+
+      {{ govukButton({ text: "Upload documents" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,208 @@
+// The markdown editor: a head bar carrying the formatting toolbar, the section
+// jump and the preview link, with the markdown and its preview side by side
+// underneath.
+
+// The Design System sets the page to 960px. Two panes at that width leave about
+// 465px each, which is too narrow to read markdown and its output together, so
+// the editor page widens the container. $govuk-page-width is a documented
+// Design System setting; this applies the same idea to one page rather than
+// changing it service-wide, so every other page keeps the default.
+//
+// Capped at 1400px: past that the preview line length runs well beyond a
+// comfortable measure even with the cap below, and the toolbar drifts a long
+// way from the text it acts on.
+.app-template--wide {
+  .govuk-width-container {
+    max-width: 1400px;
+  }
+}
+
+.app-editor {
+  margin-bottom: govuk-spacing(6);
+  border: 1px solid $govuk-mid-grey;
+}
+
+.app-editor__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+  padding: govuk-spacing(2);
+  border-bottom: 1px solid $govuk-mid-grey;
+  background-color: $govuk-light-grey;
+}
+
+.app-editor__head-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: govuk-spacing(3);
+}
+
+.app-editor__outline {
+  max-width: 20rem;
+}
+
+.app-editor__preview-link {
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.app-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.app-editor__toolbar-button {
+  min-width: 44px;
+  padding: govuk-spacing(1) govuk-spacing(2);
+  border: 1px solid $govuk-mid-grey;
+  background-color: $govuk-white;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $defra-light-green;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+    background-color: $govuk-yellow;
+    color: $govuk-black;
+  }
+}
+
+// Asks for the file and its description together, so alt text is captured when
+// the image goes in rather than reported as an issue afterwards.
+.app-editor__image-panel {
+  padding: govuk-spacing(3);
+  border-bottom: 1px solid $govuk-mid-grey;
+  background-color: $defra-light-green;
+}
+
+// Side by side from desktop, stacked below it — at tablet width two panes would
+// be no better than the 465px this layout exists to avoid.
+.app-editor__panes {
+  @include govuk-media-query($from: desktop) {
+    display: flex;
+  }
+}
+
+.app-editor__pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  & + & {
+    border-top: 1px solid $govuk-mid-grey;
+  }
+
+  @include govuk-media-query($from: desktop) {
+    flex: 1 1 0;
+
+    & + & {
+      border-top: 0;
+      border-left: 1px solid $govuk-mid-grey;
+    }
+  }
+}
+
+.app-editor__pane-label {
+  margin: 0;
+  padding: govuk-spacing(1) govuk-spacing(3);
+  border-bottom: 1px solid $govuk-mid-grey;
+  background-color: $govuk-light-grey;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  font-weight: 700;
+  color: $govuk-secondary-text-colour;
+}
+
+// Both panes are the same height so proportional scroll syncing lines up. Tall
+// enough to be worth the width, and bounded so the page still scrolls normally.
+$app-editor-height: calc(100vh - 22rem);
+
+.app-editor__input {
+  display: block;
+  width: 100%;
+  height: $app-editor-height;
+  min-height: 28rem;
+  margin-bottom: 0;
+  border: 0;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  font-size: 16px;
+  line-height: 1.45;
+  resize: vertical;
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: -3px;
+  }
+}
+
+.app-editor__preview {
+  height: $app-editor-height;
+  min-height: 28rem;
+  overflow-y: auto;
+  border: 0;
+}
+
+.app-markdown-preview {
+  box-sizing: border-box;
+  padding: govuk-spacing(4);
+  overflow-wrap: break-word;
+  background-color: $govuk-white;
+
+  // Cap the rendered guidance to a readable measure, the way it will be read
+  // once published, however wide the pane gets.
+  > p,
+  > ul,
+  > ol {
+    max-width: 40em;
+  }
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+// The preview on its own page reads as a document rather than a pane.
+.app-markdown-preview--page {
+  padding: 0;
+}
+
+.app-preview-notice {
+  padding: govuk-spacing(2) govuk-spacing(3);
+  margin-bottom: govuk-spacing(6);
+  border-left: 5px solid $defra-green;
+  background-color: $govuk-light-grey;
+  color: $govuk-secondary-text-colour;
+}
+
+// Images are not rendered in the preview, so this stands in for one. It stays
+// neutral whether or not the image has alt text — the preview is what the
+// guidance will look like, not a report on what is wrong with it.
+.app-markdown-preview__image {
+  display: block;
+  padding: govuk-spacing(2);
+  margin-bottom: govuk-spacing(3);
+  border: 1px dashed $govuk-mid-grey;
+  color: $govuk-secondary-text-colour;
+  font-size: 16px;
+}
+
+// A link whose target was not a safe address. The text stays so the guidance
+// still reads, but it is no longer clickable.
+.app-markdown-preview__blocked {
+  text-decoration: line-through;
+  color: $govuk-secondary-text-colour;
+  cursor: help;
+}
