@@ -1,0 +1,43 @@
+{#
+  The wait between submitting a query on ai-search.html and seeing results —
+  there is nothing real to wait for, but a static jump straight to results
+  would not read as "AI" doing anything.
+
+  Reuses .app-inline-spinner as it is — the small spinner "Start Checks" on
+  all-guidance-docs.html swaps in next to a document name — rather than
+  introducing a second spinner style for what is the same idea on a page of
+  its own instead of inside a table row.
+
+  The meta refresh moves the page on itself after the delay, so this works
+  without JavaScript — the visible link below is there for anyone who does
+  not want to wait, same as processing.html and uploading.html both offer.
+#}
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Analysing your question" %}
+
+{% block meta %}
+  <meta http-equiv="refresh" content="2;url=/find-guidance/ai-search-results">
+{% endblock %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Analysing your question</h1>
+
+    <p class="govuk-body">
+      <span class="app-inline-spinner" aria-hidden="true"></span>
+      <span role="status">This may take a few moments.</span>
+    </p>
+
+    <p class="govuk-body">
+      Do not close this page. If nothing happens,
+      <a class="govuk-link" href="/find-guidance/ai-search-results">continue to your results</a>.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,40 @@
+// Change review: the full document text on the left, one flagged issue and its
+// verdict on the right.
+
+// A soft amber rather than $govuk-yellow, which the service already uses for
+// focus states — a highlighted phrase needs to read as "flagged", not
+// "focused".
+$app-highlight-background: #fff3cd;
+
+.app-review-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: govuk-spacing(4);
+}
+
+.app-review-nav__next {
+  margin-left: auto;
+}
+
+// Tall enough to need scrolling with several paragraphs in it, bounded so the
+// page still scrolls normally alongside the shorter right-hand column.
+.app-review__document {
+  max-height: 32rem;
+  overflow-y: auto;
+  padding: govuk-spacing(4);
+  border: 1px solid $govuk-mid-grey;
+}
+
+.app-review__highlight {
+  padding: 0 2px;
+  background-color: $app-highlight-background;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.app-review__or {
+  margin: govuk-spacing(3) 0;
+  text-align: center;
+  color: $govuk-secondary-text-colour;
+}

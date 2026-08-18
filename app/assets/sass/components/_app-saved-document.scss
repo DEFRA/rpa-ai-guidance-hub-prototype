@@ -1,0 +1,58 @@
+// Read-only view of a saved document. The "Additional information" panel at
+// the bottom reuses .app-additional-info from _app-ai-search.scss — same
+// idea, a grey panel of context that isn't part of the document itself.
+
+.app-document-content__toggle {
+  display: inline-block;
+  margin-bottom: govuk-spacing(3);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+    box-shadow:
+      0 -2px $govuk-yellow,
+      0 4px $govuk-black;
+    text-decoration: none;
+  }
+}
+
+.app-document-content__nav {
+  margin: 0 0 govuk-spacing(6);
+  padding: 0;
+  list-style: none;
+}
+
+.app-document-content__nav-item {
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  &:first-child {
+    border-top: 1px solid $govuk-mid-grey;
+  }
+}
+
+.app-document-content__nav-link {
+  display: block;
+  padding: govuk-spacing(2) 0;
+}
+
+// Tall enough to need scrolling with several sections in it, bounded so the
+// page still scrolls normally alongside the shorter side panel.
+.app-document-text {
+  max-height: 40rem;
+  overflow-y: auto;
+  padding: govuk-spacing(4);
+  border: 1px solid $govuk-mid-grey;
+}

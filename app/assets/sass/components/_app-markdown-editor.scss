@@ -1,0 +1,78 @@
+// The simpler markdown editor: section links on the left, a plain textarea in
+// the middle, a formatting reference on the right. Compare with
+// _app-editor.scss, which styles the full toolbar editor.
+
+.app-markdown-editor__nav {
+  margin: 0 0 govuk-spacing(6);
+  padding: 0;
+  list-style: none;
+}
+
+.app-markdown-editor__nav-item {
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  &:first-child {
+    border-top: 1px solid $govuk-mid-grey;
+  }
+}
+
+.app-markdown-editor__nav-link {
+  display: block;
+  padding: govuk-spacing(2) 0;
+}
+
+// Not inside a bordered wrapper the way .app-editor__input is, so this keeps
+// its own border. Height matches it closely enough that the three columns
+// line up.
+.app-markdown-editor__textarea {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 26rem);
+  min-height: 24rem;
+  padding: govuk-spacing(3);
+  border: 1px solid $govuk-mid-grey;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  font-size: 16px;
+  line-height: 1.45;
+  resize: vertical;
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: -3px;
+  }
+}
+
+// A light grey panel, in the spirit of the Design System's related-items
+// sidebar, to set the reference list apart from the working columns either
+// side of it.
+.app-formatting-guide {
+  padding: govuk-spacing(4);
+  background-color: $govuk-light-grey;
+}
+
+.app-formatting-guide__list {
+  margin: 0;
+}
+
+.app-formatting-guide__item {
+  padding: govuk-spacing(2) 0;
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.app-formatting-guide__syntax {
+  display: block;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.app-formatting-guide__description {
+  display: block;
+  margin: 0;
+  font-size: 16px;
+  color: $govuk-secondary-text-colour;
+}

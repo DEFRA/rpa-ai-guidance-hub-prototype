@@ -57,8 +57,16 @@
     html: bannerHtml
   }) }}
 
-  {% if backHref %}
-    {{ govukBackLink({ text: "Back", href: backHref }) }}
+  {#
+    backLinkHref/backLinkText let a page point the back link somewhere other
+    than backHref with a label of its own — see ai-search-results.html, where
+    the back link goes to the saved-searches list while backHref itself still
+    drives step-to-step navigation within the page. Every other page leaves
+    these unset and gets backHref and "Back" exactly as before.
+  #}
+  {% set resolvedBackHref = backLinkHref if backLinkHref else backHref %}
+  {% if resolvedBackHref %}
+    {{ govukBackLink({ text: backLinkText | default("Back"), href: resolvedBackHref }) }}
   {% endif %}
 {% endblock %}
 

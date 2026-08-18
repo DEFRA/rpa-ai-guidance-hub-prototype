@@ -1,0 +1,124 @@
+{#
+  The three-column "simpler" markdown editor: section links, an editable
+  markdown textarea, and a formatting reference.
+
+  Included on the "Edit as markdown" tab of change-review.html. Kept as a
+  partial rather than inlined there so the markup and its fixed placeholder
+  content have one home if another page needs the same editor.
+
+  The content list is not real anchor links: a plain <textarea> has no way to
+  anchor into its own value, since browsers treat it as opaque text rather
+  than markup. Clicking a section instead scrolls and selects that line in the
+  textarea — the same idea as goToLine() in the full editor
+  (app/assets/javascripts/application.js), just without everything else that
+  depends on. Line numbers are fixed here because the markdown is fixed
+  placeholder content.
+
+  Included rather than a macro, since the textarea's placeholder markdown is
+  large, fixed body text rather than something a caller passes in.
+#}
+
+{% set sections = [
+  { name: "Introduction", line: 1 },
+  { name: "Eligibility", line: 7 },
+  { name: "How to apply", line: 15 },
+  { name: "Payments", line: 23 },
+  { name: "Reviews", line: 31 }
+] %}
+
+{% set formattingGuide = [
+  { syntax: "# Heading", description: "Creates a heading" },
+  { syntax: "**bold text**", description: "Makes text bold" },
+  { syntax: "*italic text*", description: "Makes text italic" },
+  { syntax: "- item", description: "Creates a bullet list" },
+  { syntax: "[link text](url)", description: "Creates a link" }
+] %}
+
+<div class="govuk-grid-row">
+
+  <div class="govuk-grid-column-one-quarter">
+
+    <h2 class="govuk-heading-m">Content</h2>
+
+    <nav aria-label="Content" data-module="app-section-nav" data-target="#markdown-editor">
+      <ul class="app-markdown-editor__nav">
+        {% for section in sections %}
+          <li class="app-markdown-editor__nav-item">
+            <a
+              class="govuk-link app-markdown-editor__nav-link"
+              href="#"
+              data-line="{{ section.line }}">{{ section.name }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+  </div>
+
+  <div class="govuk-grid-column-one-half">
+
+    <label class="govuk-visually-hidden" for="markdown-editor">Markdown</label>
+    <textarea
+      class="app-markdown-editor__textarea"
+      id="markdown-editor"
+      name="markdown"
+      spellcheck="true"># Introduction
+
+The Sustainable Farming Incentive (SFI) 2023 offer pays you for actions that support food production alongside environmental outcomes. This guidance explains who can apply, what you need to do before you apply, and how the actions and payment rates work.
+
+This document is aimed at farmers and their advisers who are considering an SFI agreement, and sets out the process from application through to ongoing management.
+
+# Eligibility
+
+You can apply if you are a farmer with management control of the land, and the land has been registered on the Rural Payments service.
+
+Land does not need to be actively farmed at the point you apply, but it must be in your control for the duration of any action you select.
+
+Common land and land under an existing agri-environment agreement may be eligible, subject to the rules set out in the scheme handbook.
+
+# How to apply
+
+Applications are made online through the Rural Payments service.
+
+You will need to provide supporting evidence for some actions at the point of application, and for others only if you are selected for an inspection.
+
+Before you start, check that your land parcels are mapped correctly and that any existing agreements on the same land are up to date.
+
+# Payments
+
+Payment rates are reviewed annually and published in the scheme handbook.
+
+Where an action's rate changes part-way through an agreement year, the new rate applies from the date it is published, not from the date the agreement started.
+
+Payments are made in arrears, usually in three instalments across the agreement year.
+
+# Reviews
+
+Standards and requirements set out the minimum you must do for each action, and are checked as part of any inspection.
+
+Falling short of a standard on one action does not affect payments for other actions on the same agreement, but repeated failures may lead to a review of the whole agreement.
+
+You can ask for a review of any decision relating to your agreement within 60 days of being notified.</textarea>
+
+  </div>
+
+  <div class="govuk-grid-column-one-quarter">
+
+    <aside class="app-formatting-guide" role="complementary" aria-labelledby="formatting-guide-heading">
+
+      <h2 class="govuk-heading-m" id="formatting-guide-heading">Formatting guide</h2>
+
+      <dl class="app-formatting-guide__list govuk-body">
+        {% for entry in formattingGuide %}
+          <div class="app-formatting-guide__item">
+            <dt class="app-formatting-guide__syntax">{{ entry.syntax }}</dt>
+            <dd class="app-formatting-guide__description">{{ entry.description }}</dd>
+          </div>
+        {% endfor %}
+      </dl>
+
+    </aside>
+
+  </div>
+
+</div>

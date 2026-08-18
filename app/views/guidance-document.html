@@ -1,0 +1,189 @@
+{#
+  A single guidance document's overview, opened from the "Open" action on
+  app/views/all-guidance-docs.html.
+
+  Summary text, severity counts and the recommended changes below are fixed
+  placeholder content for now, not driven by real quality-check data — see
+  app/assets/javascripts/quality-checks.js for that when this is wired up.
+
+  Each recommended change links to the change review screen
+  (app/views/change-review.html), which is itself a placeholder until the
+  change management / markdown editor is designed. The markdown editing tab
+  lives there now, not here — see change-review.html for that.
+
+  "Not fixed" and "Deferred" below are placeholder statuses standing in for
+  whatever a designer has already done with a finding — nothing here is
+  recorded yet, so every tab shows a fixed mix of both rather than reflecting
+  real state.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+
+{% set pageName = "SFI 23 Guidance document" %}
+
+{% set reviewHref = "/guidance-document/sfi-23/review" %}
+
+{% set severities = {
+  high: {
+    name: "High",
+    count: 3,
+    tagClasses: "govuk-tag--red",
+    explainer: "Issues that must be fixed before this guidance can be published",
+    changes: [
+      {
+        description: "Step 3 does not start with an action verb — rewrite as an instruction",
+        location: "How to apply",
+        status: "Not fixed"
+      },
+      {
+        description: "Section \"Eligibility\" uses \"as appropriate\" with no measurable rule",
+        location: "Eligibility",
+        status: "Not fixed"
+      },
+      {
+        description: "Payment rates table is missing a row for upland options",
+        location: "Payment rates table",
+        status: "Deferred"
+      }
+    ]
+  },
+  medium: {
+    name: "Medium",
+    count: 5,
+    tagClasses: "govuk-tag--orange",
+    explainer: "Issues that should be reviewed and are recommended to fix",
+    changes: [
+      {
+        description: "Sentence in \"How to apply\" is 41 words — split it into two",
+        location: "How to apply",
+        status: "Not fixed"
+      },
+      {
+        description: "\"Relevant evidence\" is ambiguous — say what evidence is needed",
+        location: "How to apply",
+        status: "Deferred"
+      },
+      {
+        description: "Heading levels skip from H2 to H4 in \"Standards and requirements\"",
+        location: "Standards and requirements",
+        status: "Not fixed"
+      },
+      {
+        description: "\"In a timely manner\" has no measurable rule — give a timescale",
+        location: "Reviews",
+        status: "Deferred"
+      },
+      {
+        description: "Cross-reference to the Countryside Stewardship guidance is broken",
+        location: "Payments",
+        status: "Not fixed"
+      }
+    ]
+  },
+  low: {
+    name: "Low",
+    count: 2,
+    tagClasses: "govuk-tag--blue",
+    explainer: "Minor issues that are optional to address",
+    changes: [
+      {
+        description: "Inconsistent use of \"SFI\" vs \"the Sustainable Farming Incentive\"",
+        location: "Introduction",
+        status: "Deferred"
+      },
+      {
+        description: "Bulleted list in \"Actions available\" mixes sentence case and title case",
+        location: "Eligibility",
+        status: "Not fixed"
+      }
+    ]
+  }
+} %}
+
+{% set statusTags = {
+  "Not fixed": { text: "Not fixed", classes: "govuk-tag--grey" },
+  "Deferred": { text: "Deferred", classes: "govuk-tag--blue" }
+} %}
+
+{% macro severityPanel(severity) %}
+  <h3 class="govuk-heading-m">{{ severity.name }}</h3>
+  <p class="govuk-body app-severity-explainer">{{ severity.explainer }}</p>
+
+  {% set rows = [] %}
+  {% for change in severity.changes %}
+    {% set issueCell %}<a class="govuk-link" href="{{ reviewHref }}">{{ change.description }}</a>{% endset %}
+    {% set statusCell %}{{ govukTag(statusTags[change.status]) }}{% endset %}
+    {% set rows = (rows.push([
+      { html: issueCell },
+      { text: change.location },
+      { html: statusCell }
+    ]), rows) %}
+  {% endfor %}
+
+  {{ govukTable({
+    classes: "app-severity-table",
+    head: [
+      { text: "Issue" },
+      { text: "Location" },
+      { text: "Status" }
+    ],
+    rows: rows
+  }) }}
+{% endmacro %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">SFI 23 Guidance document</h1>
+
+    <p class="govuk-body">
+      Guidance on the Sustainable Farming Incentive 2023 offer: who can apply,
+      the actions available, standards and requirements, and how payment rates
+      are calculated.
+    </p>
+
+    <div class="app-severity-summary">
+      <p class="app-severity-summary__row">
+        {{ govukTag({ text: "High (" + severities.high.count + ")", classes: severities.high.tagClasses }) }}
+      </p>
+      <p class="app-severity-summary__row">
+        {{ govukTag({ text: "Medium (" + severities.medium.count + ")", classes: severities.medium.tagClasses }) }}
+      </p>
+      <p class="app-severity-summary__row">
+        {{ govukTag({ text: "Low (" + severities.low.count + ")", classes: severities.low.tagClasses }) }}
+      </p>
+    </div>
+
+  </div>
+</div>
+
+{#
+  Full width rather than the two-thirds column above: the Issue/Location/
+  Status table has three columns of its own and was reading as squashed
+  inside the same narrow column as the summary text.
+#}
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    {% set highPanel %}{{ severityPanel(severities.high) }}{% endset %}
+    {% set mediumPanel %}{{ severityPanel(severities.medium) }}{% endset %}
+    {% set lowPanel %}{{ severityPanel(severities.low) }}{% endset %}
+
+    {{ govukTabs({
+      idPrefix: "recommended-changes",
+      items: [
+        { label: "High", id: "high", panel: { html: highPanel } },
+        { label: "Medium", id: "medium", panel: { html: mediumPanel } },
+        { label: "Low", id: "low", panel: { html: lowPanel } }
+      ]
+    }) }}
+
+  </div>
+</div>
+
+{% endblock %}

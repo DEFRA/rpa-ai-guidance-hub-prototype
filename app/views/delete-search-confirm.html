@@ -1,0 +1,40 @@
+{#
+  Confirms deleting a guided search from the list on find-guidance.html.
+  `searchName` comes from app/routes.js, looked up from
+  app/data/guided-searches.js by the :id in the URL.
+
+  A static prototype has nothing real to delete, so both buttons just return
+  to the list — "Yes, delete" does not actually remove the row.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Are you sure you want to delete this search?" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Are you sure you want to delete this search?</h1>
+
+    <p class="govuk-body govuk-!-font-weight-bold">{{ searchName }}</p>
+
+    <div class="govuk-button-group">
+      {{ govukButton({
+        text: "Yes, delete",
+        href: "/find-guidance",
+        classes: "govuk-button--warning"
+      }) }}
+      {{ govukButton({
+        text: "Cancel",
+        href: "/find-guidance",
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

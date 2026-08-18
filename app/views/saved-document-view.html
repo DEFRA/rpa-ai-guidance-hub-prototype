@@ -1,0 +1,310 @@
+{#
+  Read-only view of a document saved from an organic search — the "Open"
+  action on the "Saved documents" tab of find-guidance.html. No edit or save
+  controls, and no link into change-review.html or the markdown editor: this
+  is what the document looks like, not a place to work on it.
+
+  `id`, `documentName` and `status` come from app/routes.js, looked up from
+  app/data/saved-documents.js. The section content itself is fixed
+  placeholder text local to this template, one set per document id, since it
+  is presentational rather than something anything else in the prototype
+  needs to share.
+
+  Unlike the Content panel on the markdown editor (partials/markdown-editor-content.html),
+  the links here are real anchors: the document text is plain rendered HTML,
+  not a <textarea>'s opaque value, so the browser can jump to a heading's id
+  on its own with no JavaScript involved.
+
+  The show/hide toggle just sets `hidden` on the panel and swaps the button's
+  text and aria-expanded — enough for a prototype without reflowing the grid
+  when the panel disappears.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set statusTags = {
+  "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
+  "Partially updated": { text: "Partially updated", classes: "govuk-tag--orange" },
+  "Out of date": { text: "Out of date", classes: "govuk-tag--red" }
+} %}
+
+{% set documents = {
+
+  "countryside-stewardship-capital-grants": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "This document explains what capital grants are available under Countryside Stewardship, the items they cover, and how to apply for one alongside or separately from an existing agreement."
+        ]
+      },
+      {
+        id: "whats-covered",
+        heading: "What's covered",
+        paragraphs: [
+          "Capital grants pay towards physical items such as fencing, hedgerow restoration and watercourse fencing, listed in the capital items list. Payment is a fixed rate per item, not a percentage of cost.",
+          "A grant can be claimed alongside an existing Mid Tier or Higher Tier agreement, or on its own with no ongoing management commitment attached."
+        ]
+      },
+      {
+        id: "how-to-apply",
+        heading: "How to apply",
+        paragraphs: [
+          "Applications are submitted through the Rural Payments service, listing the items and quantities you are applying for. Larger items, such as new hedgerows, need a capital works plan or map.",
+          "Applications are assessed in batches, so there is a fixed application window each year rather than a rolling deadline."
+        ]
+      },
+      {
+        id: "payments",
+        heading: "Payments",
+        paragraphs: [
+          "Payment is made once an item is complete and evidence has been submitted — usually photos and, for some items, a supplier invoice.",
+          "Items must be maintained for a minimum period after payment, set out in the agreement, or the payment may be reclaimed."
+        ]
+      }
+    ],
+    additionalInfo: [
+      "Capital item rates are reviewed annually and can change between application windows.",
+      "This document does not cover Higher Tier capital items, which are agreed individually as part of that agreement."
+    ]
+  },
+
+  "basic-payment-scheme-closing-rules": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "The Basic Payment Scheme (BPS) closed to new claims in 2024. This document explains what still applies to farmers with entitlements or open legacy claims."
+        ]
+      },
+      {
+        id: "closing-timetable",
+        heading: "Closing timetable",
+        paragraphs: [
+          "The final BPS claim window closed in May 2024. No new claims can be submitted, but queries on claims made before closure are still being resolved."
+        ]
+      },
+      {
+        id: "entitlements",
+        heading: "Entitlements",
+        paragraphs: [
+          "Unused entitlements have no value outside an active claim, and cannot be transferred or sold now the scheme has closed."
+        ]
+      },
+      {
+        id: "final-claims-and-appeals",
+        heading: "Final claims and appeals",
+        paragraphs: [
+          "If you believe a final BPS payment was calculated incorrectly, you can still request a review within the standard 60-day appeal window from the date of the decision."
+        ]
+      }
+    ],
+    additionalInfo: [
+      "BPS is fully replaced by Environmental Land Management schemes going forward.",
+      "Historic claim data is retained for 6 years for audit purposes."
+    ]
+  },
+
+  "hedgerow-management-standards": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "This document sets out the management standards that apply to hedgerows under cross compliance and the relevant SFI actions, and when they can be relaxed."
+        ]
+      },
+      {
+        id: "cutting-and-management-dates",
+        heading: "Cutting and management dates",
+        paragraphs: [
+          "Hedgerows must not be cut between 1 March and 31 August, to protect nesting birds, except where a specific exemption applies — clearing a public right of way, for example."
+        ]
+      },
+      {
+        id: "buffer-strips",
+        heading: "Buffer strips",
+        paragraphs: [
+          "A buffer strip must be maintained alongside a hedgerow next to arable land. Its minimum width is set by whichever specific action or cross compliance rule applies."
+        ]
+      },
+      {
+        id: "record-keeping-and-enforcement",
+        heading: "Record keeping and enforcement",
+        paragraphs: [
+          "Keep a simple record of cutting dates and any exemption used. Repeated breaches can affect payments across every scheme claimed on the holding, not just one action."
+        ]
+      }
+    ],
+    additionalInfo: [
+      "Local nature recovery strategies may set additional hedgerow requirements beyond this document.",
+      "Some counties have byelaws with earlier cutting restrictions than the national dates above."
+    ]
+  },
+
+  "sfi-soil-health-actions": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "This document explains the soil health actions available under SFI 23, what they ask you to do, and how they interact with other actions on the same land."
+        ]
+      },
+      {
+        id: "actions-available",
+        heading: "Actions available",
+        paragraphs: [
+          "Soil health actions include adding organic matter, testing soil structure, and establishing herbal leys, each with its own payment rate and management requirement."
+        ]
+      },
+      {
+        id: "evidence-you-need-to-keep",
+        heading: "Evidence you need to keep",
+        paragraphs: [
+          "Keep soil test results and a simple record of any organic matter added, dated and located to the parcel it relates to."
+        ]
+      },
+      {
+        id: "combining-with-other-actions",
+        heading: "Combining with other actions",
+        paragraphs: [
+          "Most soil health actions can be combined with other SFI actions on the same parcel, as long as the combined management requirements do not conflict."
+        ]
+      }
+    ],
+    additionalInfo: [
+      "Soil testing frequency requirements are reviewed as part of the annual scheme update.",
+      "This document does not cover soil actions specific to Countryside Stewardship, which follow a separate handbook."
+    ]
+  },
+
+  "higher-tier-stewardship-options": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "This document gives an overview of the options available under a Higher Tier Countryside Stewardship agreement, and how they differ from Mid Tier."
+        ]
+      },
+      {
+        id: "who-higher-tier-is-for",
+        heading: "Who Higher Tier is for",
+        paragraphs: [
+          "Higher Tier is aimed at land with the highest environmental value, such as sites within a protected landscape or with significant habitat already present."
+        ]
+      },
+      {
+        id: "how-options-are-agreed",
+        heading: "How options are agreed",
+        paragraphs: [
+          "Unlike Mid Tier, Higher Tier options are agreed individually with an adviser rather than chosen from a fixed list, based on a site visit."
+        ]
+      },
+      {
+        id: "agreement-length-and-review",
+        heading: "Agreement length and review",
+        paragraphs: [
+          "Higher Tier agreements typically run for 10 years, with a formal review at the mid-point to check the agreed options are still appropriate."
+        ]
+      }
+    ],
+    additionalInfo: [
+      "Applying for Higher Tier usually starts with an expression of interest rather than a full application.",
+      "Existing Mid Tier agreements can sometimes be uplifted to Higher Tier without starting a new application from scratch."
+    ]
+  }
+
+} %}
+
+{% set document = documents[id] if documents[id] else documents["countryside-stewardship-capital-grants"] %}
+
+{% set pageName = documentName %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <h1 class="govuk-heading-l">{{ documentName }}</h1>
+
+    {{ govukTag(statusTags[status]) }}
+
+  </div>
+</div>
+
+<div class="govuk-grid-row govuk-!-margin-top-6">
+
+  <div class="govuk-grid-column-one-quarter" data-content-panel>
+
+    <button
+      type="button"
+      class="app-document-content__toggle"
+      data-content-toggle
+      aria-expanded="true"
+      aria-controls="document-content-nav">Hide content</button>
+
+    <div id="document-content-nav">
+      <h2 class="govuk-heading-m">Content</h2>
+      <nav aria-label="Content">
+        <ul class="app-document-content__nav">
+          {% for section in document.sections %}
+            <li class="app-document-content__nav-item">
+              <a class="govuk-link app-document-content__nav-link" href="#{{ section.id }}">{{ section.heading }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
+
+  </div>
+
+  <div class="govuk-grid-column-three-quarters">
+
+    <div class="app-document-text">
+      {% for section in document.sections %}
+        <h2 class="govuk-heading-m" id="{{ section.id }}">{{ section.heading }}</h2>
+        {% for paragraph in section.paragraphs %}
+          <p class="govuk-body">{{ paragraph }}</p>
+        {% endfor %}
+      {% endfor %}
+    </div>
+
+  </div>
+
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <div class="app-additional-info">
+      <h3 class="govuk-heading-s">Additional information</h3>
+      {% for note in document.additionalInfo %}
+        <p class="govuk-body">{{ note }}</p>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    document.querySelectorAll('[data-content-toggle]').forEach(function (button) {
+      var target = document.getElementById(button.getAttribute('aria-controls'))
+
+      button.addEventListener('click', function () {
+        var expanded = button.getAttribute('aria-expanded') === 'true'
+
+        button.setAttribute('aria-expanded', String(!expanded))
+        target.hidden = expanded
+        button.textContent = expanded ? 'Show content' : 'Hide content'
+      })
+    })
+  </script>
+{% endblock %}
