@@ -1,0 +1,52 @@
+{#
+  "Start a new search" from find-guidance.html — which of two ways in, before
+  either is designed. "Search organically" leads to organic-search.html,
+  "Search by AI" to ai-search.html; both are placeholders except the AI one,
+  which has enough shape to review — see ai-search.html for that.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "How do you want to search?" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <form method="post" action="/find-guidance/new">
+
+      {{ govukRadios({
+        idPrefix: "search-method",
+        name: "searchMethod",
+        fieldset: {
+          legend: {
+            text: "How do you want to search?",
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--l"
+          }
+        },
+        items: [
+          {
+            value: "organic",
+            text: "Search organically",
+            hint: { text: "Search by document name, date, or type" }
+          },
+          {
+            value: "ai",
+            text: "Search by AI",
+            hint: { text: "Search by explaining the issue you are trying to resolve" }
+          }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -34,6 +34,34 @@
   }
 }
 
+// A lighter wait than the upload/scan progress bar above — "Start Checks" on
+// all-guidance-docs.html replaces itself with this next to the document name
+// while its inline script waits to move on, rather than going to a page of
+// its own for it.
+.app-inline-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: govuk-spacing(2);
+  vertical-align: middle;
+  border: 3px solid $govuk-mid-grey;
+  border-top-color: $defra-green;
+  border-radius: 50%;
+  animation: app-spinner-rotate 1s linear infinite;
+}
+
+@keyframes app-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-inline-spinner {
+    animation-duration: 3s;
+  }
+}
+
 // Outcomes listed under a journey on the prototype index that are not part of
 // the numbered sequence.
 .app-journey__alternatives-heading {

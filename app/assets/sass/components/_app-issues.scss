@@ -184,3 +184,57 @@
 .app-finding-nav__next {
   margin-left: auto;
 }
+
+// -- Severity counts, as a badge on each tab on the guidance document
+// overview, rather than a summary panel above the tabs -----------------------
+
+// A pill rather than govuk-tag's rectangle — small enough to sit inline next
+// to a tab's own label without reading as a second tag. Colours are the same
+// govuk-shade()/govuk-tint() pairs the tag component itself uses for
+// red/orange/blue, copied rather than referenced, so this still renders
+// correctly if the tag component's own colours ever change independently.
+.app-tab-count-badge {
+  display: inline-block;
+  min-width: 20px;
+  padding: 1px 8px;
+  margin-left: govuk-spacing(1);
+  border-radius: 10px;
+  font-family: $govuk-font-family;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.app-tab-count-badge--red {
+  color: govuk-shade(govuk-colour("red"), 80%);
+  background-color: govuk-tint(govuk-colour("red"), 75%);
+}
+
+.app-tab-count-badge--orange {
+  color: govuk-shade(govuk-colour("orange"), 55%);
+  background-color: govuk-tint(govuk-colour("orange"), 70%);
+}
+
+.app-tab-count-badge--blue {
+  color: govuk-shade(govuk-colour("blue"), 60%);
+  background-color: govuk-tint(govuk-colour("blue"), 70%);
+}
+
+// -- Recommended changes, inside each severity tab ---------------------------
+
+.app-severity-explainer {
+  margin-top: govuk-spacing(1);
+  margin-bottom: govuk-spacing(4);
+  color: $govuk-secondary-text-colour;
+}
+
+// Taller row padding than the Design System default, so each finding reads as
+// its own entry rather than the table reading as one dense block.
+.app-severity-table {
+  td,
+  th {
+    padding-top: govuk-spacing(3);
+    padding-bottom: govuk-spacing(3);
+  }
+}

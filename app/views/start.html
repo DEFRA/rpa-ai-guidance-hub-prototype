@@ -1,0 +1,58 @@
+{#
+  The homepage: what is the designer here to do. Alternative to the
+  dashboard's two-card layout (see designer/dashboard.html) — the same kind of
+  branch point asked as a question instead.
+
+  "Guidance document management" covers both bringing new guidance in and
+  working on what is already there, so it goes straight to the document hub
+  (all-guidance-docs.html) rather than picking a branch itself — "Upload a new
+  document" and opening an existing one both live there. "Find and locate
+  guidance" is not designed yet — see app/views/find-guidance.html.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "What do you want to do?" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <form method="post" action="/">
+
+      {{ govukRadios({
+        idPrefix: "destination",
+        name: "destination",
+        fieldset: {
+          legend: {
+            text: "What do you want to do?",
+            
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--l"
+          }
+        },
+        items: [
+          {
+            value: "find",
+            text: "Find and locate guidance",
+            hint: { text: "Search for and view existing guidance documents" }
+          },
+          {
+            value: "manage",
+            text: "Guidance document management",
+            hint: { text: "Upload new guidance, migrate existing documents, or review and edit content" }
+          }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,63 @@
+// "Search organically": a full-width search bar, filters down the left, and
+// a list of results down the right.
+
+.app-search-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: govuk-spacing(3);
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-search-bar__input {
+  flex: 1 1 auto;
+}
+
+.app-search-results__count {
+  margin-bottom: govuk-spacing(2);
+}
+
+.app-search-results__sort {
+  display: flex;
+  align-items: center;
+  gap: govuk-spacing(2);
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-search-results__sort-label {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.app-search-results__sort-select {
+  flex: 0 1 auto;
+}
+
+.app-search-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-search-results__item {
+  padding: govuk-spacing(4) 0;
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  &:first-child {
+    border-top: 1px solid $govuk-mid-grey;
+  }
+}
+
+.app-search-results__name {
+  margin: 0 0 govuk-spacing(2);
+}
+
+.app-search-results__description {
+  margin-bottom: govuk-spacing(3);
+}
+
+.app-search-results__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: govuk-spacing(3);
+}

@@ -1,0 +1,409 @@
+{#
+  AI search results, stepped through one at a time rather than dumped on one
+  page. Two ways to arrive here:
+
+  - Fresh, from the form on ai-search.html: `id` is not set, the heading is
+    the query itself (from the session, via app/routes.js), and the content
+    shown is the same placeholder topic as the example query in that form's
+    hint — sfi-eligibility below.
+  - Resumed, from a row in the "Guided searches" tab on find-guidance.html:
+    `id` identifies which of the fixed example searches this is, from
+    app/data/guided-searches.js, and both the heading and the content shown
+    are specific to that topic rather than a typed query.
+
+  Guidance text, the additional information panel and the references are all
+  fixed placeholder content, one set per step, per topic. `step` and
+  `totalSteps` come from app/routes.js, along with which topic's steps to use.
+
+  Complete/Incomplete are both plain navigation for now, not something
+  recorded anywhere — there is nowhere else in the prototype yet that would
+  show a step's status back to the designer. Complete moves on to the next
+  step, or to the saved-searches list after the last one, matching the inset
+  text above. Incomplete always returns to ai-search.html, on the assumption
+  that a step marked incomplete means the query needs rephrasing rather than
+  that this one step needs revisiting — true whichever topic got you here.
+
+  Back and Incomplete are both secondary buttons: only Complete is the page's
+  primary action, following the Design System's one-primary-button guidance,
+  so Incomplete reads as lower emphasis than Complete without needing a
+  colour of its own.
+
+  Two different "back"s on this page: the "Back" button below moves between
+  steps, driven by `backHref` from app/routes.js, same as every other
+  in-page back control in this prototype. The govukBackLink at the top is not
+  a step control — it goes straight to /find-guidance, the saved-searches
+  list, as "Back to your searches" — via backLinkHref/backLinkText, which
+  override the layout's default use of backHref/"Back" for this page only.
+  See the comment on resolvedBackHref in layouts/main.html.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{#
+  Mirrors the `name` text in app/data/guided-searches.js — the enquiry as
+  typed, not a topic title — rather than reading it from there directly,
+  since everything else on this page's content is local placeholder text too.
+  Keep the two in step if either changes.
+#}
+{% set topicHeadings = {
+  "sfi-eligibility": "How do I evidence eligibility for the Sustainable Farming Incentive?",
+  "countryside-stewardship": "What capital items are covered under Countryside Stewardship grants?",
+  "cross-compliance-livestock": "What are the cross compliance rules I need to follow for livestock?",
+  "payment-deadlines": "When are the payment deadlines for my agreement this year?"
+} %}
+
+{#
+  A fresh search (no id) shows the same content as sfi-eligibility, since
+  that is what ai-search.html's example query is about — but keeps the typed
+  query as its heading rather than the fixed topic name.
+#}
+{% set heading = topicHeadings[id] if topicHeadings[id] else query %}
+
+{% set topicSteps = {
+
+  "sfi-eligibility": [
+    {
+      title: "Eligibility for the upland grazing option",
+      guidance: [
+        "To claim the upland grazing option under SFI 23, the land must be registered as eligible upland habitat on the Rural Payments service, and you must have management control for the whole agreement year.",
+        "Mixed grazing with lowland parcels in the same agreement is allowed, but each parcel is assessed against the upland criteria separately."
+      ],
+      additionalInfo: {
+        heading: "Definitions",
+        text: "\"Upland\" here follows the scheme handbook's Severely Disadvantaged Area (SDA) boundary, not a general description of altitude.",
+        linkText: "Read the full Eligibility section"
+      },
+      references: [
+        { name: "SFI 23 Guidance document", section: "Eligibility" }
+      ]
+    },
+    {
+      title: "Evidence you need to keep",
+      guidance: [
+        "Keep a record of stocking rates for each upland parcel, including the dates animals were moved on and off the land.",
+        "Photographic evidence of vegetation condition, taken from the same points each year, supports your record if a parcel is selected for inspection."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "Evidence requirements are the same across every upland option in SFI 23, so one set of records can cover more than one action.",
+        linkText: "Read the full evidence requirements"
+      },
+      references: [
+        { name: "SFI 23 Guidance document", section: "Standards and requirements" },
+        { name: "Scheme handbook", section: "Evidence and record keeping" }
+      ]
+    },
+    {
+      title: "How to submit evidence",
+      guidance: [
+        "Evidence is not submitted with your application. You keep it, and only provide it if your agreement is selected for an inspection.",
+        "If you are asked for evidence, you have 10 working days to provide it through the Rural Payments service."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "This is the same evidence process used across every SFI 2023 action, not something specific to upland grazing.",
+        linkText: "Read the full How to apply section"
+      },
+      references: [
+        { name: "SFI 23 Guidance document", section: "How to apply" }
+      ]
+    },
+    {
+      title: "What happens after you apply",
+      guidance: [
+        "Most agreements are not inspected every year. Selection is partly random and partly based on risk, including how the parcel has performed in previous years.",
+        "An inspection does not pause your payments — any adjustment is applied once the outcome is confirmed, not before."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "Repeated failures across an agreement can lead to a wider review, covering actions beyond the one that was inspected.",
+        linkText: "Read the full Reviews section"
+      },
+      references: [
+        { name: "SFI 23 Guidance document", section: "Reviews" }
+      ]
+    }
+  ],
+
+  "countryside-stewardship": [
+    {
+      title: "What capital grants cover",
+      guidance: [
+        "Capital grants under Countryside Stewardship pay towards items such as fencing, hedgerow restoration and watercourse fencing, listed in the capital items list. They are paid at a fixed rate per item, not as a percentage of cost.",
+        "A capital grant can be claimed alongside an existing Mid Tier or Higher Tier agreement, or on its own with no ongoing management commitment attached."
+      ],
+      additionalInfo: {
+        heading: "Definitions",
+        text: "\"Capital items\" means physical works — a fence, a gate, a water trough — rather than an ongoing land management action.",
+        linkText: "Read the full capital grants section"
+      },
+      references: [
+        { name: "Countryside Stewardship: capital grants", section: "What's covered" }
+      ]
+    },
+    {
+      title: "How to apply for a capital grant",
+      guidance: [
+        "Applications are submitted through the Rural Payments service, listing the capital items and quantities you are applying for. Larger items, such as new hedgerows, need a capital works plan or map.",
+        "Applications are assessed in batches, so there is a set application window each year rather than a rolling deadline."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "The application window is published separately from the main SFI application dates, so check both if you are applying for more than one scheme.",
+        linkText: "Read the full How to apply section"
+      },
+      references: [
+        { name: "Countryside Stewardship: capital grants", section: "How to apply" }
+      ]
+    },
+    {
+      title: "Payment and completion",
+      guidance: [
+        "Payment is made once an item is complete and you have submitted evidence — usually photos and, for some items, a supplier invoice. You have up to two years from approval to complete the work.",
+        "Items must be maintained for a minimum period after payment, set out in the agreement, or the payment may be reclaimed."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "A reclaimed payment follows the same process as an SFI standards failure, covered in the Reviews section of the main guidance document.",
+        linkText: "Read the full Payments section"
+      },
+      references: [
+        { name: "Countryside Stewardship: capital grants", section: "Payments" },
+        { name: "Scheme handbook", section: "Capital items list" }
+      ]
+    }
+  ],
+
+  "cross-compliance-livestock": [
+    {
+      title: "What cross compliance covers",
+      guidance: [
+        "Cross compliance sets baseline standards for animal welfare, identification and movement recording that apply whether or not you are in a scheme. Falling short can reduce payments across every scheme you claim, not just one.",
+        "Livestock standards sit alongside a separate set of cross compliance rules for environmental land management."
+      ],
+      additionalInfo: {
+        heading: "Definitions",
+        text: "\"Cross compliance\" is the baseline every claimant must meet — it is not an SFI-specific requirement.",
+        linkText: "Read the full cross compliance overview"
+      },
+      references: [
+        { name: "Cross compliance rules for livestock", section: "Overview" }
+      ]
+    },
+    {
+      title: "Identification and movement records",
+      guidance: [
+        "Cattle, sheep and pigs must be identified according to the relevant livestock scheme, with movements recorded on the appropriate movement service within the required timescale.",
+        "Records must be kept for a set number of years and produced on request during an inspection."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "Movement recording timescales differ by species — check the specific service you use rather than assuming they match.",
+        linkText: "Read the full identification section"
+      },
+      references: [
+        { name: "Cross compliance rules for livestock", section: "Identification and movement" }
+      ]
+    },
+    {
+      title: "Welfare standards checked at inspection",
+      guidance: [
+        "Inspections check housing, feed and water access, and evidence that sick or injured animals are being treated or separated as needed.",
+        "A welfare issue found at inspection can lead to a reduction across every scheme payment on the holding, not only the one being inspected."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "This is a stricter penalty model than a standards failure under a single SFI action, which only affects that action's own payment.",
+        linkText: "Read the full welfare standards section"
+      },
+      references: [
+        { name: "Cross compliance rules for livestock", section: "Welfare standards" }
+      ]
+    },
+    {
+      title: "What happens if you don't comply",
+      guidance: [
+        "A breach is categorised by severity, extent and how long it has been happening, and a reduction is calculated against your total scheme payments for the year.",
+        "You can appeal a cross compliance decision in the same way as any other scheme decision, within 60 days of being notified."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "The appeals process is the same one used for SFI decisions, covered in the Reviews section of the main guidance document.",
+        linkText: "Read the full non-compliance section"
+      },
+      references: [
+        { name: "Cross compliance rules for livestock", section: "Non-compliance" }
+      ]
+    }
+  ],
+
+  "payment-deadlines": [
+    {
+      title: "When payments are made",
+      guidance: [
+        "SFI payments are made quarterly, in arrears, starting the month after your agreement begins. Other schemes, such as Countryside Stewardship, follow their own separate payment calendar.",
+        "Payment dates are published at the start of the scheme year and don't move, unless the calculation is delayed by a query on your claim."
+      ],
+      additionalInfo: {
+        heading: "Definitions",
+        text: "\"In arrears\" means payment covers the quarter that has just finished, not the quarter ahead.",
+        linkText: "Read the full payment dates section"
+      },
+      references: [
+        { name: "Payment deadlines for 2026", section: "Payment dates" }
+      ]
+    },
+    {
+      title: "Claim deadlines you need to meet",
+      guidance: [
+        "Some actions require a claim or update to be submitted by a fixed date each year, separate from the main application deadline, or payment for that action is delayed to the next quarter.",
+        "Missing a claim deadline does not cancel the action — it just means waiting for the following payment window."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "Claim deadlines are listed action by action in the scheme handbook, rather than as one single date for the whole agreement.",
+        linkText: "Read the full claim deadlines section"
+      },
+      references: [
+        { name: "Payment deadlines for 2026", section: "Claim deadlines" }
+      ]
+    },
+    {
+      title: "What delays a payment",
+      guidance: [
+        "A payment can be delayed by a query on your claim, an unresolved inspection finding, or a change of bank details that has not yet been confirmed.",
+        "Most queries are resolved automatically once the missing information is provided, without needing a new application."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "Bank detail changes take a full payment cycle to take effect, so it's worth updating them as early as possible.",
+        linkText: "Read the full delayed payments section"
+      },
+      references: [
+        { name: "Payment deadlines for 2026", section: "Delayed payments" }
+      ]
+    },
+    {
+      title: "Checking your payment schedule",
+      guidance: [
+        "Your expected payment dates and amounts are shown on the Rural Payments service, updated once each quarterly payment run has been calculated.",
+        "The schedule shows scheduled payments only — it does not include any pending reduction from an open inspection."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "A pending reduction is shown separately, under the inspection outcome, rather than on the payment schedule itself.",
+        linkText: "Read the full payment schedule section"
+      },
+      references: [
+        { name: "Payment deadlines for 2026", section: "Payment schedule" }
+      ]
+    },
+    {
+      title: "If a payment doesn't arrive",
+      guidance: [
+        "If a scheduled payment does not arrive within 10 working days of the published date, check the Rural Payments service for an open query before contacting the helpline.",
+        "Most missed payments are down to an unconfirmed change on the account rather than an error in the calculation itself."
+      ],
+      additionalInfo: {
+        heading: "Related context",
+        text: "The helpline can only investigate once the online query check has been done, so it's worth doing that first.",
+        linkText: "Read the full missed payments section"
+      },
+      references: [
+        { name: "Payment deadlines for 2026", section: "Missed payments" }
+      ]
+    }
+  ]
+
+} %}
+
+{% set steps = topicSteps[id] if topicSteps[id] else topicSteps["sfi-eligibility"] %}
+{% set current = steps[step - 1] %}
+
+{% set pageName = heading %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <h1 class="govuk-heading-l">{{ heading }}</h1>
+
+    {{ govukInsetText({
+      text: "All searches are saved on the main search results page"
+    }) }}
+
+    <p class="govuk-body-s">Step {{ step }} of {{ totalSteps }}</p>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+
+  <div class="govuk-grid-column-two-thirds">
+
+    <h2 class="govuk-heading-m">{{ current.title }}</h2>
+
+    {% for paragraph in current.guidance %}
+      <p class="govuk-body">{{ paragraph }}</p>
+    {% endfor %}
+
+  </div>
+
+  <div class="govuk-grid-column-one-third">
+
+    <div class="app-additional-info">
+      <h3 class="govuk-heading-s">Additional information</h3>
+      <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">{{ current.additionalInfo.heading }}</p>
+      <p class="govuk-body">{{ current.additionalInfo.text }}</p>
+      <a class="govuk-link app-additional-info__link" href="/guidance-document/sfi-23">
+        {{ current.additionalInfo.linkText }}
+      </a>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <nav class="app-step-nav" aria-label="Step">
+
+      {{ govukButton({
+        text: "Back",
+        href: backHref,
+        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+      }) }}
+
+      <div class="govuk-button-group app-step-nav__actions">
+        {{ govukButton({
+          text: "Complete",
+          href: completeHref,
+          classes: "govuk-!-margin-bottom-0"
+        }) }}
+        {{ govukButton({
+          text: "Incomplete",
+          href: "/find-guidance/ai-search",
+          classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+        }) }}
+      </div>
+
+    </nav>
+
+    <h2 class="govuk-heading-m">References</h2>
+    <ul class="govuk-list govuk-list--bullet">
+      {% for reference in current.references %}
+        <li>
+          <a class="govuk-link" href="/guidance-document/sfi-23">{{ reference.name }}</a>
+          — {{ reference.section }}
+        </li>
+      {% endfor %}
+    </ul>
+
+  </div>
+</div>
+
+{% endblock %}

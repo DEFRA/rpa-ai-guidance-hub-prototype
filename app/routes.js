@@ -8,6 +8,9 @@ const router = govukPrototypeKit.requests.setupRouter()
 
 const prototypes = require('./lib/prototypes')
 const library = require('./data/documents')
+const { guidedSearches } = require('./data/guided-searches')
+const { savedDocuments } = require('./data/saved-documents')
+const { searchResults } = require('./data/search-results')
 const sampleDocument = require('./data/sample-document')
 // Shared with the browser — see the scripts block in app/views/layouts/main.html.
 const qualityChecks = require('./assets/javascripts/quality-checks')
@@ -72,6 +75,12 @@ router.use((req, res, next) => {
   // Guidance documents in the hub, shared by every designer page.
   res.locals.library = library
 
+  // AI-guided searches already run, shown on find-guidance.html.
+  res.locals.guidedSearches = guidedSearches
+
+  // Documents saved from an organic search, also shown on find-guidance.html.
+  res.locals.savedDocuments = savedDocuments
+
   // Two ways of working through the same findings: open the editor and fix them
   // as you see fit, or step through them one at a time recording a verdict on
   // each.
@@ -132,16 +141,161 @@ router.use((req, res, next) => {
   next()
 })
 
-// The landing page: every version of the prototype and the journeys inside it.
+// The homepage: ask what the designer wants to do, then send them into
+// whichever branch they choose. See app/views/start.html.
+//
+// This used to render app/views/index.html — every prototype version and the
+// journeys inside it, for picking one to run in a research session. That page
+// is still on disk but no longer routed anywhere now this is the one flow.
 router.get('/', (req, res) => {
-  // Starting from the index clears any variant left over from a previous run.
+  // Starting fresh clears any variant left over from a previous run.
   delete req.session.data.activeJourney
+  res.render('start')
+})
 
-  res.render('index', {
-    currentVersion: prototypes.getCurrentVersion(),
-    previousVersions: prototypes.getPreviousVersions()
+router.post('/', (req, res) => {
+  res.redirect(
+    req.body.destination === 'find' ? '/find-guidance' : '/all-guidance-docs'
+  )
+})
+
+// Not designed yet — a placeholder so "Find and locate guidance" leads
+// somewhere rather than a 404. See app/views/find-guidance.html.
+router.get('/find-guidance', (req, res) => {
+  res.locals.backHref = '/'
+  res.render('find-guidance')
+})
+
+// "Start a new search" — neither journey off it is designed yet, so both are
+// placeholders. See app/views/find-guidance-new.html.
+router.get('/find-guidance/new', (req, res) => {
+  res.locals.backHref = '/find-guidance'
+  res.render('find-guidance-new')
+})
+
+router.post('/find-guidance/new', (req, res) => {
+  res.redirect(
+    req.body.searchMethod === 'ai' ? '/find-guidance/ai-search' : '/find-guidance/organic-search'
+  )
+})
+
+// Deleting a guided search from the list. A static prototype has nothing
+// real to delete, so both buttons on the confirmation page just return to
+// the list — see app/views/delete-search-confirm.html.
+router.get('/find-guidance/delete/:id', (req, res) => {
+  const search = guidedSearches.find((candidate) => candidate.id === req.params.id)
+
+  res.locals.backHref = '/find-guidance'
+  res.render('delete-search-confirm', {
+    searchName: search ? search.name : 'this search'
   })
 })
+
+// A document's read-only view — opened from the "Saved documents" tab on
+// find-guidance.html, or from a result on organic-search.html for a
+// document not saved yet. Name and status come from app/data/saved-documents.js
+// or, failing that, app/data/search-results.js; the section content itself
+// is fixed placeholder text local to app/views/saved-document-view.html, one
+// set per document id, covering both sources.
+router.get('/find-guidance/document/:id', (req, res) => {
+  const document =
+    savedDocuments.find((candidate) => candidate.id === req.params.id) ||
+    searchResults.find((candidate) => candidate.id === req.params.id)
+
+  res.locals.backHref = '/find-guidance'
+  res.render('saved-document-view', {
+    id: req.params.id,
+    documentName: document ? document.name : 'Document not found',
+    status: document ? document.status : 'Up to date'
+  })
+})
+
+// Search by document name, date or type. The search bar and filters are not
+// wired up to anything real — see app/views/organic-search.html — so this
+// always shows the same fixed set of example results.
+router.get('/find-guidance/organic-search', (req, res) => {
+  res.locals.backHref = '/find-guidance/new'
+  res.render('organic-search', { results: searchResults })
+})
+
+// Search by explaining the problem, rather than by document. See
+// app/views/ai-search.html.
+router.get('/find-guidance/ai-search', (req, res) => {
+  res.locals.backHref = '/find-guidance/new'
+  res.render('ai-search')
+})
+
+// Shown if ai-search-results.html is reached without going through the form
+// first — stepping back and forward, or a direct link — so the heading is
+// never blank.
+const DEFAULT_AI_SEARCH_QUERY =
+  'I need to understand what evidence is required for the upland grazing option under SFI 23'
+
+// The wait between submitting a query and seeing results. Nothing here is a
+// real search yet, so this only remembers the query text — for
+// ai-search-results.html's heading — and gives the designer something to
+// look at while "analysing" it. Redirects to the GET route below rather than
+// rendering directly, the same POST-then-GET shape every form in this
+// prototype follows, so refreshing the loading page does not resubmit it.
+router.post('/find-guidance/ai-search-loading', (req, res) => {
+  req.session.data.aiSearchQuery = (req.body.query || '').trim()
+  res.redirect('/find-guidance/ai-search-loading')
+})
+
+router.get('/find-guidance/ai-search-loading', (req, res) => {
+  res.render('ai-search-loading')
+})
+
+// Results of an AI search, stepped through one at a time. The guidance text,
+// additional information and references are all fixed placeholder content —
+// see app/views/ai-search-results.html.
+//
+// Reached two ways: fresh from the form on ai-search.html (no :id — a query
+// just typed in, held in the session, always 4 steps starting at step 1,
+// the same shape as sfi-eligibility below); or resumed from a row in the
+// "Guided searches" tab on find-guidance.html (:id identifies which of the
+// fixed example searches this is, from app/data/guided-searches.js, which
+// says how many steps it has and which one it resumes at — a search a
+// couple of steps in does not restart from step 1).
+const DEFAULT_TOTAL_STEPS = 4
+const DEFAULT_STEP = 1
+
+function renderAiSearchResults (req, res) {
+  const search = guidedSearches.find((candidate) => candidate.id === req.params.id)
+  const id = search ? search.id : 'new'
+  const totalSteps = search ? search.totalSteps : DEFAULT_TOTAL_STEPS
+  const startingStep = search ? search.resumeStep : DEFAULT_STEP
+
+  const step = Math.min(
+    Math.max(Number(req.params.step) || startingStep, 1),
+    totalSteps
+  )
+
+  res.render('ai-search-results', {
+    id,
+    step,
+    totalSteps,
+    query: req.session.data.aiSearchQuery || DEFAULT_AI_SEARCH_QUERY,
+    // Drives the "Back" button next to Complete/Incomplete, which moves
+    // between steps. Step 1's back goes to the search itself for a fresh
+    // query, rather than a step 0 — but a resumed search did not come from
+    // there, so it goes to the saved-searches list instead.
+    backHref:
+      step > 1
+        ? `/find-guidance/ai-search-results/${id}/${step - 1}`
+        : (search ? '/find-guidance' : '/find-guidance/ai-search'),
+    // Drives the govukBackLink at the top instead — the saved-searches list,
+    // not a step. See the comment on resolvedBackHref in layouts/main.html.
+    backLinkHref: '/find-guidance',
+    backLinkText: 'Back to your searches',
+    completeHref:
+      step < totalSteps ? `/find-guidance/ai-search-results/${id}/${step + 1}` : '/find-guidance'
+  })
+}
+
+router.get('/find-guidance/ai-search-results', renderAiSearchResults)
+router.get('/find-guidance/ai-search-results/:id', renderAiSearchResults)
+router.get('/find-guidance/ai-search-results/:id/:step', renderAiSearchResults)
 
 // -- Stepping through the findings one at a time ---------------------------
 //
@@ -217,6 +371,59 @@ router.get('/designer/documents/findings', (req, res) => {
 router.get('/designer/documents/review-reset', (req, res) => {
   delete req.session.data.verdicts
   res.redirect('/designer/documents/issues')
+})
+
+// All guidance documents in the hub, tabbed by status. See
+// app/views/all-guidance-docs.html.
+router.get('/all-guidance-docs', (req, res) => {
+  res.locals.backHref = '/'
+  res.render('all-guidance-docs')
+})
+
+// A single guidance document's overview. Placeholder until the content panel
+// is designed — see app/views/guidance-document.html.
+router.get('/guidance-document/:id', (req, res) => {
+  res.locals.backHref = '/all-guidance-docs'
+  res.render('guidance-document')
+})
+
+// A recommended change, opened from the guidance document overview. The
+// document text, the finding shown and this count are all fixed placeholder
+// content — see app/views/change-review.html — but the count matches the
+// severity totals shown there (3 high + 5 medium + 2 low), so paging through
+// issue numbers stops at a sensible boundary until real issue data exists.
+const TOTAL_REVIEW_ISSUES = 10
+
+function renderChangeReview (req, res) {
+  const id = req.params.id
+  const issueNumber = Math.min(
+    Math.max(Number(req.params.issueNumber) || 1, 1),
+    TOTAL_REVIEW_ISSUES
+  )
+
+  res.locals.backHref = `/guidance-document/${id}`
+
+  res.render('change-review', {
+    issueNumber,
+    totalIssues: TOTAL_REVIEW_ISSUES,
+    previousIssueHref:
+      issueNumber > 1 ? `/guidance-document/${id}/review/${issueNumber - 1}` : null,
+    nextIssueHref:
+      issueNumber < TOTAL_REVIEW_ISSUES ? `/guidance-document/${id}/review/${issueNumber + 1}` : null
+  })
+}
+
+router.get('/guidance-document/:id/review', renderChangeReview)
+router.get('/guidance-document/:id/review/:issueNumber', renderChangeReview)
+
+// Overrides just the back link on this one step of the migrate journey — it
+// otherwise comes from prototypes.findStep() via the router.use() above,
+// which would send it back to the dashboard. Nothing else about the step
+// (journey banner, nextHref) changes, since that middleware still runs
+// first and sets everything else as normal.
+router.get('/designer/migrate/single/upload', (req, res) => {
+  res.locals.backHref = '/all-guidance-docs'
+  res.render('designer/migrate/single/upload')
 })
 
 // Add your routes here

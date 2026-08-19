@@ -1,0 +1,62 @@
+// The simpler markdown editor: section links on the left, a toolbar and a
+// plain textarea on the right. Compare with _app-editor.scss, which styles
+// the full toolbar editor.
+
+.app-markdown-editor__nav {
+  margin: 0 0 govuk-spacing(6);
+  padding: 0;
+  list-style: none;
+}
+
+.app-markdown-editor__nav-item {
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  &:first-child {
+    border-top: 1px solid $govuk-mid-grey;
+  }
+}
+
+.app-markdown-editor__nav-link {
+  display: block;
+  padding: govuk-spacing(2) 0;
+}
+
+// Not inside a bordered wrapper the way .app-editor__input is, so this keeps
+// its own border. Height matches it closely enough that the three columns
+// line up.
+.app-markdown-editor__textarea {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 26rem);
+  min-height: 24rem;
+  padding: govuk-spacing(3);
+  border: 1px solid $govuk-mid-grey;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+  font-size: 16px;
+  line-height: 1.45;
+  resize: vertical;
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: -3px;
+  }
+}
+
+// Sits above the textarea, separated from it by its own border-bottom rather
+// than a separate <hr> — one less element for the same effect.
+.app-markdown-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  padding-bottom: govuk-spacing(3);
+  margin-bottom: govuk-spacing(3);
+  border-bottom: 1px solid $govuk-mid-grey;
+}
+
+// Still a real govuk-button--secondary underneath — just smaller, so five of
+// them read as a toolbar rather than a row of full-size buttons.
+.app-markdown-toolbar__button {
+  padding: 5px govuk-spacing(2);
+  font-size: 16px;
+  min-height: 0;
+}

@@ -481,6 +481,40 @@ window.GOVUKPrototypeKit.documentReady(() => {
 })
 
 // ---------------------------------------------------------------------------
+// Section navigation on the simpler markdown editor
+// ---------------------------------------------------------------------------
+
+// Same idea as goToLine() above, but standalone: this page has no preview
+// pane to keep in sync and no outline built from the markdown as it changes,
+// so it does not need the full editor module around it.
+window.GOVUKPrototypeKit.documentReady(() => {
+  const nav = document.querySelector('[data-module="app-section-nav"]')
+  if (!nav) return
+
+  const target = document.querySelector(nav.dataset.target)
+  if (!target) return
+
+  nav.querySelectorAll('[data-line]').forEach(function (link) {
+    link.addEventListener('click', function (event) {
+      event.preventDefault()
+
+      const lineNumber = Number(link.dataset.line)
+      const lines = target.value.split('\n')
+      let start = 0
+      for (let i = 0; i < lineNumber - 1 && i < lines.length; i++) {
+        start += lines[i].length + 1
+      }
+
+      const lineHeight = parseFloat(window.getComputedStyle(target).lineHeight) || 20
+
+      target.focus()
+      target.setSelectionRange(start, start + (lines[lineNumber - 1] || '').length)
+      target.scrollTop = Math.max(0, (lineNumber - 2) * lineHeight)
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Preview in its own tab
 // ---------------------------------------------------------------------------
 

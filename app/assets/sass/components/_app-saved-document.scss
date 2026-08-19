@@ -1,0 +1,162 @@
+// Read-only view of a saved document. Additional information sits at the
+// bottom of the main content area as its own bordered box — a lighter touch
+// than .app-additional-info's grey fill elsewhere in the prototype, kept up
+// to date per section by the IntersectionObserver script in the view itself.
+
+.app-document-content__toggle {
+  display: inline-block;
+  margin-bottom: govuk-spacing(3);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+    box-shadow:
+      0 -2px $govuk-yellow,
+      0 4px $govuk-black;
+    text-decoration: none;
+  }
+}
+
+// Scrolls independently once it has more sections and subsections than fit
+// comfortably, rather than growing the column — and, with it, the page —
+// indefinitely. The toggle button above stays outside this, so it is never
+// scrolled out of reach.
+.app-document-content__scroll {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.app-document-content__nav {
+  margin: 0 0 govuk-spacing(6);
+  padding: 0;
+  list-style: none;
+}
+
+.app-document-content__nav-item {
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  &:first-child {
+    border-top: 1px solid $govuk-mid-grey;
+  }
+}
+
+// The section link and its disclosure toggle side by side — an <a> cannot
+// sit inside a <button> (or the other way round), so this is two separate
+// controls in one row rather than one control doing both jobs.
+.app-document-content__section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+}
+
+.app-document-content__nav-link {
+  display: block;
+  padding: govuk-spacing(2) 0;
+}
+
+.app-document-content__section-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+// A plain CSS chevron — border-drawn rather than an icon font or SVG,
+// pointing right when collapsed and rotating to point down once expanded.
+.app-document-content__chevron {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid $govuk-black;
+  border-bottom: 2px solid $govuk-black;
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+}
+
+.app-document-content__section-toggle[aria-expanded="true"] .app-document-content__chevron {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-document-content__chevron {
+    transition: none;
+  }
+}
+
+// Nested under a section's own link, indented and smaller so the hierarchy
+// reads at a glance rather than every link looking equally important.
+.app-document-content__subnav {
+  margin: 0;
+  padding: 0 0 govuk-spacing(2) govuk-spacing(4);
+  list-style: none;
+}
+
+.app-document-content__subnav-link {
+  display: block;
+  padding: govuk-spacing(1) 0;
+  font-size: 14px;
+  color: $govuk-secondary-text-colour;
+}
+
+.app-document-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: govuk-spacing(3);
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-document-search__input {
+  flex: 1 1 auto;
+}
+
+// Tall enough to need scrolling with several sections in it, bounded so the
+// page still scrolls normally alongside the shorter sidebar.
+.app-document-text {
+  max-height: 40rem;
+  overflow-y: auto;
+  padding: govuk-spacing(4);
+  border: 1px solid $govuk-mid-grey;
+}
+
+// $app-highlight-background comes from _app-review.scss (imported before
+// this file) — the same soft amber used to flag text in change-review.html,
+// rather than the browser's jarring default <mark> yellow.
+.app-document-search-highlight {
+  padding: 0 2px;
+  background-color: $app-highlight-background;
+}
+
+// A simple border rather than .app-additional-info's grey fill — full width
+// of the main content column, sitting below the document text rather than
+// beside it.
+.app-additional-info-panel {
+  padding: govuk-spacing(4);
+  margin-top: govuk-spacing(6);
+  border: 1px solid $govuk-mid-grey;
+}

@@ -1,0 +1,269 @@
+{#
+  All guidance documents in the hub, filterable by status.
+
+  Each tab has its own fixed set of example rows rather than a shared list, so
+  the four states read as distinct rather than the same documents repeated —
+  Uploaded reuses the batch-upload documents from app/data/documents.js, and
+  Published keeps the original full-library table it had before this tab
+  existed. Real filtering by status is still not wired up, and the tab counts
+  in each label are just these fixed rows counted, not a live total.
+
+  "Start Checks" on an Uploaded row runs in place — see the inline script at
+  the bottom of this file — rather than navigating to a separate waiting page,
+  then lands on the same placeholder document (guidance-document.html for
+  sfi-23) regardless of which row was clicked. Ready to review's first row is
+  named to match it, so browsing there after running checks reads as the same
+  document having moved rather than an unrelated one appearing.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageName = "All your guidance docs" %}
+
+{# -- Uploaded: recently uploaded, not yet checked ------------------------- #}
+
+{% set uploadedRows = [] %}
+{% for document in library.batch %}
+  {% set actionCell %}
+    {#
+      href goes straight to the overview page, so this still works with no
+      JavaScript — the inline script below intercepts the click, runs the
+      "checks running" state in place, and navigates on afterwards itself.
+    #}
+    <span class="app-start-checks">
+      {{ govukButton({
+        text: "Start Checks",
+        href: "/guidance-document/sfi-23",
+        classes: "govuk-!-margin-bottom-0",
+        attributes: { "data-start-checks": true }
+      }) }}
+    </span>
+  {% endset %}
+  {% set uploadedRows = (uploadedRows.push([
+    { text: document.name },
+    { html: actionCell }
+  ]), uploadedRows) %}
+{% endfor %}
+
+{#
+  Document name takes most of the row width here, unlike the other tables on
+  this page — otherwise the action column is left unnecessarily wide, and
+  "Start Checks" sits with a big gap of empty space after it rather than near
+  the table's right edge.
+#}
+{% set uploadedTable %}
+  {{ govukTable({
+    head: [
+      { text: "Document name", classes: "govuk-!-width-three-quarters" },
+      { html: '<span class="govuk-visually-hidden">Action</span>' }
+    ],
+    rows: uploadedRows
+  }) }}
+{% endset %}
+
+{# -- Ready to review: checked, drafted, waiting on a designer ------------- #}
+
+{#
+  The first name here matches guidance-document.html's own heading, so that
+  after "Start Checks" → processing.html → the overview page, this tab shows
+  what looks like the same document waiting to be reviewed.
+#}
+{% set readyToReviewDocuments = [
+  "SFI 23 Guidance document",
+  "How inspections work",
+  "Cross compliance rules"
+] %}
+
+{% set readyToReviewRows = [] %}
+{% for documentName in readyToReviewDocuments %}
+  {% set actionCell %}
+    {{ govukButton({
+      text: "Open",
+      href: "/guidance-document/sfi-23",
+      classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+    }) }}
+  {% endset %}
+  {% set readyToReviewRows = (readyToReviewRows.push([
+    { text: documentName },
+    { html: actionCell }
+  ]), readyToReviewRows) %}
+{% endfor %}
+
+{% set readyToReviewTable %}
+  {{ govukTable({
+    head: [
+      { text: "Document name" },
+      { html: '<span class="govuk-visually-hidden">Action</span>' }
+    ],
+    rows: readyToReviewRows
+  }) }}
+{% endset %}
+
+{# -- Awaiting approval: sent to an owner, some sent back with feedback ---- #}
+
+{% set awaitingApprovalDocuments = [
+  {
+    name: "Agri-environment scheme options",
+    status: "Awaiting approval"
+  },
+  {
+    name: "Livestock housing grants",
+    status: "Changes requested",
+    feedback: "Eligibility section needs the upland exception added back in",
+    requestedBy: "Tom Reeves"
+  },
+  {
+    name: "Nutrient management planning",
+    status: "Awaiting approval"
+  },
+  {
+    name: "Capital grants: fencing and gates",
+    status: "Changes requested",
+    feedback: "Payment table doesn't match the current scheme handbook rates",
+    requestedBy: "Priya Shah"
+  }
+] %}
+
+{% set awaitingApprovalStatusTags = {
+  "Awaiting approval": { text: "Awaiting approval", classes: "govuk-tag--blue" },
+  "Changes requested": { text: "Changes requested", classes: "govuk-tag--orange" }
+} %}
+
+{% set awaitingApprovalRows = [] %}
+{% for document in awaitingApprovalDocuments %}
+  {% set statusCell %}{{ govukTag(awaitingApprovalStatusTags[document.status]) }}{% endset %}
+  {% set actionCell %}
+    {{ govukButton({
+      text: "Open",
+      href: "/guidance-document/sfi-23",
+      classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+    }) }}
+  {% endset %}
+  {% set awaitingApprovalRows = (awaitingApprovalRows.push([
+    { text: document.name },
+    { html: statusCell },
+    { text: document.feedback if document.feedback else "-" },
+    { text: document.requestedBy if document.requestedBy else "-" },
+    { html: actionCell }
+  ]), awaitingApprovalRows) %}
+{% endfor %}
+
+{% set awaitingApprovalTable %}
+  {{ govukTable({
+    head: [
+      { text: "Document name" },
+      { text: "Status" },
+      { text: "Feedback" },
+      { text: "Changes requested by" },
+      { html: '<span class="govuk-visually-hidden">Action</span>' }
+    ],
+    rows: awaitingApprovalRows
+  }) }}
+{% endset %}
+
+{# -- Published: unchanged from before this tab existed -------------------- #}
+
+{% set rows = [] %}
+{% for document in library.documents %}
+  {% set actionCell %}
+    {{ govukButton({
+      text: "Open",
+      href: "/guidance-document/sfi-23",
+      classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+    }) }}
+  {% endset %}
+  {% set rows = (rows.push([
+    { text: document.name },
+    { html: actionCell }
+  ]), rows) %}
+{% endfor %}
+
+{% set documentsTable %}
+  {{ govukTable({
+    head: [
+      { text: "Document name" },
+      { html: '<span class="govuk-visually-hidden">Action</span>' }
+    ],
+    rows: rows
+  }) }}
+{% endset %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">All your guidance docs</h1>
+
+    <p class="govuk-body">
+      View, upload and manage guidance documents. Track which ones are
+      awaiting approval or have been published.
+    </p>
+
+  </div>
+
+  <div class="govuk-grid-column-one-third govuk-!-text-align-right">
+
+    {{ govukButton({ text: "Upload a new document", href: migrateHref }) }}
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    {{ govukTabs({
+      idPrefix: "guidance-docs",
+      items: [
+        {
+          label: "Recently uploaded (" + uploadedRows.length + ")",
+          id: "uploaded",
+          panel: { html: uploadedTable }
+        },
+        {
+          label: "Ready to review (" + readyToReviewRows.length + ")",
+          id: "ready-to-review",
+          panel: { html: readyToReviewTable }
+        },
+        {
+          label: "Awaiting approval (" + awaitingApprovalRows.length + ")",
+          id: "awaiting-approval",
+          panel: { html: awaitingApprovalTable }
+        },
+        {
+          label: "Published (" + rows.length + ")",
+          id: "published",
+          panel: { html: documentsTable }
+        }
+      ]
+    }) }}
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    document.querySelectorAll('[data-start-checks]').forEach(function (button) {
+      button.addEventListener('click', function (event) {
+        event.preventDefault()
+
+        var redirectHref = button.getAttribute('href')
+        var container = button.closest('.app-start-checks')
+
+        container.innerHTML =
+          '<span class="app-inline-spinner" aria-hidden="true"></span>' +
+          '<span role="status">Running checks…</span>'
+
+        window.setTimeout(function () {
+          window.location.href = redirectHref
+        }, 2000)
+      })
+    })
+  </script>
+{% endblock %}
