@@ -35,14 +35,16 @@
 {% set guidedSearchRows = [] %}
 {% for search in guidedSearches %}
   {% set actionCell %}
-    {{ govukButton({
-      text: "Open",
-      href: "/find-guidance/ai-search-results/" + search.id,
-      classes: "govuk-button--secondary govuk-!-margin-bottom-0"
-    }) }}
-    <a class="govuk-link govuk-!-margin-left-3" href="/find-guidance/delete/{{ search.id }}">
-      Delete<span class="govuk-visually-hidden"> {{ search.name }}</span>
-    </a>
+    <div class="app-guided-search-actions">
+      {{ govukButton({
+        text: "Open",
+        href: "/find-guidance/ai-search-results/" + search.id,
+        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+      }) }}
+      <a class="govuk-link" href="/find-guidance/delete/{{ search.id }}">
+        Delete<span class="govuk-visually-hidden"> {{ search.name }}</span>
+      </a>
+    </div>
   {% endset %}
   {% set guidedSearchRows = (guidedSearchRows.push([
     { text: search.name },
@@ -52,12 +54,19 @@
   ]), guidedSearchRows) %}
 {% endfor %}
 
+{#
+  The Name column carries the longest content — a full enquiry, which already
+  wraps onto two lines — so it gets the most width back from Last opened and
+  Steps left, both short enough not to need much. Action is left unset: the
+  flex/nowrap treatment on app-guided-search-actions is what keeps Open and
+  Delete on one line, not a fixed width.
+#}
 {% set guidedSearchesTable %}
   {{ govukTable({
     head: [
-      { text: "Name" },
-      { text: "Last opened" },
-      { text: "Steps left" },
+      { text: "Name", classes: "govuk-!-width-one-half" },
+      { text: "Last opened", classes: "govuk-!-width-one-quarter" },
+      { text: "Steps left", classes: "govuk-!-width-one-quarter" },
       { html: '<span class="govuk-visually-hidden">Action</span>' }
     ],
     rows: guidedSearchRows

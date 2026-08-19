@@ -1,6 +1,6 @@
-// The simpler markdown editor: section links on the left, a plain textarea in
-// the middle, a formatting reference on the right. Compare with
-// _app-editor.scss, which styles the full toolbar editor.
+// The simpler markdown editor: section links on the left, a toolbar and a
+// plain textarea on the right. Compare with _app-editor.scss, which styles
+// the full toolbar editor.
 
 .app-markdown-editor__nav {
   margin: 0 0 govuk-spacing(6);
@@ -42,37 +42,21 @@
   }
 }
 
-// A light grey panel, in the spirit of the Design System's related-items
-// sidebar, to set the reference list apart from the working columns either
-// side of it.
-.app-formatting-guide {
-  padding: govuk-spacing(4);
-  background-color: $govuk-light-grey;
-}
-
-.app-formatting-guide__list {
-  margin: 0;
-}
-
-.app-formatting-guide__item {
-  padding: govuk-spacing(2) 0;
+// Sits above the textarea, separated from it by its own border-bottom rather
+// than a separate <hr> — one less element for the same effect.
+.app-markdown-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  padding-bottom: govuk-spacing(3);
+  margin-bottom: govuk-spacing(3);
   border-bottom: 1px solid $govuk-mid-grey;
-
-  &:last-child {
-    border-bottom: 0;
-  }
 }
 
-.app-formatting-guide__syntax {
-  display: block;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+// Still a real govuk-button--secondary underneath — just smaller, so five of
+// them read as a toolbar rather than a row of full-size buttons.
+.app-markdown-toolbar__button {
+  padding: 5px govuk-spacing(2);
   font-size: 16px;
-  font-weight: 700;
-}
-
-.app-formatting-guide__description {
-  display: block;
-  margin: 0;
-  font-size: 16px;
-  color: $govuk-secondary-text-colour;
+  min-height: 0;
 }

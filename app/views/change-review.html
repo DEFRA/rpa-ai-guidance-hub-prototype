@@ -17,7 +17,15 @@
   exists.
 
   Previous/next moves between issues regardless of which tab is open, so it
-  sits above the tabs rather than inside either panel.
+  sits inside app-review-panel above the tabs themselves rather than inside
+  either panel — still visible and working whichever tab is selected.
+
+  The Guided tab's two columns are a 40/60 split (Guidance, then the issue
+  detail panel) built with app-review__guidance-column and
+  app-review__detail-column in _app-review.scss, rather than GOV.UK's own
+  grid-column classes — those only come in named fractions (halves, thirds,
+  quarters), none of which land on 40/60, and an empty spacer column to fake
+  the ratio leaves dead space rather than the two columns filling the row.
 
   The tabs are built by hand rather than with govukTabs(params): that macro
   runs every panel's html through Nunjucks' indent() filter to pretty-print
@@ -39,7 +47,7 @@
 {% set guidedPanel %}
 <div class="govuk-grid-row">
 
-  <div class="govuk-grid-column-two-thirds">
+  <div class="app-review__guidance-column">
 
     <h2 class="govuk-heading-m">Guidance</h2>
 
@@ -106,7 +114,7 @@
 
   </div>
 
-  <div class="govuk-grid-column-one-third">
+  <div class="app-review__detail-column">
 
     {{ govukTag({ text: "Medium", classes: "govuk-tag--orange" }) }}
 
@@ -175,32 +183,36 @@
 
     <h1 class="govuk-visually-hidden">Review change: {{ pageName }}</h1>
 
-    <nav class="app-review-nav" aria-label="Flagged issues">
-      {% if previousIssueHref %}
-        <a class="govuk-link" href="{{ previousIssueHref }}">&larr; Previous</a>
-      {% endif %}
-      <span class="govuk-body-s govuk-!-margin-0">Issue {{ issueNumber }} of {{ totalIssues }}</span>
-      {% if nextIssueHref %}
-        <a class="govuk-link app-review-nav__next" href="{{ nextIssueHref }}">Next &rarr;</a>
-      {% endif %}
-    </nav>
+    <div class="app-review-panel">
 
-    <div class="govuk-tabs" data-module="govuk-tabs">
-      <h2 class="govuk-tabs__title">Contents</h2>
-      <ul class="govuk-tabs__list">
-        <li class="govuk-tabs__list-item govuk-tabs__list-item--selected">
-          <a class="govuk-tabs__tab" href="#guided">Guided</a>
-        </li>
-        <li class="govuk-tabs__list-item">
-          <a class="govuk-tabs__tab" href="#edit-as-markdown">Edit as markdown</a>
-        </li>
-      </ul>
-      <div class="govuk-tabs__panel" id="guided">
-        {{ guidedPanel | safe }}
+      <nav class="app-review-nav" aria-label="Flagged issues">
+        {% if previousIssueHref %}
+          <a class="govuk-link" href="{{ previousIssueHref }}">&larr; Previous</a>
+        {% endif %}
+        <span class="govuk-body-s govuk-!-margin-0">Issue {{ issueNumber }} of {{ totalIssues }}</span>
+        {% if nextIssueHref %}
+          <a class="govuk-link app-review-nav__next" href="{{ nextIssueHref }}">Next &rarr;</a>
+        {% endif %}
+      </nav>
+
+      <div class="govuk-tabs" data-module="govuk-tabs">
+        <h2 class="govuk-tabs__title">Contents</h2>
+        <ul class="govuk-tabs__list">
+          <li class="govuk-tabs__list-item govuk-tabs__list-item--selected">
+            <a class="govuk-tabs__tab" href="#guided">Guided</a>
+          </li>
+          <li class="govuk-tabs__list-item">
+            <a class="govuk-tabs__tab" href="#edit-as-markdown">Edit as markdown</a>
+          </li>
+        </ul>
+        <div class="govuk-tabs__panel" id="guided">
+          {{ guidedPanel | safe }}
+        </div>
+        <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="edit-as-markdown">
+          {{ editPanel | safe }}
+        </div>
       </div>
-      <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="edit-as-markdown">
-        {{ editPanel | safe }}
-      </div>
+
     </div>
 
   </div>

@@ -1,10 +1,10 @@
 {#
-  The three-column "simpler" markdown editor: section links, an editable
-  markdown textarea, and a formatting reference.
+  The simpler markdown editor: section links on the left, a formatting
+  toolbar and an editable textarea on the right.
 
-  Included on the "Edit as markdown" tab of change-review.html. Kept as a
-  partial rather than inlined there so the markup and its fixed placeholder
-  content have one home if another page needs the same editor.
+  Included on the "Edit as markdown" tab of change-review.html — currently
+  the only place that uses it, since it was written to be shared if another
+  page needs the same editor.
 
   The content list is not real anchor links: a plain <textarea> has no way to
   anchor into its own value, since browsers treat it as opaque text rather
@@ -13,6 +13,15 @@
   (app/assets/javascripts/application.js), just without everything else that
   depends on. Line numbers are fixed here because the markdown is fixed
   placeholder content.
+
+  The toolbar buttons work the same way, scoped to their own textarea via
+  data-target rather than assuming there is only one editor on the page. Each
+  wraps or prefixes the current selection; with nothing selected, it inserts
+  its own placeholder text instead and selects just that, so typing replaces
+  it — setRangeText() rather than the full editor's execCommand('insertText')
+  dance, which exists there to keep the browser's native undo stack working
+  over a 100-page document. That does not matter for a handful of toolbar
+  clicks on fixed placeholder text.
 
   Included rather than a macro, since the textarea's placeholder markdown is
   large, fixed body text rather than something a caller passes in.
@@ -24,14 +33,6 @@
   { name: "How to apply", line: 15 },
   { name: "Payments", line: 23 },
   { name: "Reviews", line: 31 }
-] %}
-
-{% set formattingGuide = [
-  { syntax: "# Heading", description: "Creates a heading" },
-  { syntax: "**bold text**", description: "Makes text bold" },
-  { syntax: "*italic text*", description: "Makes text italic" },
-  { syntax: "- item", description: "Creates a bullet list" },
-  { syntax: "[link text](url)", description: "Creates a link" }
 ] %}
 
 <div class="govuk-grid-row">
@@ -55,7 +56,20 @@
 
   </div>
 
-  <div class="govuk-grid-column-one-half">
+  <div class="govuk-grid-column-three-quarters">
+
+    <div
+      class="app-markdown-toolbar"
+      data-module="app-markdown-toolbar"
+      data-target="#markdown-editor"
+      role="group"
+      aria-label="Formatting">
+      <button type="button" class="govuk-button govuk-button--secondary app-markdown-toolbar__button" data-md-action="bold">Bold</button>
+      <button type="button" class="govuk-button govuk-button--secondary app-markdown-toolbar__button" data-md-action="italic">Italic</button>
+      <button type="button" class="govuk-button govuk-button--secondary app-markdown-toolbar__button" data-md-action="heading">Heading</button>
+      <button type="button" class="govuk-button govuk-button--secondary app-markdown-toolbar__button" data-md-action="bullets">Bullet list</button>
+      <button type="button" class="govuk-button govuk-button--secondary app-markdown-toolbar__button" data-md-action="link">Link</button>
+    </div>
 
     <label class="govuk-visually-hidden" for="markdown-editor">Markdown</label>
     <textarea
@@ -102,23 +116,82 @@ You can ask for a review of any decision relating to your agreement within 60 da
 
   </div>
 
-  <div class="govuk-grid-column-one-quarter">
-
-    <aside class="app-formatting-guide" role="complementary" aria-labelledby="formatting-guide-heading">
-
-      <h2 class="govuk-heading-m" id="formatting-guide-heading">Formatting guide</h2>
-
-      <dl class="app-formatting-guide__list govuk-body">
-        {% for entry in formattingGuide %}
-          <div class="app-formatting-guide__item">
-            <dt class="app-formatting-guide__syntax">{{ entry.syntax }}</dt>
-            <dd class="app-formatting-guide__description">{{ entry.description }}</dd>
-          </div>
-        {% endfor %}
-      </dl>
-
-    </aside>
-
-  </div>
-
 </div>
+
+<script>
+  document.querySelectorAll('[data-module="app-markdown-toolbar"]').forEach(function (toolbar) {
+    var textarea = document.querySelector(toolbar.dataset.target)
+    if (!textarea) return
+
+    // Grows the selection out to whole lines, so Heading/Bullet list prefix
+    // every line touched rather than just the exact characters selected.
+    function selectWholeLines () {
+      var value = textarea.value
+      var start = textarea.selectionStart
+      var end = textarea.selectionEnd
+
+      while (start > 0 && value[start - 1] !== '\n') start--
+      while (end < value.length && value[end] !== '\n') end++
+
+      textarea.setSelectionRange(start, end)
+      return value.slice(start, end)
+    }
+
+    function wrapSelection (before, after, placeholder) {
+      var start = textarea.selectionStart
+      var end = textarea.selectionEnd
+      var selected = textarea.value.slice(start, end)
+
+      if (selected) {
+        textarea.setRangeText(before + selected + after, start, end, 'end')
+      } else {
+        textarea.setRangeText(before + placeholder + after, start, end, 'end')
+        textarea.setSelectionRange(start + before.length, start + before.length + placeholder.length)
+      }
+
+      textarea.focus()
+    }
+
+    function prefixLines (prefix, placeholder) {
+      var start = textarea.selectionStart
+      var end = textarea.selectionEnd
+
+      // Nothing selected: insert a placeholder line rather than guessing
+      // whether the current line should be prefixed or replaced.
+      if (start === end) {
+        textarea.setRangeText(prefix + placeholder, start, end, 'end')
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + placeholder.length)
+        textarea.focus()
+        return
+      }
+
+      var selected = selectWholeLines()
+      var lineStart = textarea.selectionStart
+      var lineEnd = textarea.selectionEnd
+
+      var replacement = selected.split('\n').map(function (line) {
+        return line.trim() ? prefix + line : line
+      }).join('\n')
+
+      textarea.setRangeText(replacement, lineStart, lineEnd, 'end')
+      textarea.focus()
+    }
+
+    var actions = {
+      bold: function () { wrapSelection('**', '**', 'bold text') },
+      italic: function () { wrapSelection('*', '*', 'italic text') },
+      // Matches the placeholder URL the full editor's own link action uses
+      // (app/assets/javascripts/application.js), so the two stay consistent.
+      link: function () { wrapSelection('[', '](https://www.gov.uk)', 'link text') },
+      heading: function () { prefixLines('# ', 'Heading') },
+      bullets: function () { prefixLines('- ', 'List item') }
+    }
+
+    toolbar.querySelectorAll('[data-md-action]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var action = actions[button.dataset.mdAction]
+        if (action) action()
+      })
+    })
+  })
+</script>

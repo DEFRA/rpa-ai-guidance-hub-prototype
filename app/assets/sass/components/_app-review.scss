@@ -6,6 +6,14 @@
 // "focused".
 $app-highlight-background: #fff3cd;
 
+// Frames the previous/next nav and the Guided/Edit as markdown tabs as one
+// piece, so the nav reads as part of the same container rather than a
+// separate strip floating above it.
+.app-review-panel {
+  padding: govuk-spacing(4);
+  border: 1px solid $govuk-mid-grey;
+}
+
 .app-review-nav {
   display: flex;
   justify-content: space-between;
@@ -15,6 +23,34 @@ $app-highlight-background: #fff3cd;
 
 .app-review-nav__next {
   margin-left: auto;
+}
+
+// A 40/60 split for the Guided tab's two columns. Built directly rather
+// than through the govuk-grid-column() mixin, which only accepts one of
+// GOV.UK's named fractions (halves, thirds, quarters) — none of which is
+// 40/60 — replicating its box-sizing/padding/float/breakpoint behaviour by
+// hand so these still behave like real grid columns at every width.
+.app-review__guidance-column,
+.app-review__detail-column {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 $govuk-gutter-half;
+
+  @include govuk-media-query($from: tablet) {
+    float: left;
+  }
+}
+
+.app-review__guidance-column {
+  @include govuk-media-query($from: tablet) {
+    width: 40%;
+  }
+}
+
+.app-review__detail-column {
+  @include govuk-media-query($from: tablet) {
+    width: 60%;
+  }
 }
 
 // Tall enough to need scrolling with several paragraphs in it, bounded so the

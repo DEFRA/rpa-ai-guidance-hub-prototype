@@ -11,31 +11,35 @@
 // placeholder content and name for that topic's heading.
 //
 
+// `name` reads as the enquiry someone typed, not a topic title — matching
+// how a fresh search's heading on ai-search-results.html is the query
+// itself. See topicHeadings there, which mirrors this text for the resumed
+// case rather than reading it from here, so the two need updating together.
 const guidedSearches = [
   {
     id: 'sfi-eligibility',
-    name: 'Sustainable Farming Incentive eligibility',
+    name: 'How do I evidence eligibility for the Sustainable Farming Incentive?',
     lastOpened: '17 August 2026',
     totalSteps: 4,
     resumeStep: 2
   },
   {
     id: 'countryside-stewardship',
-    name: 'Countryside Stewardship capital grants',
+    name: 'What capital items are covered under Countryside Stewardship grants?',
     lastOpened: '15 August 2026',
     totalSteps: 3,
     resumeStep: 1
   },
   {
     id: 'cross-compliance-livestock',
-    name: 'Cross compliance rules for livestock',
+    name: 'What are the cross compliance rules I need to follow for livestock?',
     lastOpened: '10 August 2026',
     totalSteps: 4,
     resumeStep: 4
   },
   {
     id: 'payment-deadlines',
-    name: 'Payment deadlines for 2026',
+    name: 'When are the payment deadlines for my agreement this year?',
     lastOpened: '2 August 2026',
     totalSteps: 5,
     resumeStep: 3

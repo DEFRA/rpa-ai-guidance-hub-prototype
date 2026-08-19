@@ -376,6 +376,7 @@ router.get('/designer/documents/review-reset', (req, res) => {
 // All guidance documents in the hub, tabbed by status. See
 // app/views/all-guidance-docs.html.
 router.get('/all-guidance-docs', (req, res) => {
+  res.locals.backHref = '/'
   res.render('all-guidance-docs')
 })
 
@@ -414,5 +415,15 @@ function renderChangeReview (req, res) {
 
 router.get('/guidance-document/:id/review', renderChangeReview)
 router.get('/guidance-document/:id/review/:issueNumber', renderChangeReview)
+
+// Overrides just the back link on this one step of the migrate journey — it
+// otherwise comes from prototypes.findStep() via the router.use() above,
+// which would send it back to the dashboard. Nothing else about the step
+// (journey banner, nextHref) changes, since that middleware still runs
+// first and sets everything else as normal.
+router.get('/designer/migrate/single/upload', (req, res) => {
+  res.locals.backHref = '/all-guidance-docs'
+  res.render('designer/migrate/single/upload')
+})
 
 // Add your routes here

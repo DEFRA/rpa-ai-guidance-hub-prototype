@@ -19,7 +19,6 @@
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/tag/macro.njk" import govukTag %}
-{% from "govuk/components/tabs/macro.njk" import govukTabs %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 
 {% set pageName = "SFI 23 Guidance document" %}
@@ -30,7 +29,7 @@
   high: {
     name: "High",
     count: 3,
-    tagClasses: "govuk-tag--red",
+    badgeClasses: "app-tab-count-badge--red",
     explainer: "Issues that must be fixed before this guidance can be published",
     changes: [
       {
@@ -53,7 +52,7 @@
   medium: {
     name: "Medium",
     count: 5,
-    tagClasses: "govuk-tag--orange",
+    badgeClasses: "app-tab-count-badge--orange",
     explainer: "Issues that should be reviewed and are recommended to fix",
     changes: [
       {
@@ -86,7 +85,7 @@
   low: {
     name: "Low",
     count: 2,
-    tagClasses: "govuk-tag--blue",
+    badgeClasses: "app-tab-count-badge--blue",
     explainer: "Minor issues that are optional to address",
     changes: [
       {
@@ -147,18 +146,6 @@
       are calculated.
     </p>
 
-    <div class="app-severity-summary">
-      <p class="app-severity-summary__row">
-        {{ govukTag({ text: "High (" + severities.high.count + ")", classes: severities.high.tagClasses }) }}
-      </p>
-      <p class="app-severity-summary__row">
-        {{ govukTag({ text: "Medium (" + severities.medium.count + ")", classes: severities.medium.tagClasses }) }}
-      </p>
-      <p class="app-severity-summary__row">
-        {{ govukTag({ text: "Low (" + severities.low.count + ")", classes: severities.low.tagClasses }) }}
-      </p>
-    </div>
-
   </div>
 </div>
 
@@ -174,14 +161,49 @@
     {% set mediumPanel %}{{ severityPanel(severities.medium) }}{% endset %}
     {% set lowPanel %}{{ severityPanel(severities.low) }}{% endset %}
 
-    {{ govukTabs({
-      idPrefix: "recommended-changes",
-      items: [
-        { label: "High", id: "high", panel: { html: highPanel } },
-        { label: "Medium", id: "medium", panel: { html: mediumPanel } },
-        { label: "Low", id: "low", panel: { html: lowPanel } }
-      ]
-    }) }}
+    {#
+      Tab labels carry a small count badge alongside the text — see
+      .app-tab-count-badge in _app-issues.scss, using the same colours as the
+      govukTag severity tags elsewhere on this page.
+
+      Built by hand rather than with govukTabs(params): that macro has no
+      html option for a tab's own label (only its panel), and outputs
+      {{ item.label }} with no `| safe`, so passing markup through it gets
+      HTML-escaped rather than rendered — confirmed by trying it first.
+      tabs.mjs enhances markup by class and id/href alone (see
+      setAttributes() in
+      node_modules/govuk-frontend/dist/govuk/components/tabs/tabs.mjs), so
+      hand-written markup in this shape behaves identically once JS runs —
+      the same approach change-review.html uses, for a different reason
+      (indent() corrupting a <textarea> there instead).
+    #}
+    {% set highLabel %}High <span class="app-tab-count-badge {{ severities.high.badgeClasses }}">{{ severities.high.count }}</span>{% endset %}
+    {% set mediumLabel %}Medium <span class="app-tab-count-badge {{ severities.medium.badgeClasses }}">{{ severities.medium.count }}</span>{% endset %}
+    {% set lowLabel %}Low <span class="app-tab-count-badge {{ severities.low.badgeClasses }}">{{ severities.low.count }}</span>{% endset %}
+
+    <div class="govuk-tabs" data-module="govuk-tabs">
+      <h2 class="govuk-tabs__title">Contents</h2>
+      <ul class="govuk-tabs__list">
+        <li class="govuk-tabs__list-item govuk-tabs__list-item--selected">
+          <a class="govuk-tabs__tab" href="#high">{{ highLabel | safe }}</a>
+        </li>
+        <li class="govuk-tabs__list-item">
+          <a class="govuk-tabs__tab" href="#medium">{{ mediumLabel | safe }}</a>
+        </li>
+        <li class="govuk-tabs__list-item">
+          <a class="govuk-tabs__tab" href="#low">{{ lowLabel | safe }}</a>
+        </li>
+      </ul>
+      <div class="govuk-tabs__panel" id="high">
+        {{ highPanel | safe }}
+      </div>
+      <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="medium">
+        {{ mediumPanel | safe }}
+      </div>
+      <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="low">
+        {{ lowPanel | safe }}
+      </div>
+    </div>
 
   </div>
 </div>

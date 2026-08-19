@@ -1,0 +1,12 @@
+// The "Guided searches" table on find-guidance.html.
+
+// Keeps Open and Delete on one line even in a narrow action column, rather
+// than Delete wrapping onto its own line below Open — the opposite of
+// govuk-button-group, which wraps by design.
+.app-guided-search-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: govuk-spacing(3);
+  white-space: nowrap;
+}

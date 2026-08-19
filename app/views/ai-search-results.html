@@ -41,11 +41,17 @@
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
+{#
+  Mirrors the `name` text in app/data/guided-searches.js — the enquiry as
+  typed, not a topic title — rather than reading it from there directly,
+  since everything else on this page's content is local placeholder text too.
+  Keep the two in step if either changes.
+#}
 {% set topicHeadings = {
-  "sfi-eligibility": "Sustainable Farming Incentive eligibility",
-  "countryside-stewardship": "Countryside Stewardship capital grants",
-  "cross-compliance-livestock": "Cross compliance rules for livestock",
-  "payment-deadlines": "Payment deadlines for 2026"
+  "sfi-eligibility": "How do I evidence eligibility for the Sustainable Farming Incentive?",
+  "countryside-stewardship": "What capital items are covered under Countryside Stewardship grants?",
+  "cross-compliance-livestock": "What are the cross compliance rules I need to follow for livestock?",
+  "payment-deadlines": "When are the payment deadlines for my agreement this year?"
 } %}
 
 {#

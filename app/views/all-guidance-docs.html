@@ -49,10 +49,16 @@
   ]), uploadedRows) %}
 {% endfor %}
 
+{#
+  Document name takes most of the row width here, unlike the other tables on
+  this page — otherwise the action column is left unnecessarily wide, and
+  "Start Checks" sits with a big gap of empty space after it rather than near
+  the table's right edge.
+#}
 {% set uploadedTable %}
   {{ govukTable({
     head: [
-      { text: "Document name" },
+      { text: "Document name", classes: "govuk-!-width-three-quarters" },
       { html: '<span class="govuk-visually-hidden">Action</span>' }
     ],
     rows: uploadedRows
@@ -214,7 +220,7 @@
       idPrefix: "guidance-docs",
       items: [
         {
-          label: "Uploaded (" + uploadedRows.length + ")",
+          label: "Recently uploaded (" + uploadedRows.length + ")",
           id: "uploaded",
           panel: { html: uploadedTable }
         },

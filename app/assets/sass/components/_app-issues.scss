@@ -185,23 +185,40 @@
   margin-left: auto;
 }
 
-// -- Severity summary on the guidance document overview ----------------------
+// -- Severity counts, as a badge on each tab on the guidance document
+// overview, rather than a summary panel above the tabs -----------------------
 
-// Bordered box the High/Medium/Low counts sit in, stacked one per line rather
-// than run together, so each is easy to pick out at a glance.
-.app-severity-summary {
+// A pill rather than govuk-tag's rectangle — small enough to sit inline next
+// to a tab's own label without reading as a second tag. Colours are the same
+// govuk-shade()/govuk-tint() pairs the tag component itself uses for
+// red/orange/blue, copied rather than referenced, so this still renders
+// correctly if the tag component's own colours ever change independently.
+.app-tab-count-badge {
   display: inline-block;
-  padding: govuk-spacing(3);
-  margin-bottom: govuk-spacing(6);
-  border: 1px solid $govuk-mid-grey;
+  min-width: 20px;
+  padding: 1px 8px;
+  margin-left: govuk-spacing(1);
+  border-radius: 10px;
+  font-family: $govuk-font-family;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
 }
 
-.app-severity-summary__row {
-  margin: 0;
+.app-tab-count-badge--red {
+  color: govuk-shade(govuk-colour("red"), 80%);
+  background-color: govuk-tint(govuk-colour("red"), 75%);
+}
 
-  & + & {
-    margin-top: govuk-spacing(2);
-  }
+.app-tab-count-badge--orange {
+  color: govuk-shade(govuk-colour("orange"), 55%);
+  background-color: govuk-tint(govuk-colour("orange"), 70%);
+}
+
+.app-tab-count-badge--blue {
+  color: govuk-shade(govuk-colour("blue"), 60%);
+  background-color: govuk-tint(govuk-colour("blue"), 70%);
 }
 
 // -- Recommended changes, inside each severity tab ---------------------------
