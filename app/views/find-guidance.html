@@ -1,17 +1,25 @@
 {#
   "Find and locate guidance" — not designed yet, but this is the shape of its
   landing page: previous searches, so one can be picked up again, and a way to
-  start a new one. Two tabs for the two ways a search can end up here — see
-  find-guidance-new.html — a stepped-through AI search, resumed on
-  ai-search-results.html at whichever step it was left on, or a document
-  found by searching organically, which opens straight into the existing
-  document overview since there is no separate journey for it yet.
+  start a new one.
 
-  Each guided search can also be deleted — see delete-search-confirm.html —
-  which does not need to remove anything real in a static prototype.
+  Only guided searches are shown here now. "Open" goes straight to the
+  document itself (saved-document-view.html, via search.documentId — the
+  closest existing document to that row's enquiry, see
+  app/data/guided-searches.js) rather than resuming the step-by-step guided
+  results screen (ai-search-results.html) that produced it — that page and
+  its routes are unchanged and still reachable from a new AI search, just not
+  linked from here any more. Each row can also be deleted — see
+  delete-search-confirm.html — which does not need to remove anything real in
+  a static prototype.
 
-  Both tabs are fixed example rows, not a live list — the counts in the tab
-  labels are just those rows counted.
+  Saved documents (found by searching organically) used to have a second tab
+  here, but are not shown on this page any more. app/data/saved-documents.js
+  and saved-document-view.html are unchanged and still reachable from a
+  result on organic-search.html — this page just no longer lists them.
+
+  The rows are fixed examples, not a live list — the table always shows all
+  of res.locals.guidedSearches.
 
   The back link comes from res.locals.backHref, set in app/routes.js,
   following the pattern every other page here uses.
@@ -20,13 +28,10 @@
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
-{% from "govuk/components/tabs/macro.njk" import govukTabs %}
 
 {% set pageName = "Find and locate guidance" %}
 
 {#
-  -- Guided searches: stepped through via ai-search-results.html --------
-
   Data comes from res.locals.guidedSearches (app/data/guided-searches.js),
   shared with app/routes.js so the id used to open or delete a search here is
   the same id that page and the delete confirmation page look it up by.
@@ -38,7 +43,7 @@
     <div class="app-guided-search-actions">
       {{ govukButton({
         text: "Open",
-        href: "/find-guidance/ai-search-results/" + search.id,
+        href: "/find-guidance/document/" + search.documentId,
         classes: "govuk-button--secondary govuk-!-margin-bottom-0"
       }) }}
       <a class="govuk-link" href="/find-guidance/delete/{{ search.id }}">
@@ -53,64 +58,6 @@
     { html: actionCell }
   ]), guidedSearchRows) %}
 {% endfor %}
-
-{#
-  The Name column carries the longest content — a full enquiry, which already
-  wraps onto two lines — so it gets the most width back from Last opened and
-  Steps left, both short enough not to need much. Action is left unset: the
-  flex/nowrap treatment on app-guided-search-actions is what keeps Open and
-  Delete on one line, not a fixed width.
-#}
-{% set guidedSearchesTable %}
-  {{ govukTable({
-    head: [
-      { text: "Name", classes: "govuk-!-width-one-half" },
-      { text: "Last opened", classes: "govuk-!-width-one-quarter" },
-      { text: "Steps left", classes: "govuk-!-width-one-quarter" },
-      { html: '<span class="govuk-visually-hidden">Action</span>' }
-    ],
-    rows: guidedSearchRows
-  }) }}
-{% endset %}
-
-{# -- Saved documents: found by searching organically ----------------------- #}
-
-{#
-  Organic search is not built yet — see organic-search.html — so these are
-  documents as if that search had already found and saved them. Data comes
-  from res.locals.savedDocuments (app/data/saved-documents.js), shared with
-  app/routes.js so the id used to open a document here is the same id
-  saved-document-view.html looks it up by.
-#}
-
-{% set savedDocumentRows = [] %}
-{% for document in savedDocuments %}
-  {% set actionCell %}
-    {{ govukButton({
-      text: "Open",
-      href: "/find-guidance/document/" + document.id,
-      classes: "govuk-button--secondary govuk-!-margin-bottom-0"
-    }) }}
-  {% endset %}
-  {% set savedDocumentRows = (savedDocumentRows.push([
-    { text: document.name },
-    { text: document.date },
-    { text: document.type },
-    { html: actionCell }
-  ]), savedDocumentRows) %}
-{% endfor %}
-
-{% set savedDocumentsTable %}
-  {{ govukTable({
-    head: [
-      { text: "Name" },
-      { text: "Date" },
-      { text: "Type" },
-      { html: '<span class="govuk-visually-hidden">Action</span>' }
-    ],
-    rows: savedDocumentRows
-  }) }}
-{% endset %}
 
 {% block content %}
 
@@ -131,20 +78,23 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
 
-    {{ govukTabs({
-      idPrefix: "find-guidance-tabs",
-      items: [
-        {
-          label: "Guided searches (" + guidedSearchRows.length + ")",
-          id: "guided-searches",
-          panel: { html: guidedSearchesTable }
-        },
-        {
-          label: "Saved documents (" + savedDocumentRows.length + ")",
-          id: "saved-documents",
-          panel: { html: savedDocumentsTable }
-        }
-      ]
+    <h2 class="govuk-heading-m">Saved searches</h2>
+
+    {#
+      The Name column carries the longest content — a full enquiry, which
+      already wraps onto two lines — so it gets the most width back from Last
+      opened and Steps left, both short enough not to need much. Action is
+      left unset: the flex/nowrap treatment on app-guided-search-actions is
+      what keeps Open and Delete on one line, not a fixed width.
+    #}
+    {{ govukTable({
+      head: [
+        { text: "Name", classes: "govuk-!-width-one-half" },
+        { text: "Last opened", classes: "govuk-!-width-one-quarter" },
+        { text: "Steps left", classes: "govuk-!-width-one-quarter" },
+        { html: '<span class="govuk-visually-hidden">Action</span>' }
+      ],
+      rows: guidedSearchRows
     }) }}
 
   </div>

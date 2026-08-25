@@ -11,6 +11,7 @@ const library = require('./data/documents')
 const { guidedSearches } = require('./data/guided-searches')
 const { savedDocuments } = require('./data/saved-documents')
 const { searchResults } = require('./data/search-results')
+const { documentOverviews } = require('./data/document-overviews')
 const sampleDocument = require('./data/sample-document')
 // Shared with the browser — see the scripts block in app/views/layouts/main.html.
 const qualityChecks = require('./assets/javascripts/quality-checks')
@@ -141,32 +142,31 @@ router.use((req, res, next) => {
   next()
 })
 
+// The versions list — repurposing app/views/index.html for that, rather than
+// the multi-version/journey browser it originally was. Now the root: Version
+// 2 (current) lives at /v2/start below, so nothing here is self-referential
+// any more, and this no longer needs a separate /index to avoid colliding
+// with the live homepage's own job at "/".
+router.get('/', (req, res) => {
+  res.render('index')
+})
+
 // The homepage: what the designer wants to do, as a list of direct links
 // rather than a question with a Continue button. See app/views/start.html.
 //
-// This used to render app/views/index.html — every prototype version and the
-// journeys inside it, for picking one to run in a research session. That page
-// is still on disk but no longer routed anywhere now this is the one flow.
-router.get('/', (req, res) => {
+// Namespaced under /v2/ — Version 2 (current) — now that "/" is the versions
+// list above rather than this page. Every live-flow link that used to point
+// to "/" for this now points here instead.
+router.get('/v2/start', (req, res) => {
   // Starting fresh clears any variant left over from a previous run.
   delete req.session.data.activeJourney
   res.render('start')
 })
 
-// The versions list — repurposing app/views/index.html for that, rather than
-// the multi-version/journey browser it originally was. Deliberately not at
-// "/": index.html itself links "Version 2 (current)" to "/", which would be
-// self-referential if this page lived there too, and "/" already has an
-// unrelated job as the live homepage above, which point 4 of the task this
-// came from asked to leave completely untouched.
-router.get('/index', (req, res) => {
-  res.render('index')
-})
-
 // Not designed yet — a placeholder so "Find and locate guidance" leads
 // somewhere rather than a 404. See app/views/find-guidance.html.
 router.get('/find-guidance', (req, res) => {
-  res.locals.backHref = '/'
+  res.locals.backHref = '/v2/start'
   res.render('find-guidance')
 })
 
@@ -220,6 +220,26 @@ router.get('/find-guidance/document/:id', (req, res) => {
 router.get('/find-guidance/organic-search', (req, res) => {
   res.locals.backHref = '/find-guidance/new'
   res.render('organic-search', { results: searchResults })
+})
+
+// A stop between a result on organic-search.html and the document itself
+// (saved-document-view.html, at /find-guidance/document/:id) — see
+// app/views/document-overview.html. id matches app/data/search-results.js,
+// which also covers the three ids also in app/data/saved-documents.js.
+router.get('/document-overview/:id', (req, res) => {
+  const result = searchResults.find((candidate) => candidate.id === req.params.id)
+  const overview = documentOverviews[req.params.id] || {}
+
+  res.locals.backHref = '/find-guidance/organic-search'
+  res.render('document-overview', {
+    id: req.params.id,
+    documentName: result ? result.name : 'Document not found',
+    description: result ? result.description : '',
+    status: result ? result.status : 'Up to date',
+    scheme: overview.scheme || '',
+    type: overview.type || '',
+    lastUpdated: overview.lastUpdated || ''
+  })
 })
 
 // Search by explaining the problem, rather than by document. See
@@ -380,7 +400,7 @@ router.get('/designer/documents/review-reset', (req, res) => {
 // All guidance documents in the hub, tabbed by status. See
 // app/views/all-guidance-docs.html.
 router.get('/all-guidance-docs', (req, res) => {
-  res.locals.backHref = '/'
+  res.locals.backHref = '/v2/start'
   res.render('all-guidance-docs')
 })
 
