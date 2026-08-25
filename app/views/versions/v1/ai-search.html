@@ -1,0 +1,75 @@
+{#
+  "Search by AI" from find-guidance-new.html. Explain the problem in your own
+  words rather than searching by document name or type — see organic-search.html
+  for that alternative.
+
+  Enough shape to review even though the search itself is not built: what the
+  designer types, a hint for what a good query looks like, and where "Search"
+  leads — a short wait on ai-search-loading.html, then
+  ai-search-results.html, stepped through as if these were the relevant
+  sections a real search had found, with the query itself as that page's
+  heading.
+
+  Hint text rather than an HTML placeholder attribute for the example query —
+  the Design System advises against placeholder text in form fields, since it
+  disappears the moment someone starts typing and is easy to mistake for an
+  answer already filled in.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Search by AI" %}
+
+{% set tipsHtml %}
+  <p class="govuk-body">A good search includes:</p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>what you're trying to do</li>
+    <li>which document or scheme it relates to</li>
+    <li>a specific section, if you know it</li>
+  </ul>
+{% endset %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Search by AI</h1>
+
+    <p class="govuk-body">
+      Explain the issue you're trying to resolve and we'll help find relevant
+      guidance.
+    </p>
+
+    <form method="post" action="/v1/find-guidance/ai-search-loading">
+
+      {{ govukCharacterCount({
+        name: "query",
+        id: "query",
+        maxlength: 500,
+        rows: 5,
+        label: {
+          text: "What do you need help with?",
+          classes: "govuk-label--s"
+        },
+        hint: {
+          text: "For example: \"I need to understand what evidence is required for the upland grazing option under SFI 23\""
+        }
+      }) }}
+
+      {{ govukDetails({
+        summaryText: "Tips for writing a good search",
+        html: tipsHtml
+      }) }}
+
+      {{ govukButton({ text: "Search" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

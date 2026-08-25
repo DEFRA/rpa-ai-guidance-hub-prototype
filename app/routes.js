@@ -141,8 +141,8 @@ router.use((req, res, next) => {
   next()
 })
 
-// The homepage: ask what the designer wants to do, then send them into
-// whichever branch they choose. See app/views/start.html.
+// The homepage: what the designer wants to do, as a list of direct links
+// rather than a question with a Continue button. See app/views/start.html.
 //
 // This used to render app/views/index.html — every prototype version and the
 // journeys inside it, for picking one to run in a research session. That page
@@ -153,10 +153,14 @@ router.get('/', (req, res) => {
   res.render('start')
 })
 
-router.post('/', (req, res) => {
-  res.redirect(
-    req.body.destination === 'find' ? '/find-guidance' : '/all-guidance-docs'
-  )
+// The versions list — repurposing app/views/index.html for that, rather than
+// the multi-version/journey browser it originally was. Deliberately not at
+// "/": index.html itself links "Version 2 (current)" to "/", which would be
+// self-referential if this page lived there too, and "/" already has an
+// unrelated job as the live homepage above, which point 4 of the task this
+// came from asked to leave completely untouched.
+router.get('/index', (req, res) => {
+  res.render('index')
 })
 
 // Not designed yet — a placeholder so "Find and locate guidance" leads
@@ -380,11 +384,55 @@ router.get('/all-guidance-docs', (req, res) => {
   res.render('all-guidance-docs')
 })
 
+// "Create guidance" on all-guidance-docs.html — which of three ways in.
+// See app/views/create-guidance.html.
+router.get('/create-guidance', (req, res) => {
+  res.locals.backHref = '/all-guidance-docs'
+  res.render('create-guidance')
+})
+
+router.post('/create-guidance', (req, res) => {
+  if (req.body.createGuidance === 'create-new') {
+    return res.redirect('/designer/migrate/single/new-guide-purpose')
+  }
+
+  if (req.body.createGuidance === 'update-existing') {
+    return res.redirect('/designer/update-existing-guide')
+  }
+
+  // "Upload guidance" — the existing upload flow, unchanged.
+  res.redirect(res.locals.migrateHref)
+})
+
 // A single guidance document's overview. Placeholder until the content panel
 // is designed — see app/views/guidance-document.html.
 router.get('/guidance-document/:id', (req, res) => {
   res.locals.backHref = '/all-guidance-docs'
   res.render('guidance-document')
+})
+
+// Matches the slug all-guidance-docs.html builds for each Recently added
+// row's Edit link (document.name | lower | replace(":", "") | replace(" ", "-")),
+// so the id in the URL can be traced back to which row was actually clicked.
+function slugify (name) {
+  return name.toLowerCase().replace(/:/g, '').replace(/ /g, '-')
+}
+
+// Straight into the markdown editor for a document, from the "Edit" button
+// on a Recently added row — :id is only ever used to build this href
+// (per-row, from the document's name, see all-guidance-docs.html). There is
+// no per-document markdown yet, so every route into the editor still shares
+// the one placeholder document/text — but the heading itself should match
+// whichever row was clicked, so the id is matched back to its row here.
+// See app/views/guidance-document-edit.html.
+router.get('/guidance-document/:id/edit', (req, res) => {
+  const uploaded = library.batch.find((document) => slugify(document.name) === req.params.id)
+
+  res.locals.backHref = '/all-guidance-docs'
+  res.render('guidance-document-edit', {
+    documentName: uploaded ? uploaded.name : library.current.name,
+    documentPages: uploaded ? uploaded.pages : library.current.pages
+  })
 })
 
 // A recommended change, opened from the guidance document overview. The
@@ -424,6 +472,393 @@ router.get('/guidance-document/:id/review/:issueNumber', renderChangeReview)
 router.get('/designer/migrate/single/upload', (req, res) => {
   res.locals.backHref = '/all-guidance-docs'
   res.render('designer/migrate/single/upload')
+})
+
+// Inserted between Upload a Word document and Checking your file — a
+// "Step X of 2" sequence local to these two pages, kept separate from the
+// journey banner and step count in app/data/prototypes.js, which is
+// otherwise unchanged.
+router.get('/designer/migrate/single/document-purpose', (req, res) => {
+  res.locals.backHref = '/designer/migrate/single/upload'
+  res.render('designer/migrate/single/document-purpose')
+})
+
+// Saves the document title and purpose to the session — nothing reads them
+// back yet, but they are captured in case a later step needs them — then
+// continues to Checking your file, same as before this page asked anything.
+router.post('/designer/migrate/single/document-purpose', (req, res) => {
+  req.session.data.documentTitle = (req.body.documentTitle || '').trim()
+  req.session.data.documentPurpose = (req.body.purpose || '').trim()
+
+  res.redirect('/designer/migrate/single/uploading')
+})
+
+// "Create a new guide" on create-guidance.html — the same title/purpose
+// fields as document-purpose.html above, but with no file to check
+// afterwards, so this opens the markdown editor directly instead of
+// Checking your file.
+router.get('/designer/migrate/single/new-guide-purpose', (req, res) => {
+  res.locals.backHref = '/create-guidance'
+  res.render('designer/migrate/single/new-guide-purpose')
+})
+
+router.post('/designer/migrate/single/new-guide-purpose', (req, res) => {
+  req.session.data.documentTitle = (req.body.documentTitle || '').trim()
+  req.session.data.documentPurpose = (req.body.purpose || '').trim()
+
+  res.redirect('/designer/documents/edit')
+})
+
+// "Update existing guide" on create-guidance.html — not designed yet. See
+// app/views/designer/update-existing-guide.html.
+router.get('/designer/update-existing-guide', (req, res) => {
+  res.locals.backHref = '/create-guidance'
+  res.render('designer/update-existing-guide')
+})
+
+// ===========================================================================
+// Version 1 snapshot — a frozen copy of every page reachable from the
+// homepage, at app/views/versions/v1/. See app/views/index.html, the
+// versions list this belongs to.
+//
+// Every route below is the /v1-prefixed mirror of a live route above: same
+// logic, rendering from versions/v1/... instead of the live view, and
+// redirecting to other /v1/... paths rather than live ones. Deliberately not
+// sharing handler functions with the live routes — a frozen snapshot should
+// not be able to change behaviour just because a live handler is edited
+// later — though small path-free constants (VERDICTS, the AI search step
+// counts, TOTAL_REVIEW_ISSUES) are reused as-is, since they are values, not
+// logic that could drift.
+//
+// Not namespaced: session data (verdicts, the AI search query, activeJourney,
+// document title/purpose) is shared between v1 and the live pages, since both
+// read and write the same session keys. For a static prototype this is a
+// reasonable simplification — the point of the snapshot is a frozen set of
+// pages and links, not isolated persisted state — but it does mean, for
+// example, recording a verdict on a finding in v1 also shows up if the same
+// finding is opened live in the same browser session.
+// ===========================================================================
+
+// Same idea as the router.use() journey middleware above, but for a page
+// mirrored under /v1: looks up backHref/nextHref against the *live* path a
+// v1 page corresponds to (app/data/prototypes.js only knows live paths), then
+// prefixes whatever it finds with /v1 — so the one step order in that file
+// still drives both versions, without copying it.
+function v1JourneyHrefs (req, livePath) {
+  const location = prototypes.findStep(livePath, req.session.data.activeJourney)
+  return {
+    backHref: location && location.previous ? '/v1' + location.previous.path : undefined,
+    nextHref: location && location.next ? '/v1' + location.next.path : undefined
+  }
+}
+
+router.get('/v1/', (req, res) => {
+  delete req.session.data.activeJourney
+  res.render('versions/v1/start')
+})
+
+router.post('/v1/', (req, res) => {
+  res.redirect(
+    req.body.destination === 'find' ? '/v1/find-guidance' : '/v1/all-guidance-docs'
+  )
+})
+
+router.get('/v1/find-guidance', (req, res) => {
+  res.locals.backHref = '/v1/'
+  res.render('versions/v1/find-guidance')
+})
+
+router.get('/v1/find-guidance/new', (req, res) => {
+  res.locals.backHref = '/v1/find-guidance'
+  res.render('versions/v1/find-guidance-new')
+})
+
+router.post('/v1/find-guidance/new', (req, res) => {
+  res.redirect(
+    req.body.searchMethod === 'ai' ? '/v1/find-guidance/ai-search' : '/v1/find-guidance/organic-search'
+  )
+})
+
+router.get('/v1/find-guidance/delete/:id', (req, res) => {
+  const search = guidedSearches.find((candidate) => candidate.id === req.params.id)
+
+  res.locals.backHref = '/v1/find-guidance'
+  res.render('versions/v1/delete-search-confirm', {
+    searchName: search ? search.name : 'this search'
+  })
+})
+
+router.get('/v1/find-guidance/document/:id', (req, res) => {
+  const document =
+    savedDocuments.find((candidate) => candidate.id === req.params.id) ||
+    searchResults.find((candidate) => candidate.id === req.params.id)
+
+  res.locals.backHref = '/v1/find-guidance'
+  res.render('versions/v1/saved-document-view', {
+    id: req.params.id,
+    documentName: document ? document.name : 'Document not found',
+    status: document ? document.status : 'Up to date'
+  })
+})
+
+router.get('/v1/find-guidance/organic-search', (req, res) => {
+  res.locals.backHref = '/v1/find-guidance/new'
+  res.render('versions/v1/organic-search', { results: searchResults })
+})
+
+router.get('/v1/find-guidance/ai-search', (req, res) => {
+  res.locals.backHref = '/v1/find-guidance/new'
+  res.render('versions/v1/ai-search')
+})
+
+router.post('/v1/find-guidance/ai-search-loading', (req, res) => {
+  req.session.data.aiSearchQuery = (req.body.query || '').trim()
+  res.redirect('/v1/find-guidance/ai-search-loading')
+})
+
+router.get('/v1/find-guidance/ai-search-loading', (req, res) => {
+  res.render('versions/v1/ai-search-loading')
+})
+
+function renderV1AiSearchResults (req, res) {
+  const search = guidedSearches.find((candidate) => candidate.id === req.params.id)
+  const id = search ? search.id : 'new'
+  const totalSteps = search ? search.totalSteps : DEFAULT_TOTAL_STEPS
+  const startingStep = search ? search.resumeStep : DEFAULT_STEP
+
+  const step = Math.min(
+    Math.max(Number(req.params.step) || startingStep, 1),
+    totalSteps
+  )
+
+  res.render('versions/v1/ai-search-results', {
+    id,
+    step,
+    totalSteps,
+    query: req.session.data.aiSearchQuery || DEFAULT_AI_SEARCH_QUERY,
+    backHref:
+      step > 1
+        ? `/v1/find-guidance/ai-search-results/${id}/${step - 1}`
+        : (search ? '/v1/find-guidance' : '/v1/find-guidance/ai-search'),
+    backLinkHref: '/v1/find-guidance',
+    backLinkText: 'Back to your searches',
+    completeHref:
+      step < totalSteps ? `/v1/find-guidance/ai-search-results/${id}/${step + 1}` : '/v1/find-guidance'
+  })
+}
+
+router.get('/v1/find-guidance/ai-search-results', renderV1AiSearchResults)
+router.get('/v1/find-guidance/ai-search-results/:id', renderV1AiSearchResults)
+router.get('/v1/find-guidance/ai-search-results/:id/:step', renderV1AiSearchResults)
+
+function v1FindingOr404 (req, res) {
+  const issue = res.locals.document.issues.find(
+    (candidate) => String(candidate.id) === req.params.id
+  )
+  if (!issue) res.status(404).render('versions/v1/designer/documents/finding-not-found')
+  return issue
+}
+
+router.get('/v1/designer/documents/findings/:id', (req, res) => {
+  const issue = v1FindingOr404(req, res)
+  if (!issue) return
+
+  const { issues } = res.locals.document
+  const position = issues.indexOf(issue)
+
+  res.render('versions/v1/designer/documents/finding', {
+    finding: issue,
+    position: position + 1,
+    total: issues.length,
+    previousFinding: issues[position - 1],
+    nextFinding: issues[position + 1]
+  })
+})
+
+router.post('/v1/designer/documents/findings/:id', (req, res) => {
+  const issue = v1FindingOr404(req, res)
+  if (!issue) return
+
+  if (!Object.prototype.hasOwnProperty.call(VERDICTS, req.body.verdict)) {
+    return res.redirect(`/v1/designer/documents/findings/${issue.id}`)
+  }
+
+  req.session.data.verdicts = req.session.data.verdicts || {}
+  req.session.data.verdicts[issue.id] = {
+    verdict: req.body.verdict,
+    comment: (req.body.comment || '').trim()
+  }
+
+  const next = res.locals.document.issues.find(
+    (candidate) => candidate.id !== issue.id && !candidate.verdict
+  )
+
+  res.redirect(
+    next
+      ? `/v1/designer/documents/findings/${next.id}`
+      : '/v1/designer/documents/review-complete'
+  )
+})
+
+router.get('/v1/designer/documents/findings', (req, res) => {
+  const next = res.locals.document.outstanding[0]
+  res.redirect(
+    next
+      ? `/v1/designer/documents/findings/${next.id}`
+      : '/v1/designer/documents/review-complete'
+  )
+})
+
+router.get('/v1/designer/documents/review-reset', (req, res) => {
+  delete req.session.data.verdicts
+  res.redirect('/v1/designer/documents/issues')
+})
+
+router.get('/v1/all-guidance-docs', (req, res) => {
+  res.locals.backHref = '/v1/'
+  res.render('versions/v1/all-guidance-docs')
+})
+
+router.get('/v1/create-guidance', (req, res) => {
+  res.locals.backHref = '/v1/all-guidance-docs'
+  res.render('versions/v1/create-guidance')
+})
+
+router.post('/v1/create-guidance', (req, res) => {
+  if (req.body.createGuidance === 'create-new') {
+    return res.redirect('/v1/designer/migrate/single/new-guide-purpose')
+  }
+
+  if (req.body.createGuidance === 'update-existing') {
+    return res.redirect('/v1/designer/update-existing-guide')
+  }
+
+  res.redirect('/v1' + res.locals.migrateHref)
+})
+
+router.get('/v1/guidance-document/:id', (req, res) => {
+  res.locals.backHref = '/v1/all-guidance-docs'
+  res.render('versions/v1/guidance-document')
+})
+
+function renderV1ChangeReview (req, res) {
+  const id = req.params.id
+  const issueNumber = Math.min(
+    Math.max(Number(req.params.issueNumber) || 1, 1),
+    TOTAL_REVIEW_ISSUES
+  )
+
+  res.locals.backHref = `/v1/guidance-document/${id}`
+
+  res.render('versions/v1/change-review', {
+    issueNumber,
+    totalIssues: TOTAL_REVIEW_ISSUES,
+    previousIssueHref:
+      issueNumber > 1 ? `/v1/guidance-document/${id}/review/${issueNumber - 1}` : null,
+    nextIssueHref:
+      issueNumber < TOTAL_REVIEW_ISSUES ? `/v1/guidance-document/${id}/review/${issueNumber + 1}` : null
+  })
+}
+
+router.get('/v1/guidance-document/:id/review', renderV1ChangeReview)
+router.get('/v1/guidance-document/:id/review/:issueNumber', renderV1ChangeReview)
+
+router.get('/v1/designer/migrate/single/upload', (req, res) => {
+  res.locals.backHref = '/v1/all-guidance-docs'
+  res.render('versions/v1/designer/migrate/single/upload')
+})
+
+router.get('/v1/designer/migrate/single/document-purpose', (req, res) => {
+  res.locals.backHref = '/v1/designer/migrate/single/upload'
+  res.render('versions/v1/designer/migrate/single/document-purpose')
+})
+
+router.post('/v1/designer/migrate/single/document-purpose', (req, res) => {
+  req.session.data.documentTitle = (req.body.documentTitle || '').trim()
+  req.session.data.documentPurpose = (req.body.purpose || '').trim()
+
+  res.redirect('/v1/designer/migrate/single/uploading')
+})
+
+router.get('/v1/designer/migrate/single/new-guide-purpose', (req, res) => {
+  res.locals.backHref = '/v1/create-guidance'
+  res.render('versions/v1/designer/migrate/single/new-guide-purpose')
+})
+
+router.post('/v1/designer/migrate/single/new-guide-purpose', (req, res) => {
+  req.session.data.documentTitle = (req.body.documentTitle || '').trim()
+  req.session.data.documentPurpose = (req.body.purpose || '').trim()
+
+  res.redirect('/v1/designer/documents/edit')
+})
+
+router.get('/v1/designer/update-existing-guide', (req, res) => {
+  res.locals.backHref = '/v1/create-guidance'
+  res.render('versions/v1/designer/update-existing-guide')
+})
+
+router.get('/v1/designer/migrate/single/uploading', (req, res) => {
+  Object.assign(res.locals, v1JourneyHrefs(req, '/designer/migrate/single/uploading'))
+  res.render('versions/v1/designer/migrate/single/uploading')
+})
+
+router.get('/v1/designer/migrate/single/check', (req, res) => {
+  Object.assign(res.locals, v1JourneyHrefs(req, '/designer/migrate/single/check'))
+  res.render('versions/v1/designer/migrate/single/check')
+})
+
+router.get('/v1/designer/migrate/single/confirmation', (req, res) => {
+  Object.assign(res.locals, v1JourneyHrefs(req, '/designer/migrate/single/confirmation'))
+  res.render('versions/v1/designer/migrate/single/confirmation')
+})
+
+router.get('/v1/designer/migrate/single/rejected', (req, res) => {
+  res.render('versions/v1/designer/migrate/single/rejected')
+})
+
+router.get('/v1/designer/documents', (req, res) => {
+  res.locals.migrateHref = '/v1' + res.locals.migrateHref
+  res.render('versions/v1/designer/documents')
+})
+
+// document.issues[].href is computed once in the router.use() middleware
+// above with live paths baked in (used by the task list on issues.html), so
+// it needs a v1-prefixed copy here rather than being read from res.locals
+// as-is — passed as a render local, which take precedence over res.locals of
+// the same name, rather than mutating the shared object other routes read.
+// document.split.important/suggestions are qualityChecks.split()'s filtered
+// results, which reference the same issue objects rather than copies — so
+// they need remapping to the v1-prefixed issues too, or the task list on
+// issues.html (which reads split, not issues, for its rows) still links live.
+router.get('/v1/designer/documents/issues', (req, res) => {
+  const v1Issues = res.locals.document.issues.map((issue) => ({
+    ...issue,
+    href: '/v1' + issue.href
+  }))
+  const byId = new Map(v1Issues.map((issue) => [issue.id, issue]))
+  const v1Split = {
+    important: res.locals.document.split.important.map((issue) => byId.get(issue.id)),
+    suggestions: res.locals.document.split.suggestions.map((issue) => byId.get(issue.id))
+  }
+
+  res.render('versions/v1/designer/documents/issues', {
+    document: { ...res.locals.document, issues: v1Issues, split: v1Split },
+    editorHref: '/v1/designer/documents/edit',
+    stepThroughHref: '/v1/designer/documents/findings',
+    fixHref: res.locals.fixHref ? '/v1' + res.locals.fixHref : res.locals.fixHref
+  })
+})
+
+router.get('/v1/designer/documents/edit', (req, res) => {
+  res.render('versions/v1/designer/documents/edit')
+})
+
+router.get('/v1/designer/documents/preview', (req, res) => {
+  res.render('versions/v1/designer/documents/preview')
+})
+
+router.get('/v1/designer/documents/review-complete', (req, res) => {
+  res.render('versions/v1/designer/documents/review-complete')
 })
 
 // Add your routes here

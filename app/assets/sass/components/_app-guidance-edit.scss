@@ -1,0 +1,68 @@
+// Page-only styling for guidance-document-edit.html. The shared editor
+// partials (_app-markdown-editor.scss) keep their own look on
+// change-review.html's Edit as markdown tab — these rules only apply here.
+
+.app-guidance-edit__content-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+}
+
+// Looks like a link, not a button — matches .app-document-content__toggle's
+// treatment on saved-document-view.html, the same Hide/Show interaction
+// elsewhere in the prototype.
+.app-guidance-edit__content-toggle {
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+    box-shadow:
+      0 -2px $govuk-yellow,
+      0 4px $govuk-black;
+    text-decoration: none;
+  }
+}
+
+.app-guidance-edit {
+  .app-markdown-editor__nav-link {
+    font-size: 14px;
+  }
+
+  // The textarea's own default weight reads too light against the rest of
+  // the page's body text at this size.
+  //
+  // Fixed height with its own scrollbar rather than
+  // _app-markdown-editor.scss's viewport-relative height (which grows with
+  // the page) — Edit and Preview should read as two views onto the same
+  // fixed-size box, not one that reflows the whole page depending which tab
+  // is open.
+  .app-markdown-editor__textarea {
+    height: 60vh;
+    overflow-y: auto;
+    font-weight: 600;
+  }
+
+  .app-markdown-preview {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
+
+.app-guidance-edit__actions {
+  justify-content: flex-end;
+}

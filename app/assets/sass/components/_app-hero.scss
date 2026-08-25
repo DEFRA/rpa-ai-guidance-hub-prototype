@@ -1,0 +1,17 @@
+// The homepage hero band: full-width Defra green behind the page heading.
+// The negative-margin/calc trick breaks it out of the govuk-width-container
+// the content block otherwise sits inside, regardless of viewport width —
+// the heading text itself sits in its own nested width-container so it still
+// lines up with the rest of the page.
+.app-hero {
+  background-color: $defra-green;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+.app-hero__heading,
+.app-hero__description {
+  color: $govuk-white;
+}

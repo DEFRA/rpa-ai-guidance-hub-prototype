@@ -1,0 +1,162 @@
+{#
+  Quality issues, summarised before the editor opens.
+
+  Two things are borrowed from the POC front end (DEFRA/ai-uc-rpa-guidance-fe,
+  content-review/results): an "Issue overview" card counting findings by
+  severity, and a govukTaskList split into what must be fixed and what is
+  advisory. Severity colours match its components/severity macro.
+
+  The structure follows Single Front Door's fix pattern (business-fix →
+  business-fix-list → business-fix-check in DEFRA/fcp-sfd-frontend): set out
+  what is wrong on a page of its own before dropping anyone into the thing that
+  fixes it.
+
+  Findings come from the authoring requirements, so each carries its rule ID.
+
+  Two ways on from here, compared in research:
+    Option A  open the editor and fix what you choose
+    Option B  step through the findings one at a time, recording a verdict
+
+  Inside a fix journey only that variant is offered, so a participant is not
+  choosing between the designs being compared. Outside one — browsing, or
+  arriving from a migrate journey — both are shown, because otherwise the
+  step-through is unreachable unless you enter through exactly the right door.
+
+  Either way a specific finding can be opened directly from the list.
+
+  Not an error summary: nothing here blocks saving or sending for approval.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/task-list/macro.njk" import govukTaskList %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageName = "Quality issues" %}
+
+{% macro taskItems(findings, prefix) %}
+  {% set items = [] %}
+  {% for finding in findings %}
+    {% set statusTag = finding.verdictTag if finding.verdict else finding.severityTag %}
+    {% set items = (items.push({
+      title: { text: finding.title },
+      hint: { text: finding.ruleId + " · " + finding.section if finding.section == "Whole document" else finding.ruleId + " · " + finding.section + " · line " + finding.line },
+      href: finding.href,
+      status: { tag: statusTag }
+    }), items) %}
+  {% endfor %}
+  {{ govukTaskList({ idPrefix: prefix, items: items }) }}
+{% endmacro %}
+
+{% set overviewRows = [] %}
+{% for entry in document.counts %}
+  {% set overviewRows = (overviewRows.push({
+    key: { text: entry.tag.text },
+    value: { html: '<strong class="govuk-tag ' + entry.tag.classes + '">' + entry.count + '</strong>' }
+  }), overviewRows) %}
+{% endfor %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">{{ library.current.name }}</span>
+    <h1 class="govuk-heading-l">
+      Quality checks found {{ document.issues.length }} issues
+    </h1>
+
+    <p class="govuk-body">
+      The document converted to markdown and is saved as a draft. None of these
+      issues stopped it, and none of them stop you sending it for approval —
+      fixing them will make the guidance easier to follow.
+    </p>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-one-third">
+    {{ govukSummaryList({
+      card: { title: { text: "Issue overview" } },
+      rows: overviewRows
+    }) }}
+  </div>
+
+  <div class="govuk-grid-column-two-thirds">
+    {% if document.resolved.length %}
+      {{ govukInsetText({
+        text: document.resolved.length + " of " + document.issues.length + " findings have a verdict recorded. " + document.outstanding.length + " left."
+      }) }}
+    {% endif %}
+
+    <h2 class="govuk-heading-m">What you can do</h2>
+
+    {% if fixVariant %}
+      {# In a research session, only the variant being tested is offered. #}
+      <p class="govuk-body">
+        {% if steppingThrough %}
+          Take the findings one at a time and record what you decide about each,
+          or go straight to any single finding from the list below.
+        {% else %}
+          Open the document and fix what you choose, or go straight to any
+          single finding from the list below.
+        {% endif %}
+      </p>
+
+      {{ govukButton({
+        text: "Step through the findings" if steppingThrough else "Fix these in the editor",
+        href: fixHref
+      }) }}
+    {% else %}
+      <p class="govuk-body">
+        Fix them in the editor in whatever order you like, or take them one at a
+        time and record what you decide about each. You can also go straight to
+        a single finding from the list below.
+      </p>
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Fix these in the editor", href: editorHref }) }}
+        {{ govukButton({
+          text: "Step through them one at a time",
+          href: stepThroughHref,
+          classes: "govuk-button--secondary"
+        }) }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if document.split.important.length %}
+      <h2 class="govuk-heading-m">Important to fix</h2>
+      <p class="govuk-body-s">
+        These break a rule the requirements mark as MUST.
+      </p>
+      {{ taskItems(document.split.important, "important") }}
+    {% endif %}
+
+    {% if document.split.suggestions.length %}
+      <h2 class="govuk-heading-m govuk-!-margin-top-8">Suggestions</h2>
+      <p class="govuk-body-s">
+        These break a rule marked SHOULD, or flag wording that needs a decision.
+      </p>
+      {{ taskItems(document.split.suggestions, "suggestions") }}
+    {% endif %}
+
+    {% if not document.issues.length %}
+      <p class="govuk-body">No issues were found.</p>
+    {% endif %}
+
+    <p class="govuk-body govuk-!-margin-top-8">
+      <a class="govuk-link" href="/v1/designer/documents">Leave this for now</a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

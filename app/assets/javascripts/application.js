@@ -112,6 +112,14 @@ function renderMarkdown (markdown) {
   return html.join('')
 }
 
+// This file loads as a module (see app/views/layouts/main.html), which keeps
+// its own top-level declarations out of global scope — so a plain inline
+// <script> on a page, such as guidance-document-edit.html's Preview tab,
+// cannot call renderMarkdown() directly even once this file has run. Exported
+// the same way quality-checks.js exposes itself, as window.appQualityChecks,
+// read a few lines below.
+window.appRenderMarkdown = renderMarkdown
+
 // ---------------------------------------------------------------------------
 // Quality checks
 // ---------------------------------------------------------------------------

@@ -1,56 +1,50 @@
 {#
   The homepage: what is the designer here to do. Alternative to the
-  dashboard's two-card layout (see designer/dashboard.html) — the same kind of
-  branch point asked as a question instead.
+  dashboard's two-card layout (see designer/dashboard.html) — a shorter list
+  of direct links rather than a question with a Continue button, so each
+  destination is one click away. Reuses the .app-card component dashboard.html
+  already defines in app/assets/sass/components/_app-card.scss.
 
-  "Guidance document management" covers both bringing new guidance in and
-  working on what is already there, so it goes straight to the document hub
-  (all-guidance-docs.html) rather than picking a branch itself — "Upload a new
-  document" and opening an existing one both live there. "Find and locate
-  guidance" is not designed yet — see app/views/find-guidance.html.
+  Only two cards here — "Create new guidance" and "Update guidance" are not
+  linked from this page, but their routes and views are untouched and still
+  reachable via "Manage all guidance documents" → Create guidance.
 #}
 {% extends "layouts/main.html" %}
 
-{% from "govuk/components/radios/macro.njk" import govukRadios %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
-
-{% set pageName = "What do you want to do?" %}
+{% set pageName = "Guidance hub" %}
 
 {% block content %}
 
-<div class="govuk-grid-row">
+<div class="app-hero">
+  <div class="govuk-width-container">
+    <h1 class="govuk-heading-l app-hero__heading">Guidance hub</h1>
+    <p class="govuk-body-l app-hero__description">Find, review and manage guidance for the Sustainable Farming Incentive and related schemes, all in one place.</p>
+  </div>
+</div>
+
+<div class="govuk-grid-row govuk-!-margin-top-6">
   <div class="govuk-grid-column-two-thirds">
 
-    <form method="post" action="/">
+    <h2 class="govuk-heading-m">What do you want to do?</h2>
+    <p class="govuk-body">Choose whether you're looking for existing guidance, or need to manage and check guidance documents.</p>
 
-      {{ govukRadios({
-        idPrefix: "destination",
-        name: "destination",
-        fieldset: {
-          legend: {
-            text: "What do you want to do?",
-            
-            isPageHeading: true,
-            classes: "govuk-fieldset__legend--l"
-          }
-        },
-        items: [
-          {
-            value: "find",
-            text: "Find and locate guidance",
-            hint: { text: "Search for and view existing guidance documents" }
-          },
-          {
-            value: "manage",
-            text: "Guidance document management",
-            hint: { text: "Upload new guidance, migrate existing documents, or review and edit content" }
-          }
-        ]
-      }) }}
+    <div class="app-card">
+      <h3 class="govuk-heading-s app-card__title">
+        <a class="govuk-link app-card__link" href="/find-guidance">Find and locate guidance</a>
+      </h3>
+      <p class="govuk-body app-card__description">
+        Search for and view existing guidance documents
+      </p>
+    </div>
 
-      {{ govukButton({ text: "Continue" }) }}
-
-    </form>
+    <div class="app-card">
+      <h3 class="govuk-heading-s app-card__title">
+        <a class="govuk-link app-card__link" href="/all-guidance-docs">Manage all guidance documents</a>
+      </h3>
+      <p class="govuk-body app-card__description">
+        View, upload and track guidance documents
+      </p>
+    </div>
 
   </div>
 </div>

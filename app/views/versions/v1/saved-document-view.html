@@ -1,0 +1,628 @@
+{#
+  Read-only view of a document saved from an organic search — the "Open"
+  action on the "Saved documents" tab of find-guidance.html. No edit or save
+  controls, and no link into change-review.html or the markdown editor: this
+  is what the document looks like, not a place to work on it.
+
+  `id`, `documentName` and `status` come from app/routes.js, looked up from
+  app/data/saved-documents.js. The section content itself is fixed
+  placeholder text local to this template, one set per document id, since it
+  is presentational rather than something anything else in the prototype
+  needs to share.
+
+  Unlike the Content panel on the markdown editor (partials/markdown-editor-content.html),
+  the links here are real anchors: the document text is plain rendered HTML,
+  not a <textarea>'s opaque value, so the browser can jump to a heading's id
+  on its own with no JavaScript involved. That covers subsection links too.
+
+  Two columns: Content sidebar (scrollable independently, so a long
+  subsection list does not push the rest of the page down) and the main
+  content area — status, title, document search, the document text, and
+  Additional information as one bordered box underneath it rather than a
+  column of its own. Additional information still updates as the reader
+  scrolls — see the IntersectionObserver script below — showing whichever
+  section's own notes are currently in view. Its content per section is
+  duplicated into a <template> near the visible box, so the script has
+  something to swap in without keeping a second copy of the text in
+  JavaScript.
+
+  Each section in the sidebar is collapsed by default: its own link still
+  jumps straight to that section, same as before, but its subsections are
+  hidden behind a separate chevron toggle next to it rather than shown
+  automatically — a link and a disclosure control both being interactive
+  cannot be nested inside one another, so they sit side by side instead of
+  one being wrapped in the other.
+
+  The whole-sidebar show/hide toggle sets an inline display:none on the
+  sidebar column itself, not just its contents, and gives the freed width to
+  the main content column — see the toggle script below for why that has to
+  be inline style rather than the [hidden] attribute or a class.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set statusTags = {
+  "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
+  "Partially updated": { text: "Partially updated", classes: "govuk-tag--orange" },
+  "Out of date": { text: "Out of date", classes: "govuk-tag--red" }
+} %}
+
+{% set documents = {
+
+  "countryside-stewardship-capital-grants": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "This document explains what capital grants are available under Countryside Stewardship, the items they cover, and how to apply for one alongside or separately from an existing agreement."
+        ],
+        subsections: [
+          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of what capital grants pay for and who they're for." },
+          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Sets expectations before you start an application, so you know what's involved." }
+        ],
+        additionalInfo: [
+          "This document only covers capital grants — ongoing management options are covered separately in the main Countryside Stewardship handbook."
+        ]
+      },
+      {
+        id: "whats-covered",
+        heading: "What's covered",
+        paragraphs: [
+          "Capital grants pay towards physical items such as fencing, hedgerow restoration and watercourse fencing, listed in the capital items list. Payment is a fixed rate per item, not a percentage of cost.",
+          "A grant can be claimed alongside an existing Mid Tier or Higher Tier agreement, or on its own with no ongoing management commitment attached."
+        ],
+        subsections: [
+          { id: "whats-covered-eligible-items", heading: "Eligible items", paragraph: "Fencing, hedgerow restoration and watercourse fencing are the most commonly claimed items." },
+          { id: "whats-covered-exclusions", heading: "Exclusions", paragraph: "Routine maintenance of existing infrastructure is not covered — only new capital works." }
+        ],
+        additionalInfo: [
+          "Capital item rates are reviewed annually and can change between application windows."
+        ]
+      },
+      {
+        id: "how-to-apply",
+        heading: "How to apply",
+        paragraphs: [
+          "Applications are submitted through the Rural Payments service, listing the items and quantities you are applying for. Larger items, such as new hedgerows, need a capital works plan or map.",
+          "Applications are assessed in batches, so there is a fixed application window each year rather than a rolling deadline."
+        ],
+        subsections: [
+          { id: "how-to-apply-application-process", heading: "Application process", paragraph: "Submitted through the Rural Payments service within the published application window." },
+          { id: "how-to-apply-supporting-evidence", heading: "Supporting evidence", paragraph: "A capital works plan or map is required for larger items such as new hedgerows." }
+        ],
+        additionalInfo: [
+          "The application window is published separately from the main SFI application dates."
+        ]
+      },
+      {
+        id: "payments",
+        heading: "Payments",
+        paragraphs: [
+          "Payment is made once an item is complete and evidence has been submitted — usually photos and, for some items, a supplier invoice.",
+          "Items must be maintained for a minimum period after payment, set out in the agreement, or the payment may be reclaimed."
+        ],
+        subsections: [
+          { id: "payments-payment-rates", heading: "Payment rates", paragraph: "Set per item, published in the capital items list, and reviewed annually." },
+          { id: "payments-payment-schedule", heading: "Payment schedule", paragraph: "Paid once the item is complete and evidence has been submitted." }
+        ],
+        additionalInfo: [
+          "This document does not cover Higher Tier capital items, which are agreed individually as part of that agreement."
+        ]
+      }
+    ]
+  },
+
+  "basic-payment-scheme-closing-rules": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "The Basic Payment Scheme (BPS) closed to new claims in 2024. This document explains what still applies to farmers with entitlements or open legacy claims."
+        ],
+        subsections: [
+          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of what still applies now BPS has closed to new claims." },
+          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Helps farmers with existing entitlements or open claims understand what happens next." }
+        ],
+        additionalInfo: [
+          "BPS is fully replaced by Environmental Land Management schemes going forward."
+        ]
+      },
+      {
+        id: "closing-timetable",
+        heading: "Closing timetable",
+        paragraphs: [
+          "The final BPS claim window closed in May 2024. No new claims can be submitted, but queries on claims made before closure are still being resolved."
+        ],
+        subsections: [
+          { id: "closing-timetable-final-claim-window", heading: "Final claim window", paragraph: "Closed in May 2024 — no new claims can be submitted after this date." },
+          { id: "closing-timetable-open-queries", heading: "What happens to open queries", paragraph: "Claims made before closure are still being resolved individually." }
+        ],
+        additionalInfo: [
+          "No further claim windows will open — this was the final one."
+        ]
+      },
+      {
+        id: "entitlements",
+        heading: "Entitlements",
+        paragraphs: [
+          "Unused entitlements have no value outside an active claim, and cannot be transferred or sold now the scheme has closed."
+        ],
+        subsections: [
+          { id: "entitlements-entitlement-value", heading: "Entitlement value", paragraph: "Entitlements have no value outside an active claim." },
+          { id: "entitlements-transfers-and-sales", heading: "Transfers and sales", paragraph: "Cannot be transferred or sold now the scheme has closed." }
+        ],
+        additionalInfo: [
+          "Entitlement records are retained for reference even though they can no longer be used."
+        ]
+      },
+      {
+        id: "final-claims-and-appeals",
+        heading: "Final claims and appeals",
+        paragraphs: [
+          "If you believe a final BPS payment was calculated incorrectly, you can still request a review within the standard 60-day appeal window from the date of the decision."
+        ],
+        subsections: [
+          { id: "final-claims-and-appeals-requesting-a-review", heading: "Requesting a review", paragraph: "Available if you believe a final payment was calculated incorrectly." },
+          { id: "final-claims-and-appeals-appeal-timescales", heading: "Appeal timescales", paragraph: "Standard 60-day window from the date of the decision." }
+        ],
+        additionalInfo: [
+          "Historic claim data is retained for 6 years for audit purposes."
+        ]
+      }
+    ]
+  },
+
+  "hedgerow-management-standards": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "This document sets out the management standards that apply to hedgerows under cross compliance and the relevant SFI actions, and when they can be relaxed."
+        ],
+        subsections: [
+          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of the standards that apply to hedgerow management." },
+          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Sets out when cutting restrictions apply and when they can be relaxed." }
+        ],
+        additionalInfo: [
+          "These standards apply whether or not the hedgerow sits within an SFI or Countryside Stewardship agreement."
+        ]
+      },
+      {
+        id: "cutting-and-management-dates",
+        heading: "Cutting and management dates",
+        paragraphs: [
+          "Hedgerows must not be cut between 1 March and 31 August, to protect nesting birds, except where a specific exemption applies — clearing a public right of way, for example."
+        ],
+        subsections: [
+          { id: "cutting-and-management-dates-restricted-period", heading: "Restricted period", paragraph: "No cutting between 1 March and 31 August, to protect nesting birds." },
+          { id: "cutting-and-management-dates-exemptions", heading: "Exemptions", paragraph: "Clearing a public right of way is one example of a permitted exception." }
+        ],
+        additionalInfo: [
+          "Some counties have byelaws with earlier cutting restrictions than the national dates above."
+        ]
+      },
+      {
+        id: "buffer-strips",
+        heading: "Buffer strips",
+        paragraphs: [
+          "A buffer strip must be maintained alongside a hedgerow next to arable land. Its minimum width is set by whichever specific action or cross compliance rule applies."
+        ],
+        subsections: [
+          { id: "buffer-strips-minimum-width", heading: "Minimum width", paragraph: "Set by whichever specific action or cross compliance rule applies." },
+          { id: "buffer-strips-where-they-apply", heading: "Where buffer strips apply", paragraph: "Required alongside a hedgerow next to arable land." }
+        ],
+        additionalInfo: [
+          "Buffer strip widths can vary between actions — check the specific one that applies to your agreement."
+        ]
+      },
+      {
+        id: "record-keeping-and-enforcement",
+        heading: "Record keeping and enforcement",
+        paragraphs: [
+          "Keep a simple record of cutting dates and any exemption used. Repeated breaches can affect payments across every scheme claimed on the holding, not just one action."
+        ],
+        subsections: [
+          { id: "record-keeping-and-enforcement-what-to-record", heading: "What to record", paragraph: "Cutting dates and any exemption used, kept as a simple record." },
+          { id: "record-keeping-and-enforcement-consequences", heading: "Consequences of a breach", paragraph: "Repeated breaches can affect payments across every scheme on the holding." }
+        ],
+        additionalInfo: [
+          "Local nature recovery strategies may set additional hedgerow requirements beyond this document."
+        ]
+      }
+    ]
+  },
+
+  "sfi-soil-health-actions": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "This document explains the soil health actions available under SFI 23, what they ask you to do, and how they interact with other actions on the same land."
+        ],
+        subsections: [
+          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of the soil health actions available under SFI 23." },
+          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Explains what each action asks you to do and how they interact." }
+        ],
+        additionalInfo: [
+          "This document does not cover soil actions specific to Countryside Stewardship, which follow a separate handbook."
+        ]
+      },
+      {
+        id: "actions-available",
+        heading: "Actions available",
+        paragraphs: [
+          "Soil health actions include adding organic matter, testing soil structure, and establishing herbal leys, each with its own payment rate and management requirement."
+        ],
+        subsections: [
+          { id: "actions-available-action-types", heading: "Action types", paragraph: "Include adding organic matter, testing soil structure, and establishing herbal leys." },
+          { id: "actions-available-payment-rates", heading: "Payment rates", paragraph: "Each action has its own rate and management requirement." }
+        ],
+        additionalInfo: [
+          "Actions can usually be combined with other SFI actions on the same parcel."
+        ]
+      },
+      {
+        id: "evidence-you-need-to-keep",
+        heading: "Evidence you need to keep",
+        paragraphs: [
+          "Keep soil test results and a simple record of any organic matter added, dated and located to the parcel it relates to."
+        ],
+        subsections: [
+          { id: "evidence-you-need-to-keep-soil-test-results", heading: "Soil test results", paragraph: "Keep dated results for each parcel the action applies to." },
+          { id: "evidence-you-need-to-keep-organic-matter-records", heading: "Records of organic matter added", paragraph: "Note what was added, when, and to which parcel." }
+        ],
+        additionalInfo: [
+          "Soil testing frequency requirements are reviewed as part of the annual scheme update."
+        ]
+      },
+      {
+        id: "combining-with-other-actions",
+        heading: "Combining with other actions",
+        paragraphs: [
+          "Most soil health actions can be combined with other SFI actions on the same parcel, as long as the combined management requirements do not conflict."
+        ],
+        subsections: [
+          { id: "combining-with-other-actions-compatible-actions", heading: "Compatible actions", paragraph: "Most soil health actions can be combined on the same parcel." },
+          { id: "combining-with-other-actions-where-requirements-conflict", heading: "Where requirements conflict", paragraph: "Check the combined management requirements before combining actions." }
+        ],
+        additionalInfo: [
+          "Check the combined management requirements before adding a new action to a parcel already in another."
+        ]
+      }
+    ]
+  },
+
+  "higher-tier-stewardship-options": {
+    sections: [
+      {
+        id: "introduction",
+        heading: "Introduction",
+        paragraphs: [
+          "This document gives an overview of the options available under a Higher Tier Countryside Stewardship agreement, and how they differ from Mid Tier."
+        ],
+        subsections: [
+          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of what Higher Tier offers compared with Mid Tier." },
+          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Helps you decide whether Higher Tier is the right fit before an expression of interest." }
+        ],
+        additionalInfo: [
+          "Existing Mid Tier agreements can sometimes be uplifted to Higher Tier without starting a new application."
+        ]
+      },
+      {
+        id: "who-higher-tier-is-for",
+        heading: "Who Higher Tier is for",
+        paragraphs: [
+          "Higher Tier is aimed at land with the highest environmental value, such as sites within a protected landscape or with significant habitat already present."
+        ],
+        subsections: [
+          { id: "who-higher-tier-is-for-high-value-land", heading: "Land with high environmental value", paragraph: "Sites with significant habitat already present are a good fit." },
+          { id: "who-higher-tier-is-for-protected-landscapes", heading: "Protected landscapes", paragraph: "Land within a protected landscape is often prioritised." }
+        ],
+        additionalInfo: [
+          "Not all high-value land automatically qualifies — an adviser assessment is still required."
+        ]
+      },
+      {
+        id: "how-options-are-agreed",
+        heading: "How options are agreed",
+        paragraphs: [
+          "Unlike Mid Tier, Higher Tier options are agreed individually with an adviser rather than chosen from a fixed list, based on a site visit."
+        ],
+        subsections: [
+          { id: "how-options-are-agreed-adviser-site-visit", heading: "Adviser site visit", paragraph: "Options are worked out together during a site visit, not chosen from a list." },
+          { id: "how-options-are-agreed-individually-agreed-options", heading: "Individually agreed options", paragraph: "Tailored to the land rather than a standard package." }
+        ],
+        additionalInfo: [
+          "Applying for Higher Tier usually starts with an expression of interest rather than a full application."
+        ]
+      },
+      {
+        id: "agreement-length-and-review",
+        heading: "Agreement length and review",
+        paragraphs: [
+          "Higher Tier agreements typically run for 10 years, with a formal review at the mid-point to check the agreed options are still appropriate."
+        ],
+        subsections: [
+          { id: "agreement-length-and-review-10-year-term", heading: "10-year term", paragraph: "Higher Tier agreements typically run for 10 years." },
+          { id: "agreement-length-and-review-mid-point-review", heading: "Mid-point review", paragraph: "A formal check that agreed options are still appropriate." }
+        ],
+        additionalInfo: [
+          "A poor mid-point review does not automatically end the agreement, but may require an action plan."
+        ]
+      }
+    ]
+  }
+
+} %}
+
+{% set document = documents[id] if documents[id] else documents["countryside-stewardship-capital-grants"] %}
+
+{% set pageName = documentName %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    {#
+      Lives outside the column it controls, rather than inside it, so it is
+      still there to click "Show content" once that column is fully
+      collapsed — see the toggle script below, which hides
+      #document-content-panel outright rather than just its contents.
+    #}
+    <button
+      type="button"
+      class="app-document-content__toggle"
+      data-content-toggle
+      aria-expanded="true"
+      aria-controls="document-content-panel">Hide content</button>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+
+  <div class="govuk-grid-column-one-quarter" id="document-content-panel" data-content-panel>
+
+    <div class="app-document-content__scroll">
+      <h2 class="govuk-heading-m">Content</h2>
+      <nav aria-label="Content">
+        <ul class="app-document-content__nav">
+          {% for section in document.sections %}
+            <li class="app-document-content__nav-item">
+              <div class="app-document-content__section-row">
+                <a class="govuk-link app-document-content__nav-link" href="#{{ section.id }}">{{ section.heading }}</a>
+                {% if section.subsections.length %}
+                  <button
+                    type="button"
+                    class="app-document-content__section-toggle"
+                    data-section-toggle
+                    aria-expanded="false"
+                    aria-controls="content-sub-{{ section.id }}"
+                    aria-label="Show subsections for {{ section.heading }}">
+                    <span class="app-document-content__chevron" aria-hidden="true"></span>
+                  </button>
+                {% endif %}
+              </div>
+              {% if section.subsections.length %}
+                <ul class="app-document-content__subnav" id="content-sub-{{ section.id }}" hidden>
+                  {% for subsection in section.subsections %}
+                    <li class="app-document-content__subnav-item">
+                      <a class="govuk-link app-document-content__subnav-link" href="#{{ subsection.id }}">{{ subsection.heading }}</a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
+
+  </div>
+
+  <div class="govuk-grid-column-three-quarters" data-document-text-column>
+
+    <div class="govuk-!-margin-bottom-4">
+      {{ govukTag(statusTags[status]) }}
+    </div>
+
+    <h1 class="govuk-heading-l">{{ documentName }}</h1>
+
+    <form class="app-document-search" data-document-search-form>
+      <div class="govuk-form-group govuk-!-margin-bottom-0 app-document-search__input">
+        <label class="govuk-label govuk-label--s" for="document-search">Search for information</label>
+        <input class="govuk-input" id="document-search" name="documentSearch" type="text" data-document-search-input>
+      </div>
+      <button type="submit" class="govuk-button govuk-!-margin-bottom-0" data-document-search-button>Search</button>
+    </form>
+
+    <div class="app-document-text" data-document-text>
+      {% for section in document.sections %}
+        <h2 class="govuk-heading-m" id="{{ section.id }}">{{ section.heading }}</h2>
+        {% for paragraph in section.paragraphs %}
+          <p class="govuk-body">{{ paragraph }}</p>
+        {% endfor %}
+        {% for subsection in section.subsections %}
+          <h3 class="govuk-heading-s" id="{{ subsection.id }}">{{ subsection.heading }}</h3>
+          <p class="govuk-body">{{ subsection.paragraph }}</p>
+        {% endfor %}
+      {% endfor %}
+    </div>
+
+    {#
+      Initial content matches document.sections[0], the same section the
+      IntersectionObserver script below would pick on load if it fired
+      immediately — so there is nothing to visually update until the reader
+      actually scrolls past the first section.
+    #}
+    <div class="app-additional-info-panel" data-additional-info>
+      <h3 class="govuk-heading-s">Additional information</h3>
+      {% for note in document.sections[0].additionalInfo %}
+        <p class="govuk-body">{{ note }}</p>
+      {% endfor %}
+    </div>
+
+    {% for section in document.sections %}
+      <template data-info-for="{{ section.id }}">
+        <h3 class="govuk-heading-s">Additional information</h3>
+        {% for note in section.additionalInfo %}
+          <p class="govuk-body">{{ note }}</p>
+        {% endfor %}
+      </template>
+    {% endfor %}
+
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    // Collapses the Content column to nothing — not just its contents —
+    // and gives the freed width to the document text column, rather than
+    // leaving an empty quarter-width gap where Content used to be.
+    document.querySelectorAll('[data-content-toggle]').forEach(function (button) {
+      var panel = document.getElementById(button.getAttribute('aria-controls'))
+      var textColumn = document.querySelector('[data-document-text-column]')
+
+      button.addEventListener('click', function () {
+        var expanded = button.getAttribute('aria-expanded') === 'true'
+
+        button.setAttribute('aria-expanded', String(!expanded))
+        button.textContent = expanded ? 'Show content' : 'Hide content'
+
+        // Inline style rather than [hidden], so this cannot be overridden by
+        // the govuk-grid-column-* width class still set on the same element.
+        panel.style.display = expanded ? 'none' : ''
+
+        if (textColumn) {
+          textColumn.classList.toggle('govuk-grid-column-three-quarters', expanded)
+          textColumn.classList.toggle('govuk-grid-column-full', !expanded)
+        }
+      })
+    })
+
+    // Each section in the sidebar starts collapsed; this reveals its
+    // subsections without affecting the section's own link next to it.
+    document.querySelectorAll('[data-section-toggle]').forEach(function (button) {
+      var target = document.getElementById(button.getAttribute('aria-controls'))
+      if (!target) return
+
+      button.addEventListener('click', function () {
+        var expanded = button.getAttribute('aria-expanded') === 'true'
+
+        button.setAttribute('aria-expanded', String(!expanded))
+        target.hidden = expanded
+      })
+    })
+
+    // Wraps every match of the search term in the document text in a <mark>,
+    // and scrolls to the first one. A straightforward text-node walk and
+    // wrap — not a full search engine, just enough to find a word on a page
+    // long enough that scanning it by eye is slow.
+    (function () {
+      var form = document.querySelector('[data-document-search-form]')
+      var input = document.querySelector('[data-document-search-input]')
+      var documentText = document.querySelector('[data-document-text]')
+      if (!form || !input || !documentText) return
+
+      function clearHighlights () {
+        documentText.querySelectorAll('mark[data-search-highlight]').forEach(function (mark) {
+          var text = document.createTextNode(mark.textContent)
+          mark.replaceWith(text)
+        })
+        documentText.normalize()
+      }
+
+      function highlight (query) {
+        clearHighlights()
+        if (!query) return []
+
+        var lowerQuery = query.toLowerCase()
+        var matches = []
+
+        var walker = document.createTreeWalker(documentText, NodeFilter.SHOW_TEXT, null)
+        var textNodes = []
+        var node
+        while ((node = walker.nextNode())) {
+          if (node.nodeValue.toLowerCase().indexOf(lowerQuery) !== -1) textNodes.push(node)
+        }
+
+        textNodes.forEach(function (textNode) {
+          var text = textNode.nodeValue
+          var lowerText = text.toLowerCase()
+          var fragment = document.createDocumentFragment()
+          var lastIndex = 0
+          var index = lowerText.indexOf(lowerQuery)
+
+          while (index !== -1) {
+            if (index > lastIndex) {
+              fragment.appendChild(document.createTextNode(text.slice(lastIndex, index)))
+            }
+
+            var mark = document.createElement('mark')
+            mark.className = 'app-document-search-highlight'
+            mark.setAttribute('data-search-highlight', 'true')
+            mark.textContent = text.slice(index, index + query.length)
+            fragment.appendChild(mark)
+            matches.push(mark)
+
+            lastIndex = index + query.length
+            index = lowerText.indexOf(lowerQuery, lastIndex)
+          }
+
+          if (lastIndex < text.length) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex)))
+          }
+
+          textNode.parentNode.replaceChild(fragment, textNode)
+        })
+
+        return matches
+      }
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault()
+
+        var matches = highlight(input.value.trim())
+        if (matches.length) matches[0].scrollIntoView({ block: 'center' })
+      })
+    })()
+
+    // Swaps the Additional information box's content to match whichever
+    // top-level section is currently in view in the scrollable document
+    // text — root is that text container itself, not the viewport, since it
+    // scrolls inside its own fixed-height box rather than the page scrolling.
+    var textContainer = document.querySelector('.app-document-text')
+    var infoPanel = document.querySelector('[data-additional-info]')
+
+    if (textContainer && infoPanel && 'IntersectionObserver' in window) {
+      var headings = textContainer.querySelectorAll(':scope > h2[id]')
+
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return
+
+          var template = document.querySelector('template[data-info-for="' + entry.target.id + '"]')
+          if (template) infoPanel.innerHTML = template.innerHTML
+        })
+      }, {
+        root: textContainer,
+        // Treats a section as "current" once it has scrolled into the top
+        // 30% of the text panel, rather than waiting for it to fill the
+        // whole box — the next heading down is usually already visible too.
+        rootMargin: '0px 0px -70% 0px',
+        threshold: 0
+      })
+
+      headings.forEach(function (heading) { observer.observe(heading) })
+    }
+  </script>
+{% endblock %}

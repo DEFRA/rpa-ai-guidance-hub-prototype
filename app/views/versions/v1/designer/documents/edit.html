@@ -1,0 +1,204 @@
+{#
+  The markdown editor.
+
+  Side by side: markdown on the left, preview on the right, scrolling together.
+  GOV.UK's own editor (alphagov/content-publisher) toggles between the two
+  instead, but its documents are short guidance pages. These are 10 to 100 pages
+  and the designer is working to a list of issues at specific locations, so
+  seeing the section they are editing rendered next to the markdown is the point
+  — toggling would mean losing your place on every check.
+
+  The panes are locked to the same height and scroll in proportion, so the
+  preview follows the markdown. Jumping to a section or an issue moves both.
+
+  Issues are summarised above the panes, and set out in full on the page before
+  this one.
+
+  Toolbar matches GOV.UK's own editor — heading 2, heading 3, link, numbered
+  list, bullets and an image insert. There is deliberately no bold: emphasis in
+  guidance should come from structure, and bold is the first thing a converted
+  Word document arrives covered in.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+
+{% set pageName = "Edit document" %}
+
+{#
+  Editing is the one task in this service that needs more than the 960px the
+  Design System sets by default — two panes at that width leave about 465px
+  each, which is too narrow to read markdown and its output side by side.
+  $govuk-page-width is a documented Design System setting and this widens it for
+  this page only; every other page keeps the default.
+#}
+{% set bodyClasses = "app-template--wide" %}
+
+{% set toolbarButtons = [
+  { action: "h2", label: "H2", title: "Heading level 2" },
+  { action: "h3", label: "H3", title: "Heading level 3" },
+  { action: "bullets", label: "Bullets", title: "Bulleted list" },
+  { action: "numbers", label: "Numbers", title: "Numbered list" },
+  { action: "link", label: "Link", title: "Link" },
+  { action: "image", label: "Image", title: "Insert an image" }
+] %}
+
+{% set worklistHtml %}
+  <div data-editor-worklist></div>
+{% endset %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <span class="govuk-caption-l">Draft &middot; {{ library.current.pages }} pages</span>
+    <h1 class="govuk-heading-l">{{ library.current.name }}</h1>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {# Summary first, then the editor. Counts only — the full breakdown is on
+       the quality issues page, and the expandable list has the locations. #}
+    <div class="app-issue-bar">
+      <div data-editor-summary></div>
+      <p class="govuk-body-s app-issue-bar__note">
+        None of these stop you saving or sending this document for approval.
+        The counts update as you edit.
+        <a class="govuk-link" href="/v1/designer/documents/issues">See the full summary</a>.
+      </p>
+      {{ govukDetails({
+        summaryText: "Show where the issues are",
+        html: worklistHtml
+      }) }}
+    </div>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <form method="post" action="/v1/designer/documents">
+
+      <div class="app-editor" data-module="app-editor">
+
+        <div class="app-editor__head">
+
+          <div class="app-editor__toolbar" role="group" aria-label="Formatting">
+            {% for button in toolbarButtons %}
+              <button
+                type="button"
+                class="app-editor__toolbar-button"
+                data-md="{{ button.action }}"
+                title="{{ button.title }}"
+                aria-label="{{ button.title }}">{{ button.label }}</button>
+            {% endfor %}
+          </div>
+
+          <div class="app-editor__head-right">
+            {{ govukSelect({
+              id: "outline",
+              name: "outline",
+              label: { text: "Jump to a section", classes: "govuk-visually-hidden" },
+              items: [],
+              formGroup: { classes: "govuk-!-margin-bottom-0" },
+              classes: "app-editor__outline",
+              attributes: { "data-editor-outline": true }
+            }) }}
+
+            <a
+              class="govuk-link app-editor__preview-link"
+              href="/v1/designer/documents/preview"
+              target="_blank"
+              rel="noopener"
+              data-editor-preview-link>Open preview in a new tab</a>
+          </div>
+
+        </div>
+
+        <div class="app-editor__image-panel" data-editor-image-panel hidden>
+          <div class="govuk-grid-row">
+            <div class="govuk-grid-column-one-half">
+              {{ govukInput({
+                id: "image-file",
+                name: "imageFile",
+                label: { text: "Image file name", classes: "govuk-label--s" },
+                attributes: { "data-editor-image-file": true }
+              }) }}
+            </div>
+            <div class="govuk-grid-column-one-half">
+              {{ govukInput({
+                id: "image-alt",
+                name: "imageAlt",
+                label: { text: "Describe the image", classes: "govuk-label--s" },
+                hint: { text: "So people using a screen reader do not miss it." },
+                attributes: { "data-editor-image-alt": true }
+              }) }}
+            </div>
+          </div>
+          {# type must be a top-level param — govukButton defaults to submit,
+             and passing it via attributes leaves it submitting the form. #}
+          {{ govukButton({
+            text: "Insert image",
+            type: "button",
+            classes: "govuk-button--secondary govuk-!-margin-bottom-0",
+            attributes: { "data-editor-image-insert": true }
+          }) }}
+        </div>
+
+        <div class="app-editor__panes">
+
+          <div class="app-editor__pane">
+            <h2 class="app-editor__pane-label" id="markdown-label">Markdown</h2>
+            <label class="govuk-visually-hidden" for="markdown">Markdown</label>
+            <textarea
+              class="govuk-textarea app-editor__input"
+              id="markdown"
+              name="markdown"
+              spellcheck="true"
+              data-editor-input>{{ document.markdown }}</textarea>
+          </div>
+
+          <div class="app-editor__pane">
+            <h2 class="app-editor__pane-label" id="preview-label">Preview</h2>
+            <div
+              class="app-editor__preview app-markdown-preview"
+              data-editor-preview
+              role="region"
+              aria-labelledby="preview-label"
+              tabindex="0"></div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <p class="govuk-body">
+      This document is a draft. Sending it for approval passes it to an owner,
+      who is the only person who can publish it.
+    </p>
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Save draft" }) }}
+      {{ govukButton({ text: "Send for approval", classes: "govuk-button--secondary", href: "/v1/designer/documents" }) }}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

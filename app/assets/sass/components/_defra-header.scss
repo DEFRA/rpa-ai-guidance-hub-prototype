@@ -64,6 +64,16 @@
   }
 }
 
+// Sits in the grid's third (auto) column, already reserved to the right of
+// the service name column — so it lands top-right without changing the
+// layout of anything else in the header.
+.defra-header__sign-in {
+  justify-self: end;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .defra-header__inner {
     grid-template-columns: auto 1fr;
@@ -77,6 +87,14 @@
 
   .defra-header__logo {
     height: 45px;
+  }
+
+  // Only two columns exist at this width, so pin sign-in to its own row
+  // rather than letting it overlap the service name in the second column.
+  .defra-header__sign-in {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: end;
   }
 }
 

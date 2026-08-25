@@ -1,0 +1,156 @@
+{#
+  One finding, in the step-through sub-journey.
+
+  Modelled on the POC front end (DEFRA/ai-uc-rpa-guidance-fe):
+
+  - components/finding-detail — a stable "Finding N of M" heading, the finding
+    itself as the lede, a summary list of severity/location/why it matters/what
+    to do, and the quoted text as an inset block below.
+  - components/feedback-form — the verdict split across two forms rather than a
+    radio group. The verdict that needs no justification is a single click; the
+    two that do sit next to a comment box. A details block explains what each
+    one means, because the difference between "won't fix" and "false positive"
+    matters and is not obvious.
+
+  Verdicts here are about the document rather than the model, so the POC's
+  "To fix" becomes "Fixed" — the designer is recording what they did, not
+  requesting work. "False positive" and "Won't fix" keep their meaning.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageName = "Finding " + position + " of " + total %}
+
+{% set detailRows = [
+  { key: { text: "Severity" }, value: { html: govukTag(finding.severityTag) } },
+  { key: { text: "Rule" }, value: { text: finding.ruleId + " — " + finding.ruleName } },
+  { key: { text: "Requirement" }, value: { text: finding.requirement } },
+  { key: { text: "Location" }, value: { text: finding.section if finding.section == "Whole document" else finding.section + " · line " + finding.line } },
+  { key: { text: "Why it matters" }, value: { text: finding.whyItMatters } },
+  { key: { text: "What to do" }, value: { text: finding.recommendation } }
+] %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">{{ library.current.name }}</span>
+    <h1 class="govuk-heading-l">Finding {{ position }} of {{ total }}</h1>
+
+    <p class="govuk-body-l">{{ finding.title }}</p>
+
+    {{ govukSummaryList({ rows: detailRows }) }}
+
+    {% if finding.quote %}
+      <h2 class="govuk-heading-s">In the document</h2>
+      <blockquote class="govuk-inset-text">{{ finding.quote }}</blockquote>
+    {% endif %}
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/v1/designer/documents/edit?line={{ finding.line }}">
+        Open the editor at this line
+      </a>
+    </p>
+
+    {% if finding.verdict %}
+
+      {{ govukNotificationBanner({
+        type: "success",
+        titleText: "Verdict recorded",
+        html: 'You marked this finding as <strong>' + finding.verdictTag.text + '</strong>.'
+      }) }}
+
+      {% if finding.comment %}
+        <p class="govuk-body"><strong>Your comment:</strong> {{ finding.comment }}</p>
+      {% endif %}
+
+      <p class="govuk-body">
+        <a class="govuk-link" href="/v1/designer/documents/findings">Go to the next finding without a verdict</a>
+      </p>
+
+    {% else %}
+
+      <h2 class="govuk-heading-m">What do you want to do with this finding?</h2>
+
+      <details class="govuk-details govuk-!-margin-bottom-4">
+        <summary class="govuk-details__summary">
+          <span class="govuk-details__summary-text">What the verdicts mean</span>
+        </summary>
+        <div class="govuk-details__text">
+          <dl class="govuk-body">
+            <dt class="govuk-!-font-weight-bold">Fixed</dt>
+            <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-3">
+              You have changed the document so it meets the rule.
+            </dd>
+
+            <dt class="govuk-!-font-weight-bold">Won't fix</dt>
+            <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-3">
+              The finding is right, but the content can stand as it is. Say why.
+            </dd>
+
+            <dt class="govuk-!-font-weight-bold">False positive</dt>
+            <dd class="govuk-!-margin-left-0 govuk-!-margin-bottom-0">
+              The finding is wrong, or its severity is wrong. Say why, so the
+              checks can be improved.
+            </dd>
+          </dl>
+        </div>
+      </details>
+
+      {# Marking something fixed needs no justification, so it is one click. #}
+      <form method="post" action="/v1/designer/documents/findings/{{ finding.id }}">
+        {{ govukButton({ text: "Fixed", name: "verdict", value: "fixed" }) }}
+      </form>
+
+      {# The other two benefit from an explanation, so they share a comment. #}
+      <form method="post" action="/v1/designer/documents/findings/{{ finding.id }}">
+        {{ govukCharacterCount({
+          name: "comment",
+          id: "comment",
+          maxlength: 500,
+          rows: 3,
+          label: { text: "Comment (optional)", classes: "govuk-label--s" },
+          hint: { text: "Explain why this will not be fixed, or why the finding is wrong." }
+        }) }}
+
+        <div class="govuk-button-group">
+          {{ govukButton({
+            text: "Won't fix",
+            name: "verdict",
+            value: "wont_fix",
+            classes: "govuk-button--secondary"
+          }) }}
+          {{ govukButton({
+            text: "False positive",
+            name: "verdict",
+            value: "false_positive",
+            classes: "govuk-button--secondary"
+          }) }}
+        </div>
+      </form>
+
+    {% endif %}
+
+    <nav class="app-finding-nav" aria-label="Findings">
+      {% if previousFinding %}
+        <a class="govuk-link" href="/v1/designer/documents/findings/{{ previousFinding.id }}">Previous finding</a>
+      {% endif %}
+      {% if nextFinding %}
+        <a class="govuk-link app-finding-nav__next" href="/v1/designer/documents/findings/{{ nextFinding.id }}">Next finding</a>
+      {% endif %}
+    </nav>
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/v1/designer/documents/issues">Back to all findings</a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

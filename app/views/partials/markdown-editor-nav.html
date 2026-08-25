@@ -1,0 +1,40 @@
+{#
+  The Content list for the simpler markdown editor's textarea (see
+  partials/markdown-editor-editor.html). Split out from
+  partials/markdown-editor-content.html so a page can lay the nav and the
+  editor out separately — guidance-document-edit.html keeps this list
+  outside its Edit/Preview tabs entirely, rather than inside a tab panel with
+  the editor as markdown-editor-content.html's own side-by-side pairing does.
+
+  Not real anchor links: a plain <textarea> has no way to anchor into its own
+  value, since browsers treat it as opaque text rather than markup. Clicking
+  a section instead scrolls and selects that line in the textarea — the same
+  idea as goToLine() in the full editor (app/assets/javascripts/application.js),
+  just without everything else that depends on it. Line numbers are fixed
+  here because the markdown is fixed placeholder content. The click handling
+  itself lives centrally in application.js ("Section navigation on the
+  simpler markdown editor"), scoped via data-target rather than assuming
+  there is only one editor on the page, so it works wherever this nav ends up
+  relative to the textarea it points at.
+#}
+
+{% set sections = [
+  { name: "Introduction", line: 1 },
+  { name: "Eligibility", line: 7 },
+  { name: "How to apply", line: 15 },
+  { name: "Payments", line: 23 },
+  { name: "Reviews", line: 31 }
+] %}
+
+<nav aria-label="Content" data-module="app-section-nav" data-target="#markdown-editor">
+  <ul class="app-markdown-editor__nav">
+    {% for section in sections %}
+      <li class="app-markdown-editor__nav-item">
+        <a
+          class="govuk-link app-markdown-editor__nav-link"
+          href="#"
+          data-line="{{ section.line }}">{{ section.name }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+</nav>

@@ -1,0 +1,58 @@
+{#
+  The outcome when the virus scan rejects the file.
+
+  CDP Uploader can reject an upload outright (DEFRA/cdp-uploader, "rejected file
+  (virus) callback"), so this will happen. It is not the designer's fault and
+  the page should not read as though it is — a shared network drive of old Word
+  documents will trip a scanner sooner or later.
+
+  The file never reached the hub, which is worth saying plainly: the designer's
+  next question is whether anything was stored.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "File not uploaded" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">You cannot upload this file</h1>
+
+    <p class="govuk-body">
+      The virus check found a problem with
+      <strong>{{ library.current.name }}.docx</strong>, so it was not uploaded.
+      Nothing has been added to the hub and the file has been deleted.
+    </p>
+
+    <h2 class="govuk-heading-m">What to do next</h2>
+
+    <ol class="govuk-list govuk-list--number">
+      <li>Check the file on your own computer using Defra antivirus.</li>
+      <li>
+        If it is clean, save a fresh copy from Word and upload that instead.
+        Older files from shared drives sometimes carry macros that the scanner
+        rejects.
+      </li>
+      <li>
+        If the problem continues, report it to the IT service desk. Do not email
+        the file to anyone.
+      </li>
+    </ol>
+
+    {{ govukButton({
+      text: "Upload a different file",
+      href: "/v1/designer/migrate/single/upload"
+    }) }}
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/v1/designer/documents">Return to your documents</a>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

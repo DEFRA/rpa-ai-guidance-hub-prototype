@@ -1,0 +1,169 @@
+{#
+  "Search organically" from find-guidance-new.html — search by document name,
+  date or type, as opposed to explaining a problem in your own words (see
+  ai-search.html). Not built: the search bar and every filter here are for
+  show, so this always renders the same fixed list from
+  app/data/search-results.js regardless of what is searched or ticked.
+
+  Three of the five results are already in app/data/saved-documents.js — the
+  same document, found again — and two are not. All five link to
+  saved-document-view.html the same way, via /find-guidance/document/:id,
+  which falls back to app/data/search-results.js when an id is not in
+  saved-documents.js. "Save to your searches" does not add anything there for
+  real; it only sends the designer to the tab where it would appear, per the
+  task this page was built from — nothing in this static prototype persists
+  that kind of state.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageName = "Search organically" %}
+
+{% set statusTags = {
+  "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
+  "Partially updated": { text: "Partially updated", classes: "govuk-tag--orange" },
+  "Out of date": { text: "Out of date", classes: "govuk-tag--red" }
+} %}
+
+{% block content %}
+
+<form method="get" action="/v1/find-guidance/organic-search">
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+
+      <h1 class="govuk-heading-l">Search organically</h1>
+
+      <div class="app-search-bar">
+        <div class="app-search-bar__input">
+          {{ govukInput({
+            id: "search",
+            name: "search",
+            label: { text: "Search guidance", classes: "govuk-label--s" }
+          }) }}
+        </div>
+        {{ govukButton({ text: "Search", classes: "govuk-!-margin-bottom-0" }) }}
+      </div>
+
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+
+    <div class="govuk-grid-column-one-third">
+
+      <h2 class="govuk-heading-m">Filters</h2>
+
+      {{ govukCheckboxes({
+        idPrefix: "scheme",
+        name: "scheme",
+        fieldset: {
+          legend: { text: "Scheme or topic", classes: "govuk-fieldset__legend--s" }
+        },
+        items: [
+          { value: "sfi", text: "Sustainable Farming Incentive" },
+          { value: "countryside-stewardship", text: "Countryside Stewardship" },
+          { value: "cross-compliance", text: "Cross Compliance" }
+        ]
+      }) }}
+
+      {{ govukCheckboxes({
+        idPrefix: "document-type",
+        name: "documentType",
+        fieldset: {
+          legend: { text: "Document type", classes: "govuk-fieldset__legend--s" }
+        },
+        items: [
+          { value: "guidance-document", text: "Guidance document" },
+          { value: "form", text: "Form" },
+          { value: "policy", text: "Policy" }
+        ]
+      }) }}
+
+      {{ govukRadios({
+        idPrefix: "date-updated",
+        name: "dateUpdated",
+        fieldset: {
+          legend: { text: "Date updated", classes: "govuk-fieldset__legend--s" }
+        },
+        items: [
+          { value: "last-week", text: "Last week" },
+          { value: "last-month", text: "Last month" },
+          { value: "last-year", text: "Last year" }
+        ]
+      }) }}
+
+      {{ govukCheckboxes({
+        idPrefix: "status",
+        name: "status",
+        fieldset: {
+          legend: { text: "Status", classes: "govuk-fieldset__legend--s" }
+        },
+        items: [
+          { value: "up-to-date", text: "Up to date" },
+          { value: "partially-updated", text: "Partially updated" },
+          { value: "out-of-date", text: "Out of date" }
+        ]
+      }) }}
+
+      {{ govukButton({
+        text: "Apply filters",
+        classes: "govuk-button--secondary"
+      }) }}
+
+    </div>
+
+    <div class="govuk-grid-column-two-thirds">
+
+      <h2 class="govuk-heading-m app-search-results__count">24 results</h2>
+
+      <div class="app-search-results__sort">
+        <label class="govuk-label app-search-results__sort-label" for="sort">Sort by</label>
+        {{ govukSelect({
+          id: "sort",
+          name: "sort",
+          classes: "app-search-results__sort-select",
+          formGroup: { classes: "govuk-!-margin-bottom-0" },
+          items: [
+            { value: "most-relevant", text: "Most relevant", selected: true },
+            { value: "most-recently-updated", text: "Most recently updated" }
+          ]
+        }) }}
+      </div>
+
+      <ul class="app-search-results">
+        {% for result in results %}
+          <li class="app-search-results__item">
+
+            <h3 class="govuk-heading-s app-search-results__name">
+              <a class="govuk-link" href="/v1/find-guidance/document/{{ result.id }}">{{ result.name }}</a>
+            </h3>
+
+            <p class="govuk-body app-search-results__description">{{ result.description }}</p>
+
+            <div class="app-search-results__meta">
+              {{ govukTag(statusTags[result.status]) }}
+              {{ govukButton({
+                text: "Save to your searches",
+                href: "/v1/find-guidance#saved-documents",
+                classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+              }) }}
+            </div>
+
+          </li>
+        {% endfor %}
+      </ul>
+
+    </div>
+
+  </div>
+
+</form>
+
+{% endblock %}
