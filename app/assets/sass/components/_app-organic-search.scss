@@ -10,6 +10,13 @@
 
 .app-search-bar__input {
   flex: 1 1 auto;
+
+  // The input's form group carries GOV.UK's usual bottom margin, which held
+  // the field 20-30px above the baseline the Search button sits on. Flushing
+  // it lets align-items: flex-end actually line the two up.
+  .govuk-form-group {
+    margin-bottom: 0;
+  }
 }
 
 .app-search-results__count {

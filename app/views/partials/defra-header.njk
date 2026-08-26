@@ -24,11 +24,6 @@
           <span class="govuk-visually-hidden">Department for Environment, Food and Rural Affairs: </span>{{ serviceName }}
         </a>
       </div>
-      {#
-        Not wired up yet — no sign-in page exists, so this is a placeholder
-        href until one is built.
-      #}
-      <a href="#" class="defra-header__sign-in">Sign in</a>
     </div>
   </div>
 </header>
@@ -37,7 +32,8 @@
     <div class="govuk-width-container">
       <ul class="defra-service-navigation__list">
         {% for item in navigation %}
-          <li class="defra-service-navigation__item">
+          {# item.right pushes the item (Sign out, in v3) to the bar's far end #}
+          <li class="defra-service-navigation__item{% if item.right %} defra-service-navigation__item--right{% endif %}">
             <a class="defra-service-navigation__link" href="{{ item.href }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.text }}</a>
           </li>
         {% endfor %}

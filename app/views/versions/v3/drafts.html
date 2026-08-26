@@ -1,0 +1,70 @@
+{#
+  "My drafts" on the v3 top nav — the documents this designer is part way
+  through, pulled from app/data/documents.js (status: Draft) with fixed
+  last-edited dates added in app/routes.js. A guide uploaded this session
+  joins the top of the list, and saving in the editor returns here with the
+  success banner.
+
+  "Continue editing" opens v3's own editor at /v3/guide/:id/edit — the
+  TipTap one with quality checks in its side pane — with ?from=drafts so
+  Back and Cancel return here.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageName = "My drafts" %}
+
+{% set draftRows = [] %}
+{% for draft in drafts %}
+  {% set actionCell %}
+    <a class="govuk-link" href="/v3/guide/{{ draft.id }}/edit?from=drafts">
+      Continue editing<span class="govuk-visually-hidden"> {{ draft.name }}</span>
+    </a>
+  {% endset %}
+  {% set issuesCell %}
+    {% if draft.issues %}
+      {{ govukTag({ text: draft.issues, classes: "govuk-tag--orange" }) }}
+    {% else %}
+      {{ govukTag({ text: "None", classes: "govuk-tag--green" }) }}
+    {% endif %}
+  {% endset %}
+  {% set draftRows = (draftRows.push([
+    { text: draft.name },
+    { text: draft.pages, format: "numeric" },
+    { html: issuesCell, format: "numeric" },
+    { text: draft.lastEdited },
+    { html: actionCell }
+  ]), draftRows) %}
+{% endfor %}
+
+{% block content %}
+
+{% if saved %}
+  {{ govukNotificationBanner({
+    type: "success",
+    text: "Guide saved"
+  }) }}
+{% endif %}
+
+<h1 class="govuk-heading-l">My drafts</h1>
+
+<p class="govuk-body app-v3-prose">
+  Documents you are working on. A draft is only visible in the hub until an
+  owner approves and publishes it.
+</p>
+
+{{ govukTable({
+  head: [
+    { text: "Name", classes: "govuk-!-width-one-half" },
+    { text: "Pages", format: "numeric" },
+    { text: "Quality issues", format: "numeric" },
+    { text: "Last edited" },
+    { html: '<span class="govuk-visually-hidden">Action</span>' }
+  ],
+  rows: draftRows
+}) }}
+
+{% endblock %}

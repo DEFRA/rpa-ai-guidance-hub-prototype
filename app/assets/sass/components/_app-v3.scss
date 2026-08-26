@@ -1,0 +1,634 @@
+// Version 3, which is full width throughout. layouts/v3.html puts .app-v3 on
+// the <body>, and the override below removes the fixed page width from every
+// width container inside it — header, phase banner, main and footer — keeping
+// only the page gutters. Everything else here is the v3 search page: the
+// two-pane search layout, the collapsible filter groups and the recent work
+// cards.
+
+.app-v3 .govuk-width-container {
+  max-width: none;
+  margin-right: govuk-spacing(4);
+  margin-left: govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    margin-right: govuk-spacing(7);
+    margin-left: govuk-spacing(7);
+  }
+
+  @include govuk-media-query($from: desktop) {
+    margin-right: govuk-spacing(9);
+    margin-left: govuk-spacing(9);
+  }
+}
+
+// Reading measure for text-heavy v3 pages (the unauthenticated start page,
+// the document overview) — the page stays full width, but a paragraph should
+// not.
+.app-v3-prose {
+  max-width: 640px;
+}
+
+// -- The unauthenticated front door's hero -----------------------------------
+//
+// A full-bleed Defra green band, following the hero on the Defra AI toolkit
+// (digital.defra.gov.uk/ai-toolkit, .defra-hero / .app-triage__start-*):
+// same green, white text, and a white start button with green text. The
+// negative-margin/calc trick is the same one _app-hero.scss uses to break
+// out of the width container; the negative top margin also swallows the
+// main wrapper's padding so the band sits flush under the phase banner.
+
+.app-v3-hero {
+  background-color: $defra-green;
+  color: $govuk-white;
+  margin-top: -20px;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: govuk-spacing(8) 0;
+
+  @include govuk-media-query($from: tablet) {
+    margin-top: -40px;
+  }
+}
+
+// Re-applies the page gutters the full bleed just discarded — the same
+// widths as the .app-v3 .govuk-width-container override above — so hero
+// content lines up with everything below it.
+.app-v3-hero__inner {
+  margin: 0 govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    margin: 0 govuk-spacing(7);
+  }
+
+  @include govuk-media-query($from: desktop) {
+    margin: 0 govuk-spacing(9);
+    display: flex;
+    gap: govuk-spacing(9);
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+}
+
+.app-v3-hero__content {
+  max-width: 640px;
+}
+
+.app-v3-hero__caption {
+  @include govuk-font($size: 24);
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 govuk-spacing(1);
+}
+
+.app-v3-hero__title,
+.app-v3-hero__description,
+.app-v3-hero__note {
+  color: $govuk-white;
+}
+
+.app-v3-hero__note {
+  margin-bottom: 0;
+}
+
+// The AI toolkit's start button, colour for colour: white on the green band,
+// green text, a grey underside shadow, and the standard GOV.UK focus state.
+.app-v3-hero__start-button.govuk-button--start {
+  background-color: $govuk-white;
+  color: $defra-green;
+  box-shadow: 0 2px 0 #b3b3b3;
+
+  &:hover {
+    background-color: #f2f2f2;
+    color: $defra-green-hover;
+  }
+
+  &:focus {
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+    box-shadow: 0 2px 0 $govuk-black;
+  }
+
+  .govuk-button__start-icon {
+    fill: currentcolor;
+  }
+}
+
+// The bordered panel beside the sign-in pitch — the same translucent-border
+// treatment as the toolkit hero's "what's new" box.
+.app-v3-hero__panel {
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  padding: govuk-spacing(4) govuk-spacing(5);
+  margin-top: govuk-spacing(6);
+
+  @include govuk-media-query($from: desktop) {
+    flex: 0 0 400px;
+    margin-top: 0;
+  }
+
+  h2,
+  p,
+  li {
+    color: $govuk-white;
+  }
+
+  ul {
+    margin-bottom: 0;
+  }
+}
+
+// -- The search box ---------------------------------------------------------
+//
+// A compact search: the prompt sits inside the field as a placeholder (a
+// visually hidden label still names it), with a green magnifying-glass
+// submit button attached to its right — plus, in the same row, "Add new",
+// the way into creating or uploading guidance.
+
+.app-search-row {
+  display: flex;
+  align-items: flex-start;
+  gap: govuk-spacing(3);
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-search-box {
+  display: flex;
+  flex: 0 1 720px;
+}
+
+.app-search-box__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-right: none;
+
+  // The button supplies the search affordance, so the input's own right
+  // edge stays open against it.
+  &:focus {
+    z-index: 1;
+  }
+}
+
+.app-search-box__button {
+  flex: 0 0 auto;
+  width: 45px;
+  height: 40px;
+  border: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $defra-green;
+  color: $govuk-white;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $defra-green-hover;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+    background-color: $govuk-yellow;
+    color: $govuk-black;
+  }
+}
+
+// -- The search page's two panes -------------------------------------------
+//
+// The GOV.UK grid's one-third/two-thirds split gets silly at full width, so
+// the filter pane is a fixed column and the results take whatever is left.
+
+.app-v3-search {
+  @include govuk-media-query($from: desktop) {
+    display: flex;
+    gap: govuk-spacing(6);
+    align-items: flex-start;
+  }
+}
+
+// -- The filter pane ---------------------------------------------------------
+//
+// The filter pattern from DEFRA/rpa-guidance-prototype (the guide library's
+// .app-library__* / .app-toggle / .app-filter-tag styles, adapted to this
+// codebase's variables): a link-styled Hide/Show filters toggle above the
+// panes, a facet column that can be hidden to give results the full width,
+// and removable selected-filter tags.
+
+.app-v3-search__filters {
+  @include govuk-media-query($from: desktop) {
+    flex: 0 0 300px;
+  }
+
+  .govuk-form-group {
+    margin-bottom: govuk-spacing(4);
+  }
+}
+
+.app-v3-search__toolbar {
+  margin-bottom: govuk-spacing(3);
+}
+
+// "Hide filters" / "Show filters": styled like a link so it reads as a
+// control, not an action button.
+.app-toggle {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $govuk-link-colour;
+  font-size: 0.9375rem;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-focus-colour;
+    box-shadow: 0 -2px $govuk-focus-colour, 0 4px $govuk-black;
+    text-decoration: none;
+  }
+}
+
+// Collapsing the filters gives the results the full width — the class is
+// toggled on the form by the app-v3-search module in application.js.
+.app-v3-search-form--filters-hidden .app-v3-search__filters {
+  display: none;
+}
+
+.app-v3-search__filter-actions {
+  padding-top: govuk-spacing(1);
+}
+
+// Selected-filter tags: each one removable.
+.app-v3-search__selected {
+  margin-bottom: govuk-spacing(3);
+}
+
+.app-v3-search__tags {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-v3-search__tags li {
+  display: inline-block;
+  margin: 0 govuk-spacing(2) govuk-spacing(2) 0;
+}
+
+.app-filter-tag {
+  display: inline-block;
+  padding: 0 govuk-spacing(2);
+  font-size: 0.875rem;
+  color: $govuk-link-colour;
+  background-color: $govuk-light-grey;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus {
+    color: $govuk-black;
+    background-color: $govuk-focus-colour;
+    box-shadow: 0 -2px $govuk-focus-colour, 0 4px $govuk-black;
+    outline: 3px solid transparent;
+  }
+}
+
+.app-v3-search__results {
+  @include govuk-media-query($from: desktop) {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+// -- The TipTap guide editor -------------------------------------------------
+//
+// guide-edit.html ships a plain markdown textarea; the app-tiptap-editor
+// module in application.js swaps in a TipTap surface and this toolbar when
+// it can. Kept light: a bare row of toolbar buttons and a thin rule around
+// the writing surface, with the version history pane to the right.
+
+.app-guide-edit-layout {
+  @include govuk-media-query($from: desktop) {
+    display: flex;
+    gap: govuk-spacing(8);
+    align-items: flex-start;
+  }
+}
+
+.app-guide-edit-layout__editor {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// The bar above the writing surface: formatting toolbar on the left
+// (enhanced only) and the Version history dropdown on the right. Sticks to
+// the top of the viewport while the document scrolls; the opaque background
+// stops the document showing through while stuck.
+.app-editor-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(3);
+  padding: govuk-spacing(2) 0;
+  background-color: $govuk-white;
+}
+
+.app-tiptap__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(1);
+
+  // display: flex would otherwise override the hidden attribute's UA style.
+  &[hidden] {
+    display: none;
+  }
+}
+
+// The Show/Hide links at the right end of the sticky bar, one per side
+// panel (version history, comments, quality checks). Revealed by the
+// app-editor-panes module; hidden without JavaScript.
+.app-editor-topbar__panes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(4);
+  margin-left: auto;
+
+  &[hidden] {
+    display: none;
+  }
+
+  .app-toggle {
+    white-space: nowrap;
+  }
+}
+
+.app-tiptap__button {
+  min-width: 40px;
+  padding: govuk-spacing(1) govuk-spacing(2);
+  border: 1px solid $govuk-mid-grey;
+  background-color: $govuk-white;
+  color: $govuk-black;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $govuk-light-grey;
+  }
+
+  &[aria-pressed='true'] {
+    background-color: $govuk-black;
+    border-color: $govuk-black;
+    color: $govuk-white;
+  }
+
+  &:focus-visible {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+.app-tiptap__surface {
+  margin-bottom: govuk-spacing(6);
+
+  .ProseMirror {
+    min-height: 420px;
+    padding: govuk-spacing(4);
+    border: 1px solid $govuk-mid-grey;
+    background-color: $govuk-white;
+    outline: none;
+
+    p,
+    ul,
+    ol {
+      margin: 0 0 govuk-spacing(3);
+    }
+
+    h2,
+    h3 {
+      margin: govuk-spacing(4) 0 govuk-spacing(2);
+    }
+
+    ul,
+    ol {
+      padding-left: govuk-spacing(5);
+    }
+  }
+
+  // No yellow focus outline on the writing surface — the caret already
+  // shows where you are, and a permanent outline around a full-page editor
+  // is more noise than signal. The border darkening is the focus cue.
+  .ProseMirror-focused {
+    border-color: $govuk-black;
+  }
+}
+
+// Save guide / Cancel, stuck to the bottom of the viewport the same way the
+// toolbar sticks to the top, so a long document can be saved from anywhere.
+.app-guide-edit-layout__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: govuk-spacing(3) 0;
+  margin-bottom: 0;
+  background-color: $govuk-white;
+  border-top: 1px solid $govuk-light-grey;
+}
+
+// -- The quality checks pane beside the editor -------------------------------
+//
+// One row per finding — a severity dot and the title. The whole row is a
+// button: clicking it scrolls the editor straight to the passage the
+// finding is about (see the app-editor-panes module in application.js).
+
+.app-editor-side {
+  margin-top: govuk-spacing(6);
+
+  @include govuk-media-query($from: desktop) {
+    flex: 0 0 380px;
+    margin-top: 0;
+  }
+}
+
+// The side panels — version history, comments, quality checks. With
+// JavaScript only one renders at a time (see the Show/Hide links in the
+// sticky bar); without it all three stack, so the spacing between them
+// matters.
+.app-side-section {
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-quality-pane__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid $govuk-light-grey;
+}
+
+.app-quality-pane__item {
+  border-bottom: 1px solid $govuk-light-grey;
+}
+
+.app-quality-finding {
+  display: flex;
+  align-items: flex-start;
+  gap: govuk-spacing(2);
+  width: 100%;
+  padding: govuk-spacing(2) 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover .app-quality-finding__title {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+.app-quality-finding__title {
+  @include govuk-font($size: 16);
+  color: $govuk-black;
+}
+
+// A reviewer/approver comment — the same clickable-row treatment as a
+// finding, with author and date above the comment text.
+.app-comment {
+  display: block;
+  width: 100%;
+  padding: govuk-spacing(2) 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover .app-comment__text {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+.app-comment__meta {
+  @include govuk-font($size: 14);
+  display: block;
+  margin-bottom: govuk-spacing(1);
+  color: govuk-colour("dark-grey");
+
+  strong {
+    color: $govuk-black;
+  }
+}
+
+.app-comment__text {
+  @include govuk-font($size: 16);
+  display: block;
+  color: $govuk-black;
+}
+
+// Severity as a dot rather than a tag repeated down the pane — GOV.UK
+// palette colours, matching the severity tags used elsewhere. The severity
+// name itself is in visually hidden text beside the title.
+.app-quality-finding__dot {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+
+  &--critical { background-color: #d4351c; }
+  &--high { background-color: #f47738; }
+  &--medium { background-color: $govuk-yellow; }
+  &--low { background-color: #1d70b8; }
+  &--info { background-color: $govuk-mid-grey; }
+}
+
+
+// The brief highlight over the passage a finding's anchor lands on — an
+// absolutely positioned overlay (see the flash() note in application.js:
+// ProseMirror reverts classes added to its own nodes).
+.app-quality-flash-overlay {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  background-color: rgba(0, 133, 49, 0.15);
+  animation: app-quality-flash 2s ease-out forwards;
+}
+
+@keyframes app-quality-flash {
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+// -- Version history ---------------------------------------------------------
+//
+// The divided list of versions inside the sticky bar's dropdown, each older
+// one restorable (see guide-edit.html).
+
+.app-version-history__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-version-history__item {
+  padding: govuk-spacing(3) 0;
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  &:first-child {
+    border-top: 1px solid $govuk-mid-grey;
+  }
+}
+
+// -- Recent work -------------------------------------------------------------
+//
+// A plain divided list rather than cards: the document name on the left, when
+// it was last opened on the right. Capped at the search bar's width so the
+// two read as one column.
+
+.app-recent-work {
+  margin: 0 0 govuk-spacing(6);
+  padding: 0;
+  list-style: none;
+  max-width: 720px;
+}
+
+.app-recent-work__item {
+  @include govuk-font($size: 19);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: govuk-spacing(4);
+  padding: govuk-spacing(3) 0;
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  &:first-child {
+    border-top: 1px solid $govuk-mid-grey;
+  }
+}
+
+.app-recent-work__date {
+  color: govuk-colour("dark-grey");
+  white-space: nowrap;
+}

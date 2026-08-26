@@ -1,0 +1,29 @@
+{#
+  "Update existing guide" from the chooser (create-guidance.html in this
+  folder) — pick which guide to update. The list is the same fixed set as
+  the search results (app/data/search-results.js), so a guide picked here
+  and a guide found by searching lead to the same editor at
+  /v3/guide/:id/edit.
+#}
+{% extends "layouts/v3.html" %}
+
+{% set pageName = "Update an existing guide" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+  <h1 class="govuk-heading-l">Which guide do you want to update?</h1>
+</div>
+
+<ul class="app-search-results app-v3-prose">
+  {% for guide in guides %}
+    <li class="app-search-results__item">
+      <h2 class="govuk-heading-s app-search-results__name">
+        <a class="govuk-link" href="/v3/guide/{{ guide.id }}/edit">{{ guide.name }}</a>
+      </h2>
+      <p class="govuk-body app-search-results__description govuk-!-margin-bottom-0">{{ guide.description }}</p>
+    </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

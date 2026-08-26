@@ -1,0 +1,53 @@
+{#
+  "My approvals" on the v3 top nav — documents sent to this owner to approve
+  and publish, pulled from app/data/documents.js (status: Awaiting approval)
+  with fixed sender names and dates added in app/routes.js.
+
+  "Review" opens the live guidance document overview and its recommended-
+  changes flow (/guidance-document/:id, see guidance-document.html) — like
+  the editor off My drafts, the edge of what v3 redesigns.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageName = "My approvals" %}
+
+{% set approvalRows = [] %}
+{% for approval in approvals %}
+  {% set actionCell %}
+    <a class="govuk-link" href="{{ approval.href }}">
+      Review<span class="govuk-visually-hidden"> {{ approval.name }}</span>
+    </a>
+  {% endset %}
+  {% set approvalRows = (approvalRows.push([
+    { text: approval.name },
+    { text: approval.pages, format: "numeric" },
+    { text: approval.sentBy },
+    { text: approval.sent },
+    { html: actionCell }
+  ]), approvalRows) %}
+{% endfor %}
+
+{% block content %}
+
+<h1 class="govuk-heading-l">My approvals</h1>
+
+<p class="govuk-body app-v3-prose">
+  Documents waiting for your approval. Approving a document publishes it —
+  the designer who sent it cannot publish it themselves.
+</p>
+
+{{ govukTable({
+  head: [
+    { text: "Name", classes: "govuk-!-width-one-half" },
+    { text: "Pages", format: "numeric" },
+    { text: "Sent by" },
+    { text: "Date sent" },
+    { html: '<span class="govuk-visually-hidden">Action</span>' }
+  ],
+  rows: approvalRows
+}) }}
+
+{% endblock %}

@@ -22,6 +22,18 @@ $defra-green: #008531;
 $defra-green-brand: #00a33b;
 $defra-light-green: #eefdf4;
 
+// Hover state for anything Defra green — the same 20% shade govuk-shade()
+// applies to buttons, precomputed because govuk-frontend's functions are not
+// loaded yet when this file is imported.
+$defra-green-hover: #006a27;
+
+// GOV.UK Frontend's buttons default to GOV.UK green (#00703c), which sat
+// next to the Defra green header, hero and navigation as a second,
+// mismatched green. Setting this here (before GOV.UK Frontend loads) turns
+// every primary and start button Defra green, with hover and shadow shades
+// derived from it automatically.
+$govuk-button-background-colour: $defra-green;
+
 $govuk-white: #ffffff;
 $govuk-black: #0b0c0c;
 $govuk-light-grey: #f3f2f1;

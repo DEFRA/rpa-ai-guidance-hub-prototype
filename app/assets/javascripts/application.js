@@ -546,3 +546,263 @@ window.GOVUKPrototypeKit.documentReady(() => {
 
   target.innerHTML = renderMarkdown(markdown)
 })
+
+// ---------------------------------------------------------------------------
+// v3 search filters
+// ---------------------------------------------------------------------------
+
+// The filter behaviour copied from DEFRA/rpa-guidance-prototype (the guide
+// library module in src/client/javascripts/application.js): changing a facet
+// applies it immediately, which makes the explicit Apply button redundant,
+// and the filter column can be collapsed to give the results the full width.
+// Without JavaScript the Apply button stays and the toggle does nothing.
+window.GOVUKPrototypeKit.documentReady(() => {
+  const searchForm = document.querySelector('[data-module="app-v3-search"]')
+  if (!searchForm) return
+
+  const applyButton = searchForm.querySelector(
+    '[data-module="app-apply-filters"]'
+  )
+  const filterToggle = searchForm.querySelector(
+    '[data-module="app-filter-toggle"]'
+  )
+
+  if (applyButton) {
+    // Filters auto-apply on change with JS on, so the button is redundant.
+    // Remove it rather than set .hidden, which govuk-button's display overrides.
+    applyButton.remove()
+  }
+
+  searchForm
+    .querySelectorAll('input[type="checkbox"], input[type="radio"]')
+    .forEach((box) => {
+      box.addEventListener('change', () => searchForm.submit())
+    })
+
+  if (filterToggle) {
+    filterToggle.addEventListener('click', () => {
+      const hidden = searchForm.classList.toggle(
+        'app-v3-search-form--filters-hidden'
+      )
+      filterToggle.setAttribute('aria-expanded', String(!hidden))
+      filterToggle.textContent = hidden ? 'Show filters' : 'Hide filters'
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// TipTap guide editor (v3's update-existing-guide flow)
+// ---------------------------------------------------------------------------
+
+// Progressive enhancement over the markdown textarea on guide-edit.html.
+// TipTap is loaded from esm.sh at runtime rather than bundled — the
+// prototype kit has no JS build step — so with no network (or no JS) the
+// import never resolves and the textarea simply stays, which is the basic
+// accessible version working as designed. When TipTap does load, the
+// tiptap-markdown extension keeps the textarea's markdown in sync on every
+// edit, so the form posts exactly what the basic version would.
+window.GOVUKPrototypeKit.documentReady(() => {
+  const mount = document.querySelector('[data-module="app-tiptap-editor"]')
+  if (!mount) return
+
+  const fallback = mount.querySelector('[data-tiptap-fallback]')
+  const textarea = fallback && fallback.querySelector('textarea')
+  const toolbar = mount.querySelector('[data-tiptap-toolbar]')
+  const surface = mount.querySelector('[data-tiptap-surface]')
+  if (!textarea || !toolbar || !surface) return
+
+  // ?deps pins tiptap-markdown to the same @tiptap/core instance as the
+  // other imports, or its schema checks fail against a duplicate copy.
+  Promise.all([
+    import('https://esm.sh/@tiptap/core@2?deps=@tiptap/pm@2'),
+    import('https://esm.sh/@tiptap/starter-kit@2?deps=@tiptap/core@2,@tiptap/pm@2'),
+    import('https://esm.sh/tiptap-markdown@0.8.10?deps=@tiptap/core@2,@tiptap/pm@2')
+  ])
+    .then(([core, starterKit, markdown]) => {
+      const editor = new core.Editor({
+        element: surface,
+        extensions: [starterKit.default, markdown.Markdown],
+        content: textarea.value,
+        editorProps: {
+          attributes: {
+            role: 'textbox',
+            'aria-multiline': 'true',
+            'aria-label': 'Guide content'
+          }
+        },
+        onUpdate: () => {
+          textarea.value = editor.storage.markdown.getMarkdown()
+        }
+      })
+
+      const commands = {
+        bold: (chain) => chain.toggleBold(),
+        italic: (chain) => chain.toggleItalic(),
+        heading2: (chain) => chain.toggleHeading({ level: 2 }),
+        heading3: (chain) => chain.toggleHeading({ level: 3 }),
+        bulletList: (chain) => chain.toggleBulletList(),
+        orderedList: (chain) => chain.toggleOrderedList(),
+        undo: (chain) => chain.undo(),
+        redo: (chain) => chain.redo()
+      }
+
+      const isActive = {
+        bold: () => editor.isActive('bold'),
+        italic: () => editor.isActive('italic'),
+        heading2: () => editor.isActive('heading', { level: 2 }),
+        heading3: () => editor.isActive('heading', { level: 3 }),
+        bulletList: () => editor.isActive('bulletList'),
+        orderedList: () => editor.isActive('orderedList')
+      }
+
+      toolbar.querySelectorAll('[data-tiptap-command]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const command = commands[button.dataset.tiptapCommand]
+          if (command) command(editor.chain().focus()).run()
+        })
+      })
+
+      // aria-pressed follows the selection, so the toolbar reads back which
+      // formatting applies at the caret.
+      editor.on('transaction', () => {
+        toolbar.querySelectorAll('[aria-pressed]').forEach((button) => {
+          const check = isActive[button.dataset.tiptapCommand]
+          if (check) button.setAttribute('aria-pressed', String(check()))
+        })
+      })
+
+      toolbar.hidden = false
+      surface.hidden = false
+      fallback.hidden = true
+    })
+    .catch(() => {
+      // Offline, or the CDN is unreachable — the markdown textarea stays.
+    })
+})
+
+// ---------------------------------------------------------------------------
+// Quality check anchors (v3 guide editor)
+// ---------------------------------------------------------------------------
+
+// Each finding in the pane beside the editor is one button; clicking it
+// scrolls the editor straight to the passage the finding is about (located
+// by the finding's quoted text, falling back to the markdown line's text)
+// and flashes it — or, if the markdown textarea is still the editor,
+// selects that line instead.
+window.GOVUKPrototypeKit.documentReady(() => {
+  if (!document.querySelector('[data-finding-anchor]')) return
+
+  // The three panels beside the editor — version history, comments and
+  // quality checks — toggled by the link-styled buttons in the sticky bar.
+  // At most one is open at a time: opening one closes the others, and each
+  // link's text flips between Show and Hide. With every panel closed the
+  // side pane disappears and the editor takes the full width. The links
+  // ship hidden; without JavaScript all three panels simply render stacked.
+  const side = document.querySelector('[data-module="app-editor-panes"]')
+  const paneLinks = document.querySelector('[data-pane-links]')
+
+  if (side && paneLinks) {
+    const panes = side.querySelectorAll('[data-editor-pane]')
+    const toggles = paneLinks.querySelectorAll('[data-pane-toggle]')
+    const labels = {
+      versions: 'version history',
+      comments: 'comments',
+      checks: 'quality checks'
+    }
+    let active = 'checks'
+
+    function renderPanes () {
+      panes.forEach((pane) => {
+        pane.hidden = pane.dataset.editorPane !== active
+      })
+      side.hidden = !active
+      toggles.forEach((toggle) => {
+        const name = toggle.dataset.paneToggle
+        toggle.textContent = (name === active ? 'Hide ' : 'Show ') + labels[name]
+        toggle.setAttribute('aria-expanded', String(name === active))
+      })
+    }
+
+    toggles.forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        active = toggle.dataset.paneToggle === active ? null : toggle.dataset.paneToggle
+        renderPanes()
+      })
+    })
+
+    paneLinks.hidden = false
+    renderPanes()
+  }
+
+  const textarea = document.querySelector('[data-tiptap-fallback] textarea')
+
+  // The text a finding should land on: its quote if the rule recorded one,
+  // otherwise the markdown line itself, stripped of list/heading syntax.
+  function findingSnippet (button) {
+    const quote = (button.dataset.findingQuote || '').trim()
+    if (quote) return quote
+
+    const line = Number(button.dataset.findingLine)
+    const raw = (textarea ? textarea.value.split('\n')[line - 1] : '') || ''
+    return raw.replace(/^[#>\-*\d.\s]+/, '').trim().slice(0, 60)
+  }
+
+  // The highlight is an overlay positioned over the passage rather than a
+  // class on the passage itself: ProseMirror owns its DOM and its mutation
+  // observer reverts foreign attribute changes almost immediately, so a
+  // class added to one of its nodes never survives long enough to be seen.
+  function flash (element) {
+    const rect = element.getBoundingClientRect()
+    const overlay = document.createElement('div')
+    overlay.className = 'app-quality-flash-overlay'
+    overlay.style.top = rect.top + window.scrollY - 4 + 'px'
+    overlay.style.left = rect.left + window.scrollX - 8 + 'px'
+    overlay.style.width = rect.width + 16 + 'px'
+    overlay.style.height = rect.height + 8 + 'px'
+    document.body.appendChild(overlay)
+    overlay.addEventListener('animationend', () => overlay.remove())
+  }
+
+  function anchorInSurface (surface, button) {
+    const snippet = findingSnippet(button)
+    if (!snippet) return false
+
+    const blocks = surface.querySelectorAll('p, h1, h2, h3, li')
+    for (const block of blocks) {
+      if (block.textContent.includes(snippet)) {
+        // Instant, not smooth: ProseMirror's own focus and scroll handling
+        // cancels an in-flight smooth scroll, leaving the page where it was.
+        block.scrollIntoView({ block: 'center' })
+        flash(block)
+        return true
+      }
+    }
+    return false
+  }
+
+  function anchorInTextarea (button) {
+    const line = Number(button.dataset.findingLine)
+    const lines = textarea.value.split('\n')
+    const start = lines.slice(0, line - 1).join('\n').length + (line > 1 ? 1 : 0)
+
+    textarea.focus()
+    textarea.setSelectionRange(start, start + (lines[line - 1] || '').length)
+    // Rough but serviceable: put the target line about a third of the way
+    // down the visible box.
+    const lineHeight = textarea.scrollHeight / lines.length
+    textarea.scrollTop = Math.max(0, (line - 1) * lineHeight - textarea.clientHeight / 3)
+  }
+
+  // Delegated from the document, so the anchors work regardless of when the
+  // findings list was shown, hidden or re-rendered.
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-finding-anchor]')
+    if (!button) return
+
+    const surface = document.querySelector('[data-tiptap-surface] .ProseMirror')
+    const surfaceVisible = surface && !surface.closest('[hidden]')
+
+    if (surfaceVisible && anchorInSurface(surface, button)) return
+    if (textarea) anchorInTextarea(button)
+  })
+})
