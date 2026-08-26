@@ -28,33 +28,20 @@
 
 {% set uploadedRows = [] %}
 {% for document in library.batch %}
-  {#
-    No id in the data this row comes from (app/data/documents.js), so one is
-    built from the name — matches the pattern /guidance-document/:id already
-    uses elsewhere, where the id is only ever used to build the href.
-  #}
-  {% set documentId = document.name | lower | replace(":", "") | replace(" ", "-") %}
   {% set actionCell %}
-    <div class="govuk-button-group">
+    {#
+      href goes straight to the overview page, so this still works with no
+      JavaScript — the inline script below intercepts the click, runs the
+      "checks running" state in place, and navigates on afterwards itself.
+    #}
+    <span class="app-start-checks">
       {{ govukButton({
-        text: "Edit",
-        href: "/guidance-document/" + documentId + "/edit",
-        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+        text: "Start Checks",
+        href: "/v1/guidance-document/sfi-23",
+        classes: "govuk-!-margin-bottom-0",
+        attributes: { "data-start-checks": true }
       }) }}
-      {#
-        href goes straight to the overview page, so this still works with no
-        JavaScript — the inline script below intercepts the click, runs the
-        "checks running" state in place, and navigates on afterwards itself.
-      #}
-      <span class="app-start-checks">
-        {{ govukButton({
-          text: "Start Checks",
-          href: "/guidance-document/sfi-23",
-          classes: "govuk-!-margin-bottom-0",
-          attributes: { "data-start-checks": true }
-        }) }}
-      </span>
-    </div>
+    </span>
   {% endset %}
   {% set uploadedRows = (uploadedRows.push([
     { text: document.name },
@@ -96,7 +83,7 @@
   {% set actionCell %}
     {{ govukButton({
       text: "Open",
-      href: "/guidance-document/sfi-23",
+      href: "/v1/guidance-document/sfi-23",
       classes: "govuk-button--secondary govuk-!-margin-bottom-0"
     }) }}
   {% endset %}
@@ -152,7 +139,7 @@
   {% set actionCell %}
     {{ govukButton({
       text: "Open",
-      href: "/guidance-document/sfi-23",
+      href: "/v1/guidance-document/sfi-23",
       classes: "govuk-button--secondary govuk-!-margin-bottom-0"
     }) }}
   {% endset %}
@@ -185,7 +172,7 @@
   {% set actionCell %}
     {{ govukButton({
       text: "Open",
-      href: "/guidance-document/sfi-23",
+      href: "/v1/guidance-document/sfi-23",
       classes: "govuk-button--secondary govuk-!-margin-bottom-0"
     }) }}
   {% endset %}
@@ -210,15 +197,18 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-l">Manage all guidances
-    </h1>
+    <h1 class="govuk-heading-l">All your guidance docs</h1>
 
     <p class="govuk-body">
       View, upload and manage guidance documents. Track which ones are
       awaiting approval or have been published.
     </p>
 
-    {{ govukButton({ text: "Create or upload guidance", href: "/create-guidance" }) }}
+  </div>
+
+  <div class="govuk-grid-column-one-third govuk-!-text-align-right">
+
+    {{ govukButton({ text: "Create guidance", href: "/v1/create-guidance" }) }}
 
   </div>
 </div>
@@ -230,7 +220,7 @@
       idPrefix: "guidance-docs",
       items: [
         {
-          label: "Recently added (" + uploadedRows.length + ")",
+          label: "Recently uploaded (" + uploadedRows.length + ")",
           id: "uploaded",
           panel: { html: uploadedTable }
         },

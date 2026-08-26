@@ -22,12 +22,14 @@ body {
 @import "components/app-journey";
 
 // Service pages
+@import "components/app-hero";
 @import "components/app-card";
 @import "components/app-editor";
 @import "components/app-issues";
 @import "components/app-progress";
 @import "components/app-review";
 @import "components/app-markdown-editor";
+@import "components/app-guidance-edit";
 @import "components/app-ai-search";
 @import "components/app-saved-document";
 @import "components/app-organic-search";

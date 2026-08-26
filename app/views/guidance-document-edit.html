@@ -1,0 +1,145 @@
+{#
+  The markdown editor for a single guidance document, reached from "Edit" on
+  a Recently added row (see all-guidance-docs.html).
+
+  Two columns: a persistent Content list on the left (outside the tabs, so it
+  stays available on both Edit and Preview — see partials/markdown-editor-nav.html)
+  and Edit/Preview tabs on the right (partials/markdown-editor-editor.html
+  for the toolbar and textarea, and a client-rendered preview next to it).
+  Compare with change-review.html's Guided / Edit as markdown tabs, which
+  pairs the same nav and editor side by side inside one tab instead — see
+  partials/markdown-editor-content.html for that layout.
+
+  Hand-rolled tabs rather than the govukTabs() macro: the macro pipes each
+  panel through Nunjucks' indent() filter, which corrupts the <textarea>
+  inside the Edit panel. See change-review.html for the same fix.
+
+  The markdown, and the Content list's line numbers, are still the one fixed
+  placeholder document every route into the editor shares — there is no real
+  per-document markdown yet. Only the heading (documentName/documentPages,
+  passed in by the route from the row that was clicked) is per-document.
+
+  Save and Publish are placeholder outcomes rather than real state changes —
+  this is a static prototype with nothing to persist — so both just redirect
+  to All your guidance docs, landing on the tab that outcome implies. GOV.UK
+  tabs read the initial tab from the URL hash on load, so no query param or
+  session flag is needed to make that land on the right tab.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Edit document" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full app-guidance-edit">
+
+    <span class="govuk-caption-l">Draft &middot; {{ documentPages }} pages</span>
+    <h1 class="govuk-heading-l">{{ documentName }}</h1>
+
+    <p class="govuk-body">
+      Edit the whole guide below. Use the contents to jump to a section, and
+      the Preview tab to see how it will look when published.
+    </p>
+
+    <div class="govuk-grid-row">
+
+      <div class="govuk-grid-column-one-quarter">
+
+        <div class="app-guidance-edit__content-heading">
+          <h2 class="govuk-heading-m">Content</h2>
+          <button
+            type="button"
+            class="app-guidance-edit__content-toggle"
+            data-content-toggle
+            aria-expanded="true"
+            aria-controls="guidance-content-list">Hide</button>
+        </div>
+
+        <div id="guidance-content-list">
+          {% include "partials/markdown-editor-nav.html" %}
+        </div>
+
+      </div>
+
+      <div class="govuk-grid-column-three-quarters">
+
+        <div class="govuk-tabs" data-module="govuk-tabs">
+          <h2 class="govuk-tabs__title">Contents</h2>
+          <ul class="govuk-tabs__list">
+            <li class="govuk-tabs__list-item govuk-tabs__list-item--selected">
+              <a class="govuk-tabs__tab" href="#edit">Edit</a>
+            </li>
+            <li class="govuk-tabs__list-item">
+              <a class="govuk-tabs__tab" href="#preview">Preview</a>
+            </li>
+          </ul>
+          <div class="govuk-tabs__panel" id="edit">
+            {% include "partials/markdown-editor-editor.html" %}
+          </div>
+          <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="preview">
+            <div class="app-markdown-preview" data-guidance-preview></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="govuk-button-group app-guidance-edit__actions">
+      {{ govukButton({
+        text: "Save",
+        href: "/all-guidance-docs#uploaded",
+        classes: "govuk-button--secondary"
+      }) }}
+      {{ govukButton({
+        text: "Publish",
+        href: "/all-guidance-docs#awaiting-approval"
+      }) }}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    window.GOVUKPrototypeKit.documentReady(function () {
+      // Content list visibility, next to the "Content" heading — the list
+      // toggles, not the column: the heading and Hide/Show button stay put
+      // either way, so there is always something to click back to Show.
+      document.querySelectorAll('[data-content-toggle]').forEach(function (button) {
+        var panel = document.getElementById(button.getAttribute('aria-controls'))
+        if (!panel) return
+
+        button.addEventListener('click', function () {
+          var expanded = button.getAttribute('aria-expanded') === 'true'
+
+          button.setAttribute('aria-expanded', String(!expanded))
+          button.textContent = expanded ? 'Show' : 'Hide'
+          panel.hidden = expanded
+        })
+      })
+
+      // Preview tab
+      var textarea = document.getElementById('markdown-editor')
+      var preview = document.querySelector('[data-guidance-preview]')
+      var previewTab = document.querySelector('a.govuk-tabs__tab[href="#preview"]')
+      if (!textarea || !preview) return
+
+      // window.appRenderMarkdown comes from application.js — see the export
+      // next to renderMarkdown() there for why the plain function name isn't
+      // reachable from here, and why this waits for documentReady rather
+      // than running immediately.
+      function renderPreview () {
+        preview.innerHTML = window.appRenderMarkdown(textarea.value)
+      }
+
+      renderPreview()
+      if (previewTab) previewTab.addEventListener('click', renderPreview)
+    })
+  </script>
+{% endblock %}

@@ -30,6 +30,14 @@
 }
 
 .app-card__link {
+  // No link colour override existed anywhere in the project (checked the
+  // Defra header/footer/nav partials and settings.scss) — $defra-green is
+  // the same value the header bar and service navigation use.
+  &:link,
+  &:visited {
+    color: $defra-green;
+  }
+
   &::after {
     content: "";
     position: absolute;

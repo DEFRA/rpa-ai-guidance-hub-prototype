@@ -1,0 +1,57 @@
+{#
+  "Create a new guide" on create-guidance.html — the same title/purpose
+  fields as document-purpose.html (the equivalent step in the upload flow),
+  but reached with no file to attach them to, so it is a separate page
+  rather than that one with a flag: the back link and where Continue leads
+  both genuinely differ, not just the wording around the same fields.
+
+  Posts to app/routes.js, which saves both fields to the session and opens
+  the markdown editor directly — there is no file to check or scan here, so
+  Checking your file (used by the upload flow's equivalent page) would not
+  make sense as the next step.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "What is this document for?" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">What is this document for?</h1>
+
+    <p class="govuk-body">
+      This helps us understand the purpose of the document.
+    </p>
+
+    <form method="post" action="/v1/designer/migrate/single/new-guide-purpose">
+
+      {{ govukInput({
+        id: "document-title",
+        name: "documentTitle",
+        label: { text: "Document title", classes: "govuk-label--s" },
+        hint: { text: "e.g. Sustainable Farming Incentive 2023 offer" }
+      }) }}
+
+      {{ govukCharacterCount({
+        id: "purpose",
+        name: "purpose",
+        maxlength: 500,
+        rows: 5,
+        label: { text: "Purpose of this document", classes: "govuk-label--s" },
+        hint: { text: "Briefly describe what this document covers and who it's for" }
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

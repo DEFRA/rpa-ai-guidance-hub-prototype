@@ -1,0 +1,53 @@
+{#
+  Step 2 of 2 — inserted between Upload a Word document and Checking your
+  file. Posts to app/routes.js, which saves both fields to the session and
+  continues to /designer/migrate/single/uploading, exactly where the Upload
+  screen used to lead before this page was put in front of it; that page and
+  everything after it in app/data/prototypes.js is unchanged.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "What is this document for?" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">Step 2 of 2</span>
+    <h1 class="govuk-heading-l">What is this document for?</h1>
+
+    <p class="govuk-body">
+      This helps us understand the purpose of the document.
+    </p>
+
+    <form method="post" action="/v1/designer/migrate/single/document-purpose">
+
+      {{ govukInput({
+        id: "document-title",
+        name: "documentTitle",
+        label: { text: "Document title", classes: "govuk-label--s" },
+        hint: { text: "e.g. Sustainable Farming Incentive 2023 offer" }
+      }) }}
+
+      {{ govukCharacterCount({
+        id: "purpose",
+        name: "purpose",
+        maxlength: 500,
+        rows: 5,
+        label: { text: "Purpose of this document", classes: "govuk-label--s" },
+        hint: { text: "Briefly describe what this document covers and who it's for" }
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

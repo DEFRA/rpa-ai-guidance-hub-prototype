@@ -6,12 +6,13 @@
   app/data/search-results.js regardless of what is searched or ticked.
 
   Three of the five results are already in app/data/saved-documents.js — the
-  same document, found again — and two are not. All five link to a document
-  overview first (/document-overview/:id, see app/views/document-overview.html)
-  rather than straight to the document itself. "Save to your searches" does
-  not add anything there for real; it only sends the designer to the tab
-  where it would appear, per the task this page was built from — nothing in
-  this static prototype persists that kind of state.
+  same document, found again — and two are not. All five link to
+  saved-document-view.html the same way, via /find-guidance/document/:id,
+  which falls back to app/data/search-results.js when an id is not in
+  saved-documents.js. "Save to your searches" does not add anything there for
+  real; it only sends the designer to the tab where it would appear, per the
+  task this page was built from — nothing in this static prototype persists
+  that kind of state.
 #}
 {% extends "layouts/main.html" %}
 
@@ -32,7 +33,7 @@
 
 {% block content %}
 
-<form method="get" action="/find-guidance/organic-search">
+<form method="get" action="/v1/find-guidance/organic-search">
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
@@ -141,7 +142,7 @@
           <li class="app-search-results__item">
 
             <h3 class="govuk-heading-s app-search-results__name">
-              <a class="govuk-link" href="/document-overview/{{ result.id }}">{{ result.name }}</a>
+              <a class="govuk-link" href="/v1/find-guidance/document/{{ result.id }}">{{ result.name }}</a>
             </h3>
 
             <p class="govuk-body app-search-results__description">{{ result.description }}</p>
@@ -150,7 +151,7 @@
               {{ govukTag(statusTags[result.status]) }}
               {{ govukButton({
                 text: "Save to your searches",
-                href: "/find-guidance#saved-documents",
+                href: "/v1/find-guidance#saved-documents",
                 classes: "govuk-button--secondary govuk-!-margin-bottom-0"
               }) }}
             </div>

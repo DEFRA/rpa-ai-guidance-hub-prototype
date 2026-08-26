@@ -45,12 +45,11 @@
   list-style: none;
 }
 
+// Plain and minimal — a simple list of links rather than a boxed nav panel,
+// so spacing between items comes from generous margin alone rather than a
+// rule between them.
 .app-document-content__nav-item {
-  border-bottom: 1px solid $govuk-mid-grey;
-
-  &:first-child {
-    border-top: 1px solid $govuk-mid-grey;
-  }
+  margin-bottom: govuk-spacing(4);
 }
 
 // The section link and its disclosure toggle side by side — an <a> cannot
@@ -65,7 +64,8 @@
 
 .app-document-content__nav-link {
   display: block;
-  padding: govuk-spacing(2) 0;
+  padding: govuk-spacing(1) 0;
+  color: $govuk-link-colour;
 }
 
 .app-document-content__section-toggle {
@@ -112,17 +112,31 @@
 // reads at a glance rather than every link looking equally important.
 .app-document-content__subnav {
   margin: 0;
-  padding: 0 0 govuk-spacing(2) govuk-spacing(4);
+  padding: govuk-spacing(2) 0 0 govuk-spacing(4);
   list-style: none;
 }
 
+.app-document-content__subnav-item {
+  margin-bottom: govuk-spacing(2);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Standard link blue, same as the section links above — a smaller size is
+// enough to show the hierarchy without also greying it out.
 .app-document-content__subnav-link {
   display: block;
   padding: govuk-spacing(1) 0;
   font-size: 14px;
-  color: $govuk-secondary-text-colour;
+  color: $govuk-link-colour;
 }
 
+// Scrolls normally with the page — its own govuk-grid-row/govuk-grid-column-full
+// (see the view) keeps it the same width as the two columns below, rather
+// than the full browser width a bare direct child of <main> would otherwise
+// have room to stretch to.
 .app-document-search {
   display: flex;
   flex-wrap: wrap;
@@ -135,13 +149,60 @@
   flex: 1 1 auto;
 }
 
-// Tall enough to need scrolling with several sections in it, bounded so the
-// page still scrolls normally alongside the shorter sidebar.
-.app-document-text {
-  max-height: 40rem;
+// Pinned to the top of the viewport as the reader scrolls, rather than
+// scrolling away with the rest of the page — the Defra header above it is
+// not sticky itself, so this only starts overlapping it once the reader has
+// scrolled past where the header would otherwise be. A solid background
+// stops page content scrolling underneath from bleeding through once it is
+// pinned; no border of its own is needed for the same job, since the
+// visible section break at the bottom of this element already draws one.
+.app-document-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-top: govuk-spacing(3);
+  background-color: $govuk-white;
+}
+
+// "Currently viewing" left, "Save my place here" right — wraps on narrow
+// screens instead of squeezing the button under the button-group's usual
+// row/column breakpoint, since there is no button-group here, just the one.
+.app-document-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(3);
+  margin-bottom: govuk-spacing(3);
+}
+
+.app-document-header-row__current-section {
+  margin-bottom: 0;
+  font-weight: 700;
+}
+
+// Shown once "Save my place here" is clicked — see the view's pageScripts.
+// Green rather than a plain govuk-body-s, so it reads as confirmation
+// rather than more explanatory text like the line above it.
+.app-save-place__confirmation {
+  margin-top: govuk-spacing(2);
+  color: $defra-green;
+  font-weight: 700;
+}
+
+// .app-document-text itself carries no styling any more — plain flowing
+// content, no border or height of its own. It stays in the markup only as a
+// hook for the search-highlight script and the IntersectionObserver's
+// :scope > h2[id] query. See .app-document-text-column__scroll below, which
+// is what actually scrolls.
+
+// Mirrors .app-document-content__scroll opposite it — its own bounded,
+// independently scrolling box, so a long document does not push Additional
+// information (or the page) down indefinitely, and scrolling it never moves
+// the sidebar.
+.app-document-text-column__scroll {
+  max-height: 80vh;
   overflow-y: auto;
-  padding: govuk-spacing(4);
-  border: 1px solid $govuk-mid-grey;
 }
 
 // $app-highlight-background comes from _app-review.scss (imported before

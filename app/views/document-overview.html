@@ -1,0 +1,79 @@
+{#
+  A document's overview, opened from a result on organic-search.html —
+  a stop between the results list and the read-only document itself
+  (saved-document-view.html), showing enough to decide whether to open it or
+  save it for later without leaving the results.
+
+  Name, description and status come from app/data/search-results.js; scheme,
+  type and last updated come from app/data/document-overviews.js, keyed by
+  the same id.
+
+  "Save to search" does not add anything to app/data/saved-documents.js for
+  real — nothing in this static prototype persists that kind of state — it
+  only sends the designer to find-guidance.html, per the task this page was
+  built from.
+
+  The back link comes from res.locals.backHref, set in app/routes.js,
+  following the pattern every other page here uses.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% set pageName = documentName %}
+
+{% set statusTags = {
+  "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
+  "Partially updated": { text: "Partially updated", classes: "govuk-tag--orange" },
+  "Out of date": { text: "Out of date", classes: "govuk-tag--red" }
+} %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <span class="govuk-caption-l">{{ type }}</span>
+    <h1 class="govuk-heading-l">{{ documentName }}</h1>
+
+    <p class="govuk-body">{{ description }}</p>
+
+    {{ govukSummaryList({
+      rows: [
+        {
+          key: { text: "Scheme or topic" },
+          value: { text: scheme }
+        },
+        {
+          key: { text: "Document type" },
+          value: { text: type }
+        },
+        {
+          key: { text: "Status" },
+          value: { html: govukTag(statusTags[status]) }
+        },
+        {
+          key: { text: "Last updated" },
+          value: { text: lastUpdated }
+        }
+      ]
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({
+        text: "Open",
+        href: "/find-guidance/document/" + id
+      }) }}
+      {{ govukButton({
+        text: "Save to search",
+        href: "/find-guidance",
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

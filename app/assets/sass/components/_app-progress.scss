@@ -34,6 +34,15 @@
   }
 }
 
+// Wraps "Start Checks" so the inline script above has something to target
+// with closest()/innerHTML — display: contents takes it out of the button
+// group's flex layout so its button still sits directly on the row's
+// baseline alongside Edit, rather than a level lower because it is one
+// level deeper in the DOM than its neighbour.
+.app-start-checks {
+  display: contents;
+}
+
 // A lighter wait than the upload/scan progress bar above — "Start Checks" on
 // all-guidance-docs.html replaces itself with this next to the document name
 // while its inline script waits to move on, rather than going to a page of
