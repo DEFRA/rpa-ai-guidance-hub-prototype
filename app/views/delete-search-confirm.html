@@ -1,29 +1,34 @@
 {#
-  Confirms deleting a guided search from the list on find-guidance.html.
+  Confirms removing a row from either tab on find-guidance.html.
   `searchName` comes from app/routes.js, looked up from
-  app/data/guided-searches.js by the :id in the URL.
+  app/data/guided-searches.js or app/data/favourited-guidance.js by the :id
+  in the URL. `verb` follows which of the two the id matched — "remove" for
+  Recently opened, "delete" for Favourited guidance (and for an id that
+  matched neither), so the wording matches whichever row this was opened
+  from.
 
   A static prototype has nothing real to delete, so both buttons just return
-  to the list — "Yes, delete" does not actually remove the row.
+  to the list — "Yes, {{ verb }}" does not actually remove the row.
 #}
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
-{% set pageName = "Are you sure you want to delete this search?" %}
+{% set verb = verb | default("delete") %}
+{% set pageName = "Are you sure you want to " + verb + " this?" %}
 
 {% block content %}
 
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-l">Are you sure you want to delete this search?</h1>
+    <h1 class="govuk-heading-l">Are you sure you want to {{ verb }} this?</h1>
 
     <p class="govuk-body govuk-!-font-weight-bold">{{ searchName }}</p>
 
     <div class="govuk-button-group">
       {{ govukButton({
-        text: "Yes, delete",
+        text: "Yes, " + verb,
         href: "/find-guidance",
         classes: "govuk-button--warning"
       }) }}

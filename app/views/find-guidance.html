@@ -3,23 +3,31 @@
   landing page: previous searches, so one can be picked up again, and a way to
   start a new one.
 
-  Only guided searches are shown here now. "Open" goes straight to the
-  document itself (saved-document-view.html, via search.documentId — the
-  closest existing document to that row's enquiry, see
-  app/data/guided-searches.js) rather than resuming the step-by-step guided
-  results screen (ai-search-results.html) that produced it — that page and
-  its routes are unchanged and still reachable from a new AI search, just not
-  linked from here any more. Each row can also be deleted — see
-  delete-search-confirm.html — which does not need to remove anything real in
-  a static prototype.
+  Only guided searches are shown here now, as "Recently opened" — read as
+  plain document titles rather than the enquiry that found them. "Open" goes
+  straight to the document itself (saved-document-view.html, via
+  search.documentId — the closest existing document to that row's original
+  enquiry, see app/data/guided-searches.js) rather than resuming the
+  step-by-step guided results screen (ai-search-results.html) that produced
+  it — that page and its routes are unchanged and still reachable from a new
+  AI search, just not linked from here any more. Each row can also be
+  removed — see delete-search-confirm.html, whose wording follows which of
+  guidedSearches/favouritedGuidance the id matched in app/routes.js — which
+  does not need to remove anything real in a static prototype.
 
   Saved documents (found by searching organically) used to have a second tab
   here, but are not shown on this page any more. app/data/saved-documents.js
   and saved-document-view.html are unchanged and still reachable from a
   result on organic-search.html — this page just no longer lists them.
 
-  The rows are fixed examples, not a live list — the table always shows all
-  of res.locals.guidedSearches.
+  Favourited guidance is a second tab alongside Recently opened instead —
+  see app/data/favourited-guidance.js — for a document favourited directly
+  rather than found through a search. Unlike Recently opened, it keeps its
+  Steps left column and "Delete" wording exactly as before.
+
+  The rows are fixed examples, not a live list — each table always shows all
+  of res.locals.guidedSearches / res.locals.favouritedGuidance, and the tab
+  counts are just those rows counted.
 
   The back link comes from res.locals.backHref, set in app/routes.js,
   following the pattern every other page here uses.
@@ -28,13 +36,18 @@
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
 
 {% set pageName = "Find and locate guidance" %}
 
 {#
+  -- Recently opened ---------------------------------------------------------
+
   Data comes from res.locals.guidedSearches (app/data/guided-searches.js),
-  shared with app/routes.js so the id used to open or delete a search here is
-  the same id that page and the delete confirmation page look it up by.
+  shared with app/routes.js so the id used to open or remove a row here is
+  the same id that page and the delete confirmation page look it up by. No
+  Steps left column — these read as plain document titles now, not searches
+  with a step count left to show.
 #}
 
 {% set guidedSearchRows = [] %}
@@ -47,17 +60,70 @@
         classes: "govuk-button--secondary govuk-!-margin-bottom-0"
       }) }}
       <a class="govuk-link" href="/find-guidance/delete/{{ search.id }}">
-        Delete<span class="govuk-visually-hidden"> {{ search.name }}</span>
+        Remove<span class="govuk-visually-hidden"> {{ search.name }}</span>
       </a>
     </div>
   {% endset %}
   {% set guidedSearchRows = (guidedSearchRows.push([
     { text: search.name },
     { text: search.lastOpened },
-    { text: "Step " + search.resumeStep + " of " + search.totalSteps },
     { html: actionCell }
   ]), guidedSearchRows) %}
 {% endfor %}
+
+{% set recentlyOpenedTable %}
+  {{ govukTable({
+    head: [
+      { text: "Name", classes: "govuk-!-width-two-thirds" },
+      { text: "Last opened", classes: "govuk-!-width-one-third" },
+      { html: '<span class="govuk-visually-hidden">Action</span>' }
+    ],
+    rows: guidedSearchRows
+  }) }}
+{% endset %}
+
+{#
+  -- Favourited guidance -----------------------------------------------------
+
+  Data comes from res.locals.favouritedGuidance
+  (app/data/favourited-guidance.js). Steps left does not really apply to a
+  document rather than a search in progress, so it reads "-" here instead of
+  the column being dropped — see that file for why the table still has it.
+#}
+
+{% set favouritedRows = [] %}
+{% for favourite in favouritedGuidance %}
+  {% set actionCell %}
+    <div class="app-guided-search-actions">
+      {{ govukButton({
+        text: "Open",
+        href: "/find-guidance/document/" + favourite.documentId,
+        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+      }) }}
+      <a class="govuk-link" href="/find-guidance/delete/{{ favourite.id }}">
+        Delete<span class="govuk-visually-hidden"> {{ favourite.name }}</span>
+      </a>
+    </div>
+  {% endset %}
+  {% set favouritedRows = (favouritedRows.push([
+    { text: favourite.name },
+    { text: favourite.lastOpened },
+    { text: "-" },
+    { html: actionCell }
+  ]), favouritedRows) %}
+{% endfor %}
+
+{% set favouritedGuidanceTable %}
+  {{ govukTable({
+    head: [
+      { text: "Name", classes: "govuk-!-width-one-half" },
+      { text: "Last opened", classes: "govuk-!-width-one-quarter" },
+      { text: "Steps left", classes: "govuk-!-width-one-quarter" },
+      { html: '<span class="govuk-visually-hidden">Action</span>' }
+    ],
+    rows: favouritedRows
+  }) }}
+{% endset %}
 
 {% block content %}
 
@@ -78,23 +144,20 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
 
-    <h2 class="govuk-heading-m">Saved searches</h2>
-
-    {#
-      The Name column carries the longest content — a full enquiry, which
-      already wraps onto two lines — so it gets the most width back from Last
-      opened and Steps left, both short enough not to need much. Action is
-      left unset: the flex/nowrap treatment on app-guided-search-actions is
-      what keeps Open and Delete on one line, not a fixed width.
-    #}
-    {{ govukTable({
-      head: [
-        { text: "Name", classes: "govuk-!-width-one-half" },
-        { text: "Last opened", classes: "govuk-!-width-one-quarter" },
-        { text: "Steps left", classes: "govuk-!-width-one-quarter" },
-        { html: '<span class="govuk-visually-hidden">Action</span>' }
-      ],
-      rows: guidedSearchRows
+    {{ govukTabs({
+      idPrefix: "find-guidance-tabs",
+      items: [
+        {
+          label: "Recently opened (" + guidedSearchRows.length + ")",
+          id: "recently-opened",
+          panel: { html: recentlyOpenedTable }
+        },
+        {
+          label: "Favourited guidance (" + favouritedRows.length + ")",
+          id: "favourited-guidance",
+          panel: { html: favouritedGuidanceTable }
+        }
+      ]
     }) }}
 
   </div>

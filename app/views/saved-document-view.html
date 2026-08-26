@@ -15,16 +15,36 @@
   not a <textarea>'s opaque value, so the browser can jump to a heading's id
   on its own with no JavaScript involved. That covers subsection links too.
 
-  Two columns: Content sidebar (scrollable independently, so a long
-  subsection list does not push the rest of the page down) and the main
-  content area — status, title, document search, the document text, and
-  Additional information as one bordered box underneath it rather than a
-  column of its own. Additional information still updates as the reader
-  scrolls — see the IntersectionObserver script below — showing whichever
-  section's own notes are currently in view. Its content per section is
-  duplicated into a <template> near the visible box, so the script has
-  something to swap in without keeping a second copy of the text in
-  JavaScript.
+  Search scrolls normally, in its own full-width row matching the two
+  columns' own width below. .app-document-sticky-header is what is sticky
+  (position: sticky, see _app-saved-document.scss) — pinned to the top of the
+  viewport as the reader scrolls, it carries the "Currently viewing"
+  indicator, "Save my place here" and the explanatory text underneath, down
+  to the visible section break that closes it off from the two columns.
+  Status and the title above it are normal flow, not part of what is sticky.
+
+  "Currently viewing" reuses the same IntersectionObserver that already
+  drove Additional information below — one more thing it updates on the
+  same scroll, rather than a second observer doing the same work twice. It
+  reads the heading text directly off entry.target, the h2 that came into
+  view, so there is no separate lookup to keep in sync with document.sections.
+
+  Two columns below that, each scrolling independently within its own fixed
+  max-height rather than the whole page scrolling: Content sidebar (so a long
+  subsection list does not push anything else down) and the document text
+  column, which also carries Additional information underneath the text —
+  one bordered box, not a column of its own, but still inside the same
+  scrolling area as the text above it. Additional information still updates
+  as the reader scrolls — see the IntersectionObserver script below —
+  showing whichever section's own notes are currently in view. Its content
+  per section is duplicated into a <template> near the visible box, so the
+  script has something to swap in without keeping a second copy of the text
+  in JavaScript.
+
+  The document text itself is plain flowing content, not a bordered box —
+  only the column around it (.app-document-text-column__scroll) is bounded
+  and scrollable, mirroring .app-document-content__scroll for the sidebar
+  opposite it.
 
   Each section in the sidebar is collapsed by default: its own link still
   jumps straight to that section, same as before, but its subsections are
@@ -41,6 +61,7 @@
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% set statusTags = {
   "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
@@ -369,6 +390,64 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
 
+    <form class="app-document-search" data-document-search-form>
+      <div class="govuk-form-group govuk-!-margin-bottom-0 app-document-search__input">
+        <label class="govuk-label govuk-label--s" for="document-search">Search for information</label>
+        <input class="govuk-input" id="document-search" name="documentSearch" type="text" data-document-search-input>
+      </div>
+      <button type="submit" class="govuk-button govuk-!-margin-bottom-0" data-document-search-button>Search</button>
+    </form>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <div class="govuk-!-margin-bottom-4">
+      {{ govukTag(statusTags[status]) }}
+    </div>
+
+    <h1 class="govuk-heading-xl">{{ documentName }}</h1>
+
+    {#
+      Sticky instead of the search box above — pinned to the top of the
+      viewport as the reader scrolls, background included, so this reads as
+      a fixed header for the two columns below rather than the search box
+      above it. See _app-saved-document.scss.
+    #}
+    <div class="app-document-sticky-header" data-document-sticky-header>
+
+      <div class="app-document-header-row">
+        {#
+          Initial text matches document.sections[0], the same section the
+          IntersectionObserver script below would pick on load if it fired
+          immediately — same reasoning as Additional information's own
+          starting content further down.
+        #}
+        <p class="govuk-body app-document-header-row__current-section" data-current-section>
+          Currently viewing: {{ document.sections[0].heading }}
+        </p>
+        {{ govukButton({
+          text: "Save my place here",
+          type: "button",
+          classes: "govuk-button--secondary govuk-!-margin-bottom-0",
+          attributes: { "data-save-place": true }
+        }) }}
+      </div>
+
+      <p class="govuk-body-s">
+        This will save your current position in the document so you can
+        return to it later.
+      </p>
+      <p class="govuk-body-s app-save-place__confirmation" data-save-place-confirmation role="status" hidden>
+        Your place has been saved
+      </p>
+
+      <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l">
+
+    </div>
+
     {#
       Lives outside the column it controls, rather than inside it, so it is
       still there to click "Show content" once that column is fully
@@ -428,54 +507,49 @@
 
   <div class="govuk-grid-column-three-quarters" data-document-text-column>
 
-    <div class="govuk-!-margin-bottom-4">
-      {{ govukTag(statusTags[status]) }}
-    </div>
-
-    <h1 class="govuk-heading-l">{{ documentName }}</h1>
-
-    <form class="app-document-search" data-document-search-form>
-      <div class="govuk-form-group govuk-!-margin-bottom-0 app-document-search__input">
-        <label class="govuk-label govuk-label--s" for="document-search">Search for information</label>
-        <input class="govuk-input" id="document-search" name="documentSearch" type="text" data-document-search-input>
-      </div>
-      <button type="submit" class="govuk-button govuk-!-margin-bottom-0" data-document-search-button>Search</button>
-    </form>
-
-    <div class="app-document-text" data-document-text>
-      {% for section in document.sections %}
-        <h2 class="govuk-heading-m" id="{{ section.id }}">{{ section.heading }}</h2>
-        {% for paragraph in section.paragraphs %}
-          <p class="govuk-body">{{ paragraph }}</p>
-        {% endfor %}
-        {% for subsection in section.subsections %}
-          <h3 class="govuk-heading-s" id="{{ subsection.id }}">{{ subsection.heading }}</h3>
-          <p class="govuk-body">{{ subsection.paragraph }}</p>
-        {% endfor %}
-      {% endfor %}
-    </div>
-
     {#
-      Initial content matches document.sections[0], the same section the
-      IntersectionObserver script below would pick on load if it fired
-      immediately — so there is nothing to visually update until the reader
-      actually scrolls past the first section.
+      The only scrollable element on this side now — the document text
+      itself is plain flowing content with no border or height of its own,
+      so this is what mirrors .app-document-content__scroll opposite it.
     #}
-    <div class="app-additional-info-panel" data-additional-info>
-      <h3 class="govuk-heading-s">Additional information</h3>
-      {% for note in document.sections[0].additionalInfo %}
-        <p class="govuk-body">{{ note }}</p>
-      {% endfor %}
-    </div>
+    <div class="app-document-text-column__scroll">
 
-    {% for section in document.sections %}
-      <template data-info-for="{{ section.id }}">
+      <div class="app-document-text" data-document-text>
+        {% for section in document.sections %}
+          <h2 class="govuk-heading-m" id="{{ section.id }}">{{ section.heading }}</h2>
+          {% for paragraph in section.paragraphs %}
+            <p class="govuk-body">{{ paragraph }}</p>
+          {% endfor %}
+          {% for subsection in section.subsections %}
+            <h3 class="govuk-heading-s" id="{{ subsection.id }}">{{ subsection.heading }}</h3>
+            <p class="govuk-body">{{ subsection.paragraph }}</p>
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      {#
+        Initial content matches document.sections[0], the same section the
+        IntersectionObserver script below would pick on load if it fired
+        immediately — so there is nothing to visually update until the
+        reader actually scrolls past the first section.
+      #}
+      <div class="app-additional-info-panel" data-additional-info>
         <h3 class="govuk-heading-s">Additional information</h3>
-        {% for note in section.additionalInfo %}
+        {% for note in document.sections[0].additionalInfo %}
           <p class="govuk-body">{{ note }}</p>
         {% endfor %}
-      </template>
-    {% endfor %}
+      </div>
+
+      {% for section in document.sections %}
+        <template data-info-for="{{ section.id }}">
+          <h3 class="govuk-heading-s">Additional information</h3>
+          {% for note in section.additionalInfo %}
+            <p class="govuk-body">{{ note }}</p>
+          {% endfor %}
+        </template>
+      {% endfor %}
+
+    </div>
 
   </div>
 
@@ -522,6 +596,19 @@
         target.hidden = expanded
       })
     })
+
+    // Nothing persists in a static prototype — this just confirms the click
+    // in place. role="status" on the message means a screen reader announces
+    // it as soon as it is shown, with no focus move needed.
+    (function () {
+      var button = document.querySelector('[data-save-place]')
+      var confirmation = document.querySelector('[data-save-place-confirmation]')
+      if (!button || !confirmation) return
+
+      button.addEventListener('click', function () {
+        confirmation.hidden = false
+      })
+    })()
 
     // Wraps every match of the search term in the document text in a <mark>,
     // and scrolls to the first one. A straightforward text-node walk and
@@ -596,14 +683,18 @@
       })
     })()
 
-    // Swaps the Additional information box's content to match whichever
-    // top-level section is currently in view in the scrollable document
-    // text — root is that text container itself, not the viewport, since it
-    // scrolls inside its own fixed-height box rather than the page scrolling.
+    // Swaps the Additional information box's content, and updates "Currently
+    // viewing" above the columns, to match whichever top-level section is
+    // currently in view in the scrollable document text column — root is
+    // that scrolling wrapper (.app-document-text-column__scroll), not the
+    // viewport, and not .app-document-text either, since that no longer
+    // scrolls on its own — see the comment on it further up.
+    var scrollContainer = document.querySelector('.app-document-text-column__scroll')
     var textContainer = document.querySelector('.app-document-text')
     var infoPanel = document.querySelector('[data-additional-info]')
+    var currentSection = document.querySelector('[data-current-section]')
 
-    if (textContainer && infoPanel && 'IntersectionObserver' in window) {
+    if (scrollContainer && textContainer && infoPanel && 'IntersectionObserver' in window) {
       var headings = textContainer.querySelectorAll(':scope > h2[id]')
 
       var observer = new IntersectionObserver(function (entries) {
@@ -612,9 +703,11 @@
 
           var template = document.querySelector('template[data-info-for="' + entry.target.id + '"]')
           if (template) infoPanel.innerHTML = template.innerHTML
+
+          if (currentSection) currentSection.textContent = 'Currently viewing: ' + entry.target.textContent
         })
       }, {
-        root: textContainer,
+        root: scrollContainer,
         // Treats a section as "current" once it has scrolled into the top
         // 30% of the text panel, rather than waiting for it to fill the
         // whole box — the next heading down is usually already visible too.

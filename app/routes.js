@@ -9,6 +9,7 @@ const router = govukPrototypeKit.requests.setupRouter()
 const prototypes = require('./lib/prototypes')
 const library = require('./data/documents')
 const { guidedSearches } = require('./data/guided-searches')
+const { favouritedGuidance } = require('./data/favourited-guidance')
 const { savedDocuments } = require('./data/saved-documents')
 const { searchResults } = require('./data/search-results')
 const { documentOverviews } = require('./data/document-overviews')
@@ -78,6 +79,10 @@ router.use((req, res, next) => {
 
   // AI-guided searches already run, shown on find-guidance.html.
   res.locals.guidedSearches = guidedSearches
+
+  // Guidance documents favourited for quick access, also shown on
+  // find-guidance.html.
+  res.locals.favouritedGuidance = favouritedGuidance
 
   // Documents saved from an organic search, also shown on find-guidance.html.
   res.locals.savedDocuments = savedDocuments
@@ -183,15 +188,22 @@ router.post('/find-guidance/new', (req, res) => {
   )
 })
 
-// Deleting a guided search from the list. A static prototype has nothing
-// real to delete, so both buttons on the confirmation page just return to
-// the list — see app/views/delete-search-confirm.html.
+// Deleting a guided search or a favourited document from the list. A static
+// prototype has nothing real to delete, so both buttons on the confirmation
+// page just return to the list — see app/views/delete-search-confirm.html.
+//
+// Wording differs by source: Recently opened rows say "remove" (see
+// find-guidance.html), Favourited guidance rows keep the original "delete"
+// wording unchanged — same default an unmatched id already fell back to.
 router.get('/find-guidance/delete/:id', (req, res) => {
-  const search = guidedSearches.find((candidate) => candidate.id === req.params.id)
+  const guidedSearch = guidedSearches.find((candidate) => candidate.id === req.params.id)
+  const favourite = favouritedGuidance.find((candidate) => candidate.id === req.params.id)
+  const match = guidedSearch || favourite
 
   res.locals.backHref = '/find-guidance'
   res.render('delete-search-confirm', {
-    searchName: search ? search.name : 'this search'
+    searchName: match ? match.name : 'this search',
+    verb: guidedSearch ? 'remove' : 'delete'
   })
 })
 
@@ -420,8 +432,9 @@ router.post('/create-guidance', (req, res) => {
     return res.redirect('/designer/update-existing-guide')
   }
 
-  // "Upload guidance" — the existing upload flow, unchanged.
-  res.redirect(res.locals.migrateHref)
+  // "Upload guidance" — captures metadata first, then continues into the
+  // existing upload flow. See app/views/designer/migrate/single/metadata.html.
+  res.redirect('/designer/migrate/single/metadata')
 })
 
 // A single guidance document's overview. Placeholder until the content panel
@@ -484,13 +497,32 @@ function renderChangeReview (req, res) {
 router.get('/guidance-document/:id/review', renderChangeReview)
 router.get('/guidance-document/:id/review/:issueNumber', renderChangeReview)
 
+// Captures a bit of context about the guidance before the existing upload
+// flow starts — inserted between "Upload guidance" on create-guidance.html
+// and the upload screen below. See
+// app/views/designer/migrate/single/metadata.html.
+router.get('/designer/migrate/single/metadata', (req, res) => {
+  res.render('designer/migrate/single/metadata')
+})
+
+router.post('/designer/migrate/single/metadata', (req, res) => {
+  req.session.data.guidanceType = req.body.guidanceType
+  req.session.data.guidanceTitle = (req.body.guidanceTitle || '').trim()
+  req.session.data.guidanceAudience = (req.body.guidanceAudience || '').trim()
+  req.session.data.guidanceGoal = (req.body.guidanceGoal || '').trim()
+  req.session.data.guidanceRequirements = (req.body.guidanceRequirements || '').trim()
+  req.session.data.guidanceSystemAccess = req.body.systemAccess
+
+  res.redirect(res.locals.migrateHref)
+})
+
 // Overrides just the back link on this one step of the migrate journey — it
 // otherwise comes from prototypes.findStep() via the router.use() above,
 // which would send it back to the dashboard. Nothing else about the step
 // (journey banner, nextHref) changes, since that middleware still runs
 // first and sets everything else as normal.
 router.get('/designer/migrate/single/upload', (req, res) => {
-  res.locals.backHref = '/all-guidance-docs'
+  res.locals.backHref = '/designer/migrate/single/metadata'
   res.render('designer/migrate/single/upload')
 })
 

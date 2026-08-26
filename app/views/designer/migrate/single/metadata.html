@@ -1,0 +1,106 @@
+{#
+  "Upload guidance" on create-guidance.html — a step inserted before the
+  existing Upload a Word document screen, so context about the guidance is
+  captured before conversion starts rather than only afterwards (see
+  document-purpose.html, which asks a narrower version of the same "what is
+  this for" question later in this same journey, once a file exists to
+  attach it to).
+
+  Breadcrumbs rather than a back link — GOV.UK guidance is not to use both on
+  the same page — so res.locals.backHref is deliberately left unset here.
+  Labels match the pages that actually lead here: the "Create guidance"
+  breadcrumb uses that link text from all-guidance-docs.html rather than
+  create-guidance.html's own heading ("What would you like to do?"), and
+  "Upload guidance" matches the radio option selected to arrive here.
+
+  None of these fields are read back anywhere yet — captured to session in
+  case a later step needs them, same as document-purpose.html.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Capture guidance metadata" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ govukBreadcrumbs({
+      items: [
+        { text: "All your guidance docs", href: "/all-guidance-docs" },
+        { text: "Create guidance", href: "/create-guidance" },
+        { text: "Upload guidance" }
+      ]
+    }) }}
+
+    <h1 class="govuk-heading-l">Capture guidance metadata</h1>
+
+    <p class="govuk-body">
+      Add context for the guidance before conversion to Markdown starts.
+    </p>
+
+    <form method="post" action="/designer/migrate/single/metadata">
+
+      {{ govukSelect({
+        id: "guidance-type",
+        name: "guidanceType",
+        label: { text: "Type of guidance" },
+        items: [
+          { value: "", text: "Choose the type of guidance" },
+          { value: "process-guide", text: "Process guide" },
+          { value: "policy-guidance", text: "Policy guidance" },
+          { value: "reference-document", text: "Reference document" }
+        ]
+      }) }}
+
+      {{ govukInput({
+        id: "guidance-title",
+        name: "guidanceTitle",
+        label: { text: "Guidance title" }
+      }) }}
+
+      {{ govukTextarea({
+        id: "guidance-audience",
+        name: "guidanceAudience",
+        label: { text: "Who is this guidance for?" }
+      }) }}
+
+      {{ govukTextarea({
+        id: "guidance-goal",
+        name: "guidanceGoal",
+        label: { text: "What does this guidance aim to achieve?" }
+      }) }}
+
+      {{ govukTextarea({
+        id: "guidance-requirements",
+        name: "guidanceRequirements",
+        label: { text: "What do users need to perform or understand?" }
+      }) }}
+
+      {{ govukRadios({
+        idPrefix: "system-access",
+        name: "systemAccess",
+        fieldset: {
+          legend: { text: "Do users need access to any systems?" }
+        },
+        items: [
+          { value: "yes", text: "Yes" },
+          { value: "no", text: "No" }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Save and continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

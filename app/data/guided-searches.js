@@ -17,14 +17,15 @@
 // document of their own.
 //
 
-// `name` reads as the enquiry someone typed, not a topic title — matching
-// how a fresh search's heading on ai-search-results.html is the query
-// itself. See topicHeadings there, which mirrors this text for the resumed
-// case rather than reading it from here, so the two need updating together.
+// `name` reads as a plain document title, shown on the "Recently opened" tab
+// of find-guidance.html — it does not have to double as the enquiry someone
+// typed any more. ai-search-results.html keeps its own separate
+// topicHeadings for the heading text a resumed search shows, so the two are
+// independent and do not need updating together.
 const guidedSearches = [
   {
     id: 'sfi-eligibility',
-    name: 'How do I evidence eligibility for the Sustainable Farming Incentive?',
+    name: 'Sustainable Farming Incentive eligibility',
     lastOpened: '17 August 2026',
     totalSteps: 4,
     resumeStep: 2,
@@ -32,7 +33,7 @@ const guidedSearches = [
   },
   {
     id: 'countryside-stewardship',
-    name: 'What capital items are covered under Countryside Stewardship grants?',
+    name: 'Countryside Stewardship capital grants',
     lastOpened: '15 August 2026',
     totalSteps: 3,
     resumeStep: 1,
@@ -40,7 +41,7 @@ const guidedSearches = [
   },
   {
     id: 'cross-compliance-livestock',
-    name: 'What are the cross compliance rules I need to follow for livestock?',
+    name: 'Cross compliance rules for livestock',
     lastOpened: '10 August 2026',
     totalSteps: 4,
     resumeStep: 4,
@@ -48,7 +49,7 @@ const guidedSearches = [
   },
   {
     id: 'payment-deadlines',
-    name: 'When are the payment deadlines for my agreement this year?',
+    name: 'Payment deadlines 2026',
     lastOpened: '2 August 2026',
     totalSteps: 5,
     resumeStep: 3,
