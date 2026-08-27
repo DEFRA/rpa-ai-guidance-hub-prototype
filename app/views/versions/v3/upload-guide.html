@@ -1,17 +1,17 @@
 {#
   "Upload guidance" from the chooser (create-guidance.html in this folder) —
-  v3's own short version of the migrate journey. Name the guide, pick the
-  Word document, and the processing page (upload-processing.html) leads
-  straight into the v3 editor with the quality checks in its side pane —
-  not the old editor and issues pages the designer flow ends in.
+  the start of v3's version of the migrate journey: pick the file here, wait
+  through the upload and scan (upload-processing.html), add or confirm the
+  guide's details (upload-metadata.html), check everything before converting
+  (upload-check.html), then land in the v3 editor with the quality checks in
+  its side pane.
 
-  Nothing is really uploaded in a static prototype: the title is kept in the
-  session (app/routes.js) so the editor and My drafts can call the guide by
-  name, and the converted markdown is the shared sample document.
+  Nothing is really uploaded in a static prototype: the details captured at
+  the metadata step live in the session (app/routes.js), and the converted
+  markdown is the shared sample document.
 #}
 {% extends "layouts/v3.html" %}
 
-{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
@@ -30,13 +30,6 @@
 
   <form method="post" action="/v3/upload-guide">
 
-    {{ govukInput({
-      id: "guide-title",
-      name: "guideTitle",
-      label: { text: "Guide title", classes: "govuk-label--s" },
-      hint: { text: "What the guide will be called in the hub" }
-    }) }}
-
     {{ govukFileUpload({
       id: "guide-file",
       name: "guideFile",
@@ -44,7 +37,7 @@
       hint: { text: "Must be a .docx file" }
     }) }}
 
-    {{ govukButton({ text: "Upload and convert" }) }}
+    {{ govukButton({ text: "Upload" }) }}
 
   </form>
 

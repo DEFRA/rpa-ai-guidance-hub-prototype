@@ -1,0 +1,63 @@
+{#
+  "Create a new guide" from the chooser (create-guidance.html in this
+  folder) — the start of v3's create-new journey, matching the shape of the
+  upload one: these details, a check page (new-guide-check.html), a success
+  page (new-guide-created.html), then the v3 editor starting from a
+  skeleton document.
+
+  The same three fields as the upload journey's metadata step, but nothing
+  is prefilled from a document — the title is the designer's to write.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Create a new guide" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">The guide's details</h1>
+
+  <form method="post" action="/v3/new-guide">
+
+    {{ govukInput({
+      id: "guide-title",
+      name: "guideTitle",
+      value: guideTitle,
+      label: { text: "Guidance title", classes: "govuk-label--s" },
+      hint: { text: "What the guide will be called in the hub" }
+    }) }}
+
+    {{ govukInput({
+      id: "owner",
+      name: "owner",
+      value: owner,
+      label: { text: "Owner", classes: "govuk-label--s" },
+      hint: { text: "Who approves and publishes this guide" }
+    }) }}
+
+    {{ govukRadios({
+      idPrefix: "guidance-type",
+      name: "guidanceType",
+      value: guidanceType,
+      fieldset: {
+        legend: { text: "Type of guidance", classes: "govuk-fieldset__legend--s" }
+      },
+      items: [
+        { value: "process-guide", text: "Process guide" },
+        { value: "policy-guidance", text: "Policy guidance" },
+        { value: "reference-document", text: "Reference document" }
+      ]
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+
+  </form>
+
+</div>
+
+{% endblock %}

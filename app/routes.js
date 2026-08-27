@@ -1073,23 +1073,128 @@ router.get('/v3/create-guidance', (req, res) => {
 })
 
 router.post('/v3/create-guidance', (req, res) => {
-  if (req.body.createGuidance === 'update-existing') {
-    return res.redirect('/v3/update-guide')
-  }
-
   if (req.body.createGuidance === 'create-new') {
-    return res.redirect('/designer/migrate/single/new-guide-purpose')
+    return res.redirect('/v3/new-guide')
   }
 
   res.redirect('/v3/upload-guide')
 })
 
+// -- Create a new guide ------------------------------------------------------
+//
+// v3's version of the create-new flow, matching the shape of the upload
+// journey below: the guide's details, a check page, a success page, then
+// the v3 editor — starting from a skeleton document rather than a
+// converted one.
+
+// The skeleton a new guide starts from: the shape the authoring
+// requirements ask for, with prompts where the writing goes.
+function v3StarterMarkdown (title) {
+  return [
+    '# ' + title,
+    '',
+    'As a [who this guide is for]',
+    'You need to [what they need to do]',
+    'So that [why it matters]',
+    '',
+    '## Before you start',
+    '',
+    '[What the reader needs access to, or to have to hand.]',
+    '',
+    '## Steps',
+    '',
+    '1. [Open each step with an action verb.]',
+    '',
+    '## Notes',
+    ''
+  ].join('\n')
+}
+
+router.get('/v3/new-guide', (req, res) => {
+  const created = req.session.data.v3NewGuide || {}
+
+  res.locals.backHref = '/v3/create-guidance'
+  res.render('versions/v3/new-guide', {
+    guideTitle: created.name || '',
+    owner: created.owner || 'Priya Devi',
+    guidanceType: created.type || 'process-guide'
+  })
+})
+
+router.post('/v3/new-guide', (req, res) => {
+  req.session.data.v3NewGuide = {
+    name: (req.body.guideTitle || '').trim() || 'Untitled guide',
+    owner: (req.body.owner || '').trim() || 'Priya Devi',
+    type: V3_GUIDANCE_TYPES[req.body.guidanceType]
+      ? req.body.guidanceType
+      : 'process-guide'
+  }
+  res.redirect('/v3/new-guide/check')
+})
+
+router.get('/v3/new-guide/check', (req, res) => {
+  const created = req.session.data.v3NewGuide
+  if (!created) return res.redirect('/v3/new-guide')
+
+  res.locals.backHref = '/v3/new-guide'
+  res.render('versions/v3/new-guide-check', {
+    created,
+    typeLabel: V3_GUIDANCE_TYPES[created.type] || 'Process guide'
+  })
+})
+
+// Creating writes the skeleton into the session as the guide's markdown, so
+// from here on the editor, drafts list and save flow treat it like any
+// other guide.
+router.post('/v3/new-guide/check', (req, res) => {
+  const created = req.session.data.v3NewGuide
+  if (!created) return res.redirect('/v3/new-guide')
+
+  req.session.data.v3GuideEdits = req.session.data.v3GuideEdits || {}
+  req.session.data.v3GuideEdits.new = v3StarterMarkdown(created.name)
+  res.redirect('/v3/new-guide/created')
+})
+
+router.get('/v3/new-guide/created', (req, res) => {
+  const created = req.session.data.v3NewGuide
+  if (!created) return res.redirect('/v3/new-guide')
+
+  res.render('versions/v3/new-guide-created', {
+    guideName: created.name
+  })
+})
+
 // -- Upload guidance ---------------------------------------------------------
 //
-// v3's own short version of the migrate journey: name the guide and pick the
-// Word document, watch it upload and convert, then land straight in the v3
-// editor — quality checks already in the side pane — rather than the old
-// editor and issues pages the designer flow ends in.
+// v3's version of the migrate journey: pick the Word document, watch it
+// upload and scan, confirm the guide's details (title, owner, type — read
+// out of the document for the designer to correct), check everything before
+// converting, then land in the v3 editor — quality checks already in the
+// side pane — rather than the old editor and issues pages the designer flow
+// ends in.
+
+const V3_GUIDANCE_TYPES = {
+  'process-guide': 'Process guide',
+  'policy-guidance': 'Policy guidance',
+  'reference-document': 'Reference document'
+}
+
+// The title as if read out of the uploaded document — the converted markdown
+// is the shared sample document, whose H1 this is.
+const V3_UPLOAD_DEFAULT_TITLE =
+  'Check an application for the Sustainable Farming Incentive'
+
+// Only findings a designer can act on in the v3 editor make its pane (and
+// the count on the converted success page): the advisory low/info ones are
+// noise at this stage, and GI-002 quotes an image path that never appears
+// in the rendered text, so its anchor has nowhere to land.
+function v3EditorFindings (markdown) {
+  return qualityChecks.findIssues(markdown).filter(
+    (finding) =>
+      ['critical', 'high', 'medium'].includes(finding.severity) &&
+      finding.ruleId !== 'GI-002'
+  )
+}
 
 router.get('/v3/upload-guide', (req, res) => {
   res.locals.backHref = '/v3/create-guidance'
@@ -1097,34 +1202,75 @@ router.get('/v3/upload-guide', (req, res) => {
 })
 
 router.post('/v3/upload-guide', (req, res) => {
-  // The file itself goes nowhere in a static prototype; the title is kept so
-  // the editor and My drafts can call the guide by name. The converted
-  // markdown is the shared sample document, like every editor here.
-  req.session.data.v3UploadedGuide = {
-    name:
-      (req.body.guideTitle || '').trim() ||
-      'Check an application for the Sustainable Farming Incentive'
-  }
+  // The file itself goes nowhere in a static prototype — straight on to the
+  // upload-and-scan wait.
   res.redirect('/v3/upload-guide/processing')
 })
 
 router.get('/v3/upload-guide/processing', (req, res) => {
-  res.render('versions/v3/upload-processing', {
-    uploadedName: (req.session.data.v3UploadedGuide || {}).name
+  res.render('versions/v3/upload-processing')
+})
+
+// Add or confirm the guide's details. Title and type arrive prefilled as if
+// extracted from the document; the owner is who approves and publishes it.
+router.get('/v3/upload-guide/metadata', (req, res) => {
+  const uploaded = req.session.data.v3UploadedGuide || {}
+
+  res.locals.backHref = '/v3/upload-guide'
+  res.render('versions/v3/upload-metadata', {
+    guideTitle: uploaded.name || V3_UPLOAD_DEFAULT_TITLE,
+    owner: uploaded.owner || 'Priya Devi',
+    guidanceType: uploaded.type || 'process-guide'
+  })
+})
+
+router.post('/v3/upload-guide/metadata', (req, res) => {
+  req.session.data.v3UploadedGuide = {
+    name: (req.body.guideTitle || '').trim() || V3_UPLOAD_DEFAULT_TITLE,
+    owner: (req.body.owner || '').trim() || 'Priya Devi',
+    type: V3_GUIDANCE_TYPES[req.body.guidanceType]
+      ? req.body.guidanceType
+      : 'process-guide'
+  }
+  res.redirect('/v3/upload-guide/check')
+})
+
+// The check page before converting — everything on one summary list, with
+// Change links back into the journey.
+router.get('/v3/upload-guide/check', (req, res) => {
+  const uploaded = req.session.data.v3UploadedGuide
+  if (!uploaded) return res.redirect('/v3/upload-guide')
+
+  res.locals.backHref = '/v3/upload-guide/metadata'
+  res.render('versions/v3/upload-check', {
+    uploaded,
+    typeLabel: V3_GUIDANCE_TYPES[uploaded.type] || 'Process guide'
+  })
+})
+
+router.post('/v3/upload-guide/check', (req, res) => {
+  res.redirect('/v3/upload-guide/converted')
+})
+
+// The success page after converting — the confirmation-panel pattern the
+// old flow's "Document migrated" page used, rather than a banner on the
+// editor. Sets what happens next, then hands over to editing.
+router.get('/v3/upload-guide/converted', (req, res) => {
+  const uploaded = req.session.data.v3UploadedGuide
+  if (!uploaded) return res.redirect('/v3/upload-guide')
+
+  const edits = req.session.data.v3GuideEdits || {}
+  res.render('versions/v3/upload-converted', {
+    guideName: uploaded.name,
+    findingsCount: v3EditorFindings(edits.uploaded || sampleDocument).length
   })
 })
 
 // -- Update an existing guide ----------------------------------------------
 //
-// The v3 flow: pick the guide (this page), edit it in the TipTap-enhanced
-// editor at /v3/guide/:id/edit, save back to the document overview. The
-// same editor is also reachable straight from a search: result → document
-// overview (verifying it is the right guide) → Edit guide.
-
-router.get('/v3/update-guide', (req, res) => {
-  res.locals.backHref = '/v3/create-guidance'
-  res.render('versions/v3/update-guide', { guides: searchResults })
-})
+// Updating an existing guide starts from searching, not from Add new:
+// result → document overview (verifying it is the right guide) → Edit
+// guide, into the TipTap-enhanced editor at /v3/guide/:id/edit.
 
 // The version history shown beside the editor — the same fixed example
 // versions for every guide, but restoring one really changes the content:
@@ -1149,9 +1295,7 @@ function v3VersionMarkdown (versionId) {
 // elsewhere in this prototype — except an edit saved in this session sticks,
 // so saving and reopening shows your changes rather than quietly reverting.
 //
-// ?from=overview marks the copy opened from a document overview, so Back and
-// Cancel return to where the designer actually came from. ?restored carries
-// the date of a just-restored version, for the banner.
+// ?restored carries the date of a just-restored version, for the banner.
 router.get('/v3/guide/:id/edit', (req, res) => {
   // The guide's name can come from three places: the search results (the
   // update-existing flow), My drafts (:id is the same name slug
@@ -1163,14 +1307,16 @@ router.get('/v3/guide/:id/edit', (req, res) => {
   )
   const uploaded =
     req.params.id === 'uploaded' ? req.session.data.v3UploadedGuide : null
+  const created =
+    req.params.id === 'new' ? req.session.data.v3NewGuide : null
 
   const edits = req.session.data.v3GuideEdits || {}
-  const fromOverview = req.query.from === 'overview'
-  const cancelHref = fromOverview
+  // A guide from the search results belongs to its document overview (the
+  // page that verified it); everything else — drafts, uploads, new guides —
+  // belongs to My drafts.
+  const cancelHref = guide
     ? `/v3/document-overview/${req.params.id}`
-    : req.query.from === 'drafts' || uploaded
-      ? '/v3/drafts'
-      : '/v3/update-guide'
+    : '/v3/drafts'
   const markdown = edits[req.params.id] || sampleDocument
 
   res.locals.backHref = cancelHref
@@ -1180,25 +1326,15 @@ router.get('/v3/guide/:id/edit', (req, res) => {
       (guide && guide.name) ||
       (draft && draft.name) ||
       (uploaded && uploaded.name) ||
+      (created && created.name) ||
       'Guide not found',
-    caption: uploaded ? 'New guide' : 'Update guide',
-    // Set arriving from the upload journey, for the converted banner.
-    converted: req.query.converted === '1',
+    caption: uploaded || created ? 'New guide' : 'Update guide',
     markdown,
     cancelHref,
-    fromOverview,
     restored: req.query.restored,
     // The Quality checks pane beside the editor — run on the markdown being
-    // served, so a restored or edited version is checked as it stands. Only
-    // findings a designer can act on here make the list: the advisory
-    // low/info ones are noise at this stage, and GI-002 quotes an image
-    // path that never appears in the rendered text, so its anchor has
-    // nowhere to land.
-    findings: qualityChecks.findIssues(markdown).filter(
-      (finding) =>
-        ['critical', 'high', 'medium'].includes(finding.severity) &&
-        finding.ruleId !== 'GI-002'
-    ),
+    // served, so a restored or edited version is checked as it stands.
+    findings: v3EditorFindings(markdown),
     comments: V3_GUIDE_COMMENTS,
     versions: V3_GUIDE_VERSIONS
   })
@@ -1247,7 +1383,6 @@ router.post('/v3/guide/:id/restore', (req, res) => {
   req.session.data.v3GuideEdits[req.params.id] = v3VersionMarkdown(version.id)
 
   const params = new URLSearchParams({ restored: version.date })
-  if (req.body.from === 'overview') params.set('from', 'overview')
   res.redirect(`/v3/guide/${req.params.id}/edit?` + params.toString())
 })
 
@@ -1267,32 +1402,53 @@ router.post('/v3/guide/:id/edit', (req, res) => {
   )
 })
 
-// "My drafts" on the v3 top nav — documents this designer is part way
-// through, from app/data/documents.js, dressed with fixed last-edited dates
-// (newest first, matching the file's order of Draft rows). See
-// app/views/versions/v3/drafts.html.
-const V3_DRAFT_DATES = ['24 August 2026', '21 August 2026', '18 August 2026', '11 August 2026']
+// "My drafts" on the v3 top nav — the designer's guides at every stage of
+// the workflow (Draft, Pending, Approved, Published, Removed). Fixed
+// example rows built on names from app/data/documents.js, so each row's
+// name slug opens v3's editor at /v3/guide/:id/edit; status, scheme and
+// comment counts are this page's own. See app/views/versions/v3/drafts.html.
+const V3_DRAFT_ROWS = [
+  { name: 'Applying for the Sustainable Farming Incentive', status: 'Draft', scheme: 'Sustainable Farming Incentive', issues: 31, comments: 2, lastEdited: '24 August 2026' },
+  { name: 'How inspections work', status: 'Pending', scheme: 'Cross Compliance', issues: 12, comments: 3, lastEdited: '21 August 2026' },
+  { name: 'Cross compliance rules', status: 'Approved', scheme: 'Cross Compliance', issues: 22, comments: 1, lastEdited: '18 August 2026' },
+  { name: 'Woodland creation: eligibility', status: 'Published', scheme: 'Countryside Stewardship', issues: 14, comments: 0, lastEdited: '11 August 2026' },
+  { name: 'Payment deadlines and what to expect', status: 'Removed', scheme: 'Basic Payment Scheme', issues: 8, comments: 4, lastEdited: '2 August 2026' }
+]
 
 router.get('/v3/drafts', (req, res) => {
-  const drafts = library.documents
-    .filter((document) => document.status === 'Draft')
-    .map((document, index) => ({
-      ...document,
-      // The same name slug all-guidance-docs.html builds, so each row can
-      // open v3's editor at /v3/guide/:id/edit.
-      id: slugify(document.name),
-      lastEdited: V3_DRAFT_DATES[index] || '11 August 2026'
-    }))
+  const drafts = V3_DRAFT_ROWS.map((row) => ({
+    ...row,
+    id: slugify(row.name)
+  }))
 
-  // A guide uploaded this session joins the top of the list — a converted
-  // document becomes a draft.
+  // Guides made this session join the top of the list — a converted or
+  // newly created document becomes a draft. Their issue counts are computed
+  // from their actual markdown, so the list agrees with the editor's pane;
+  // the uploaded guide's comment count is the same fixed set the editor's
+  // Comments panel shows.
+  const edits = req.session.data.v3GuideEdits || {}
+  const created = req.session.data.v3NewGuide
+  if (created) {
+    drafts.unshift({
+      id: 'new',
+      name: created.name,
+      status: 'Draft',
+      scheme: '-',
+      issues: v3EditorFindings(edits.new || sampleDocument).length,
+      comments: 0,
+      lastEdited: 'Today'
+    })
+  }
+
   const uploaded = req.session.data.v3UploadedGuide
   if (uploaded) {
     drafts.unshift({
       id: 'uploaded',
       name: uploaded.name,
-      pages: 34,
-      issues: 14,
+      status: 'Draft',
+      scheme: 'Sustainable Farming Incentive',
+      issues: v3EditorFindings(edits.uploaded || sampleDocument).length,
+      comments: V3_GUIDE_COMMENTS.length,
       lastEdited: 'Today'
     })
   }

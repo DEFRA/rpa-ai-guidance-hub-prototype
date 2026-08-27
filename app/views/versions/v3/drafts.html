@@ -1,13 +1,16 @@
 {#
-  "My drafts" on the v3 top nav — the documents this designer is part way
-  through, pulled from app/data/documents.js (status: Draft) with fixed
-  last-edited dates added in app/routes.js. A guide uploaded this session
-  joins the top of the list, and saving in the editor returns here with the
-  success banner.
+  "My drafts" on the v3 top nav — the designer's guides at every stage of
+  the workflow, from fixed example rows in app/routes.js. A guide uploaded
+  or created this session joins the top of the list, and saving in the
+  editor returns here with the success banner.
+
+  Status is one of Draft, Pending, Approved, Published, Removed, colour
+  coded as a tag. Quality issues and comments are plain counts — an issue
+  count is workload, not an alarm, so it is deliberately not coloured.
 
   "Continue editing" opens v3's own editor at /v3/guide/:id/edit — the
-  TipTap one with quality checks in its side pane — with ?from=drafts so
-  Back and Cancel return here.
+  TipTap one with quality checks in its side pane — whose Back and Cancel
+  return here.
 #}
 {% extends "layouts/v3.html" %}
 
@@ -17,24 +20,27 @@
 
 {% set pageName = "My drafts" %}
 
+{% set statusTags = {
+  "Draft": { text: "Draft", classes: "govuk-tag--grey" },
+  "Pending": { text: "Pending", classes: "govuk-tag--yellow" },
+  "Approved": { text: "Approved", classes: "govuk-tag--turquoise" },
+  "Published": { text: "Published", classes: "govuk-tag--green" },
+  "Removed": { text: "Removed", classes: "govuk-tag--red" }
+} %}
+
 {% set draftRows = [] %}
 {% for draft in drafts %}
   {% set actionCell %}
-    <a class="govuk-link" href="/v3/guide/{{ draft.id }}/edit?from=drafts">
+    <a class="govuk-link" href="/v3/guide/{{ draft.id }}/edit">
       Continue editing<span class="govuk-visually-hidden"> {{ draft.name }}</span>
     </a>
   {% endset %}
-  {% set issuesCell %}
-    {% if draft.issues %}
-      {{ govukTag({ text: draft.issues, classes: "govuk-tag--orange" }) }}
-    {% else %}
-      {{ govukTag({ text: "None", classes: "govuk-tag--green" }) }}
-    {% endif %}
-  {% endset %}
   {% set draftRows = (draftRows.push([
     { text: draft.name },
-    { text: draft.pages, format: "numeric" },
-    { html: issuesCell, format: "numeric" },
+    { html: govukTag(statusTags[draft.status]) },
+    { text: draft.scheme },
+    { text: draft.issues, format: "numeric" },
+    { text: draft.comments, format: "numeric" },
     { text: draft.lastEdited },
     { html: actionCell }
   ]), draftRows) %}
@@ -52,15 +58,17 @@
 <h1 class="govuk-heading-l">My drafts</h1>
 
 <p class="govuk-body app-v3-prose">
-  Documents you are working on. A draft is only visible in the hub until an
-  owner approves and publishes it.
+  Your guides, and where each one is in the workflow. A draft is only
+  visible in the hub until its owner approves and publishes it.
 </p>
 
 {{ govukTable({
   head: [
-    { text: "Name", classes: "govuk-!-width-one-half" },
-    { text: "Pages", format: "numeric" },
+    { text: "Name", classes: "govuk-!-width-one-third" },
+    { text: "Status" },
+    { text: "Scheme or topic" },
     { text: "Quality issues", format: "numeric" },
+    { text: "Comments", format: "numeric" },
     { text: "Last edited" },
     { html: '<span class="govuk-visually-hidden">Action</span>' }
   ],

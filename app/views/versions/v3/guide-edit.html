@@ -1,7 +1,8 @@
 {#
-  The guide editor for v3's update-existing-guide flow, reached two ways:
-  from the update-guide list, or from a document overview's "Edit guide"
-  (?from=overview, which points Back and Cancel at the overview instead).
+  The guide editor, reached from a document overview's "Edit guide" (after
+  searching), from a My drafts row, or at the end of the upload and
+  create-new journeys. Back and Cancel return to the document overview for
+  a guide from the search results, and to My drafts for everything else.
 
   Progressive enhancement, in both directions:
 
@@ -61,13 +62,6 @@
 <div class="app-guide-edit-layout">
 
 <div class="app-guide-edit-layout__editor">
-
-{% if converted %}
-  {{ govukNotificationBanner({
-    type: "success",
-    text: "Document converted into a guide. Fix the quality findings, then save it to your drafts."
-  }) }}
-{% endif %}
 
 {% if restored %}
   {{ govukNotificationBanner({
@@ -140,7 +134,6 @@
             <p class="govuk-body-s govuk-!-margin-bottom-1">Edited by {{ version.author }}</p>
             <form method="post" action="/v3/guide/{{ id }}/restore">
               <input type="hidden" name="version" value="{{ version.id }}">
-              {% if fromOverview %}<input type="hidden" name="from" value="overview">{% endif %}
               <button type="submit" class="app-toggle">
                 Restore<span class="govuk-visually-hidden"> the version from {{ version.date }}</span>
               </button>

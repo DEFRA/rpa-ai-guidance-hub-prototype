@@ -1,9 +1,9 @@
 {#
-  The wait between choosing a file and the guide being ready — v3's version
-  of the designer flow's uploading page, reusing the same app-progress
-  module in application.js (upload, virus scan, done, then on to data-next).
-  It lands in the v3 editor at /v3/guide/uploaded/edit with the converted
-  banner, quality checks already in the side pane.
+  The wait between choosing a file and the hub having it — v3's version of
+  the designer flow's uploading page, reusing the same app-progress module
+  in application.js (upload, virus scan, done, then on to data-next). It
+  continues to the metadata step, where the guide's details are confirmed
+  before the check page and the conversion.
 
   The status is in a role="status" region so it is announced rather than
   only seen, and the plain link keeps the journey working without
@@ -11,26 +11,26 @@
 #}
 {% extends "layouts/v3.html" %}
 
-{% set pageName = "Converting your document" %}
+{% set pageName = "Checking your file" %}
 
 {% block content %}
 
 <div class="app-v3-prose">
 
-  <h1 class="govuk-heading-l">Converting your document</h1>
+  <h1 class="govuk-heading-l">Checking your file</h1>
 
   <p class="govuk-body">
-    We scan every file for viruses, then convert it into a guide. This
+    We scan every file for viruses before it goes into the hub. This
     usually takes a few seconds.
   </p>
 
   <div
     class="app-progress"
     data-module="app-progress"
-    data-next="/v3/guide/uploaded/edit?converted=1">
+    data-next="/v3/upload-guide/metadata">
 
     <p class="app-progress__status" data-progress-status role="status">
-      Uploading {{ uploadedName }}.docx
+      Uploading your file
     </p>
 
     <div class="app-progress__track">
@@ -41,7 +41,7 @@
 
   <p class="govuk-body">
     Do not close this page. If nothing happens,
-    <a class="govuk-link" href="/v3/guide/uploaded/edit?converted=1">continue to your guide</a>.
+    <a class="govuk-link" href="/v3/upload-guide/metadata">continue to the guide's details</a>.
   </p>
 
 </div>

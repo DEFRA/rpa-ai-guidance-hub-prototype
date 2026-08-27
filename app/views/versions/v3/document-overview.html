@@ -10,7 +10,7 @@
   the participant is in the shared document pages. "Save for later" points
   back at the recent work area on search.html; nothing in this static
   prototype persists that kind of state. "Edit guide" opens the guide in
-  v3's TipTap editor (guide-edit.html, ?from=overview so Back and Cancel
+  v3's TipTap editor (guide-edit.html, whose Back and Cancel
   return here) — so a guide found by searching can be verified on this page,
   then edited. Saving there lands back here with the success banner below.
 #}
@@ -73,7 +73,7 @@
     }) }}
     {{ govukButton({
       text: "Edit guide",
-      href: "/v3/guide/" + id + "/edit?from=overview",
+      href: "/v3/guide/" + id + "/edit",
       classes: "govuk-button--secondary"
     }) }}
     {{ govukButton({
