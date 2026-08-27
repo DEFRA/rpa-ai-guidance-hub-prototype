@@ -1,0 +1,14 @@
+{#
+  Version 3 layout — the same Defra-branded layout as layouts/main.html, but
+  full width. Every v3 page uses the whole viewport rather than the fixed
+  GOV.UK page width, one of the design changes that version is trying.
+
+  Setting bodyClasses here puts .app-v3 on the <body>, and _app-v3.scss
+  removes the max-width from every .govuk-width-container inside it — the
+  header, the phase banner, the main column and the footer all at once, since
+  the header and footer partials have width containers of their own that the
+  GOV.UK template's containerClasses variable would not reach.
+#}
+{% extends "layouts/main.html" %}
+
+{% set bodyClasses = "app-v3" %}
