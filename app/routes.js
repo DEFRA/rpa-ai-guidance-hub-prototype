@@ -917,7 +917,7 @@ router.get('/v1/designer/documents/review-complete', (req, res) => {
 // Version 3 — a redesign of the whole entry, trying a different shape from
 // v2's find/manage split: an unauthenticated page explaining the service at
 // /v3/, then one full-width signed-in landing page at /v3/search that folds
-// searching, filters and recent work into a single screen. Views live in
+// searching, filters and saved guides into a single screen. Views live in
 // app/views/versions/v3/ on layouts/v3.html (full width). See
 // app/views/index.html, the versions list this belongs to.
 // ===========================================================================
@@ -1033,27 +1033,23 @@ router.get('/v3/search', (req, res) => {
     })
   })
 
-  // Recent work cards: recently opened documents from
-  // app/data/guided-searches.js, each dressed with the status of the
-  // matching document in app/data/search-results.js so the card can carry a
-  // status tag.
-  const recentWork = guidedSearches.map((search) => {
-    const document = searchResults.find(
-      (candidate) => candidate.id === search.documentId
-    )
-    return {
-      id: search.documentId,
-      name: search.name,
-      lastOpened: search.lastOpened,
-      status: document ? document.status : 'Up to date'
-    }
-  })
+  // My saved guides: documents saved from a search, from
+  // app/data/saved-documents.js — the same ids the document overviews and
+  // the editor resolve.
+  const removed = req.session.data.v3RemovedSavedGuides || []
+  const savedGuides = savedDocuments
+    .filter((document) => !removed.includes(document.id))
+    .map((document) => ({
+      id: document.id,
+      name: document.name,
+      saved: document.date
+    }))
 
   res.render('versions/v3/search', {
     searched,
     query: req.query.search || '',
     results: searched ? searchResults : [],
-    recentWork,
+    savedGuides,
     selections,
     selectedFilters,
     // Clearing the filters keeps the search itself.
@@ -1121,47 +1117,22 @@ router.get('/v3/new-guide', (req, res) => {
   })
 })
 
+// Creating writes the skeleton into the session as the guide's markdown and
+// goes straight into the editor — no check or success page between the
+// details and the writing.
 router.post('/v3/new-guide', (req, res) => {
-  req.session.data.v3NewGuide = {
+  const created = {
     name: (req.body.guideTitle || '').trim() || 'Untitled guide',
     owner: (req.body.owner || '').trim() || 'Priya Devi',
     type: V3_GUIDANCE_TYPES[req.body.guidanceType]
       ? req.body.guidanceType
       : 'process-guide'
   }
-  res.redirect('/v3/new-guide/check')
-})
 
-router.get('/v3/new-guide/check', (req, res) => {
-  const created = req.session.data.v3NewGuide
-  if (!created) return res.redirect('/v3/new-guide')
-
-  res.locals.backHref = '/v3/new-guide'
-  res.render('versions/v3/new-guide-check', {
-    created,
-    typeLabel: V3_GUIDANCE_TYPES[created.type] || 'Process guide'
-  })
-})
-
-// Creating writes the skeleton into the session as the guide's markdown, so
-// from here on the editor, drafts list and save flow treat it like any
-// other guide.
-router.post('/v3/new-guide/check', (req, res) => {
-  const created = req.session.data.v3NewGuide
-  if (!created) return res.redirect('/v3/new-guide')
-
+  req.session.data.v3NewGuide = created
   req.session.data.v3GuideEdits = req.session.data.v3GuideEdits || {}
   req.session.data.v3GuideEdits.new = v3StarterMarkdown(created.name)
-  res.redirect('/v3/new-guide/created')
-})
-
-router.get('/v3/new-guide/created', (req, res) => {
-  const created = req.session.data.v3NewGuide
-  if (!created) return res.redirect('/v3/new-guide')
-
-  res.render('versions/v3/new-guide-created', {
-    guideName: created.name
-  })
+  res.redirect('/v3/guide/new/edit')
 })
 
 // -- Upload guidance ---------------------------------------------------------
@@ -1480,6 +1451,17 @@ router.get('/v3/approvals', (req, res) => {
     }))
 
   res.render('versions/v3/approvals', { approvals })
+})
+
+// "Remove" on a My saved guides row. Nothing real to delete in a static
+// prototype, but the removal sticks for the session so the table responds.
+router.get('/v3/saved-guides/remove/:id', (req, res) => {
+  req.session.data.v3RemovedSavedGuides =
+    req.session.data.v3RemovedSavedGuides || []
+  if (!req.session.data.v3RemovedSavedGuides.includes(req.params.id)) {
+    req.session.data.v3RemovedSavedGuides.push(req.params.id)
+  }
+  res.redirect('/v3/search#saved-guides')
 })
 
 // v3's copy of the document overview — same lookup as the live

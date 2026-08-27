@@ -2,7 +2,7 @@
 // the <body>, and the override below removes the fixed page width from every
 // width container inside it — header, phase banner, main and footer — keeping
 // only the page gutters. Everything else here is the v3 search page: the
-// two-pane search layout, the collapsible filter groups and the recent work
+// two-pane search layout, the collapsible filter groups and the saved guides
 // cards.
 
 .app-v3 .govuk-width-container {
@@ -601,34 +601,12 @@
   }
 }
 
-// -- Recent work -------------------------------------------------------------
+// -- My saved guides ---------------------------------------------------------
 //
-// A plain divided list rather than cards: the document name on the left, when
-// it was last opened on the right. Capped at the search bar's width so the
-// two read as one column.
+// A table on the search page: name (the link that opens the guide), date
+// saved, and a remove action. Capped at the search bar's width so the two
+// read as one column.
 
-.app-recent-work {
-  margin: 0 0 govuk-spacing(6);
-  padding: 0;
-  list-style: none;
+.app-saved-guides {
   max-width: 720px;
-}
-
-.app-recent-work__item {
-  @include govuk-font($size: 19);
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: govuk-spacing(4);
-  padding: govuk-spacing(3) 0;
-  border-bottom: 1px solid $govuk-mid-grey;
-
-  &:first-child {
-    border-top: 1px solid $govuk-mid-grey;
-  }
-}
-
-.app-recent-work__date {
-  color: govuk-colour("dark-grey");
-  white-space: nowrap;
 }

@@ -1,9 +1,7 @@
 {#
   "Create a new guide" from the chooser (create-guidance.html in this
-  folder) — the start of v3's create-new journey, matching the shape of the
-  upload one: these details, a check page (new-guide-check.html), a success
-  page (new-guide-created.html), then the v3 editor starting from a
-  skeleton document.
+  folder) — one page, then straight into the v3 editor on a skeleton
+  document: no check or success page between the details and the writing.
 
   The same three fields as the upload journey's metadata step, but nothing
   is prefilled from a document — the title is the designer's to write.
@@ -54,7 +52,7 @@
       ]
     }) }}
 
-    {{ govukButton({ text: "Continue" }) }}
+    {{ govukButton({ text: "Create guide" }) }}
 
   </form>
 

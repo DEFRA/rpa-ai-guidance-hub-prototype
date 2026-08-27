@@ -1,6 +1,6 @@
 {#
   Version 3's copy of document-overview.html — the stop between a result (or
-  a recent work card) on search.html and the document itself — on the v3
+  a saved guide row) on search.html and the document itself — on the v3
   full-width layout, with its back link pointing into v3 rather than the v2
   results page. Data comes through /v3/document-overview/:id in app/routes.js
   from the same files as the live page.
@@ -8,7 +8,7 @@
   "Open" leads to the live read-only document view at
   /find-guidance/document/:id — the edge of what v3 redesigns, so from there
   the participant is in the shared document pages. "Save for later" points
-  back at the recent work area on search.html; nothing in this static
+  back at the saved guides area on search.html; nothing in this static
   prototype persists that kind of state. "Edit guide" opens the guide in
   v3's TipTap editor (guide-edit.html, whose Back and Cancel
   return here) — so a guide found by searching can be verified on this page,
@@ -78,7 +78,7 @@
     }) }}
     {{ govukButton({
       text: "Save for later",
-      href: "/v3/search#recent-work",
+      href: "/v3/search#saved-guides",
       classes: "govuk-button--secondary"
     }) }}
   </div>

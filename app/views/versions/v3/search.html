@@ -16,15 +16,15 @@
     field as a placeholder (with a visually hidden label), a green
     magnifying-glass button submits it, and "Add new" — the way into
     creating or uploading guidance — sits beside it. The filter pane starts
-    a level down, alongside the results / recent work.
+    a level down, alongside the results / saved guides.
   - nothing is listed until a search is explicitly made: `searched` comes
     from app/routes.js, which switches on the presence of ?search in the URL
     (the Search button and Apply filters both submit the same GET form), not
     its content — the search itself is as unwired as v2's, so any query
     returns the same fixed list from app/data/search-results.js. Until then
-    the pane holds just "Your recent work", which drops below the results
+    the pane holds just "My saved guides", which drops below the results
     once there are any.
-  - recent work cards and results carry no status tags for now — status
+  - saved guide rows and results carry no status tags for now — status
     still shows on the document overview each links to
 
   Results link to v3's own document overview (document-overview.html in this
@@ -33,24 +33,52 @@
 {% extends "layouts/v3.html" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
 
 {% set pageName = "Guidance hub" %}
 
-{% set recentWorkSection %}
-  <section id="recent-work" aria-label="Your recent work">
-    <h2 class="govuk-heading-m">Your recent work</h2>
+{#
+  My saved guides as a table: the name opens the guide (via its document
+  overview), and each row can be removed — which sticks for the session, see
+  app/routes.js.
+#}
+{% set savedGuideRows = [] %}
+{% for item in savedGuides %}
+  {% set nameCell %}
+    <a class="govuk-link" href="/v3/document-overview/{{ item.id }}">{{ item.name }}</a>
+  {% endset %}
+  {% set removeCell %}
+    <a class="govuk-link" href="/v3/saved-guides/remove/{{ item.id }}">
+      Remove<span class="govuk-visually-hidden"> {{ item.name }} from my guides</span>
+    </a>
+  {% endset %}
+  {% set savedGuideRows = (savedGuideRows.push([
+    { html: nameCell },
+    { text: item.saved },
+    { html: removeCell }
+  ]), savedGuideRows) %}
+{% endfor %}
 
-    <ul class="app-recent-work">
-      {% for item in recentWork %}
-        <li class="app-recent-work__item">
-          <a class="govuk-link" href="/v3/document-overview/{{ item.id }}">{{ item.name }}</a>
-          <span class="app-recent-work__date">Last opened {{ item.lastOpened }}</span>
-        </li>
-      {% endfor %}
-    </ul>
+{% set savedGuidesSection %}
+  <section id="saved-guides" aria-label="My saved guides">
+    <h2 class="govuk-heading-m">My saved guides</h2>
+
+    {% if savedGuides.length %}
+      {{ govukTable({
+        classes: "app-saved-guides",
+        head: [
+          { text: "Name", classes: "govuk-!-width-one-half" },
+          { text: "Date saved" },
+          { html: '<span class="govuk-visually-hidden">Action</span>' }
+        ],
+        rows: savedGuideRows
+      }) }}
+    {% else %}
+      <p class="govuk-body">You have no saved guides.</p>
+    {% endif %}
   </section>
 {% endset %}
 
@@ -226,7 +254,7 @@
 
       {% endif %}
 
-      {{ recentWorkSection | safe }}
+      {{ savedGuidesSection | safe }}
 
     </div>
 
