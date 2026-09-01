@@ -36,4 +36,32 @@ body {
 @import "components/app-find-guidance";
 @import "components/app-editor-experiment";
 
+// Version 3 — full-width layout, collapsible filters, recent work cards
+@import "components/app-v3";
+
+// The last components still shipping GOV.UK green (#00703c), re-pointed at
+// Defra green so every green on the service matches — buttons are already
+// recoloured via $govuk-button-background-colour in settings.scss, and the
+// header, hero and navigation use $defra-green directly.
+.govuk-panel--confirmation {
+  background: $defra-green;
+}
+
+.govuk-notification-banner--success {
+  border-color: $defra-green;
+  background-color: $defra-green;
+
+  .govuk-notification-banner__link {
+    &:link,
+    &:visited,
+    &:active {
+      color: $defra-green;
+    }
+
+    &:hover {
+      color: $defra-green-hover;
+    }
+  }
+}
+
 // Add extra styles here

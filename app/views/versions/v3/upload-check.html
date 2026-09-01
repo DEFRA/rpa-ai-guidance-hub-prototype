@@ -1,0 +1,68 @@
+{#
+  The check page before converting — v3's version of the designer flow's
+  check.html, with the guide's details from the metadata step alongside what
+  the old page showed about the document. Change links go back into the
+  journey; converting lands in the v3 editor with the quality checks in its
+  side pane.
+
+  Like the old page, this sets the expectation that quality checks run after
+  converting and do not block it.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageName = "Check the document" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">Check the document before you convert it</h1>
+
+  {{ govukSummaryList({
+    rows: [
+      {
+        key: { text: "File" },
+        value: { text: uploaded.name + ".docx" },
+        actions: { items: [{ href: "/v3/upload-guide", text: "Change", visuallyHiddenText: "the file" }] }
+      },
+      {
+        key: { text: "Guidance title" },
+        value: { text: uploaded.name },
+        actions: { items: [{ href: "/v3/upload-guide/metadata", text: "Change", visuallyHiddenText: "the guidance title" }] }
+      },
+      {
+        key: { text: "Owner" },
+        value: { text: uploaded.owner },
+        actions: { items: [{ href: "/v3/upload-guide/metadata", text: "Change", visuallyHiddenText: "the owner" }] }
+      },
+      {
+        key: { text: "Type of guidance" },
+        value: { text: typeLabel },
+        actions: { items: [{ href: "/v3/upload-guide/metadata", text: "Change", visuallyHiddenText: "the type of guidance" }] }
+      },
+      {
+        key: { text: "Length" },
+        value: { text: "34 pages" }
+      },
+      {
+        key: { text: "Status after converting" },
+        value: { text: "Draft" }
+      }
+    ]
+  }) }}
+
+  {{ govukInsetText({
+    text: "The hub runs quality checks once the document is markdown. Anything it finds will not stop the conversion — the findings appear beside the editor, ready to fix."
+  }) }}
+
+  <form method="post" action="/v3/upload-guide/check">
+    {{ govukButton({ text: "Convert document" }) }}
+  </form>
+
+</div>
+
+{% endblock %}

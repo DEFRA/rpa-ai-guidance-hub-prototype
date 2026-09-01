@@ -1,0 +1,49 @@
+{#
+  The success page after converting — the confirmation-panel pattern the old
+  flow's "Document migrated" page used, instead of a banner on the editor.
+  Reached from the check page (upload-check.html) via the POST-then-GET
+  redirect in app/routes.js, so refreshing does not resubmit anything.
+
+  "Review and fix the issues" proceeds to the v3 editor, where the same
+  findings counted here sit in the side pane.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Document converted" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  {{ govukPanel({
+    titleText: "Document converted",
+    text: guideName
+  }) }}
+
+  <h2 class="govuk-heading-m">What happens next</h2>
+
+  <p class="govuk-body">
+    Your document is now markdown in the hub, saved as a draft in My drafts.
+    Only you can see it.
+  </p>
+
+  <p class="govuk-body">
+    Quality checks found {{ findingsCount }} issues. They did not stop the
+    conversion — they are waiting beside the editor, ready to fix.
+  </p>
+
+  {{ govukButton({
+    text: "Review and fix the issues",
+    href: "/v3/guide/uploaded/edit"
+  }) }}
+
+  <p class="govuk-body">
+    <a class="govuk-link" href="/v3/drafts">Go to My drafts</a>
+  </p>
+
+</div>
+
+{% endblock %}

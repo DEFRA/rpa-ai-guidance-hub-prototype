@@ -1,0 +1,68 @@
+{#
+  Add or confirm the guide's details, between the upload scan and the check
+  page. The title and type arrive prefilled as if the hub read them out of
+  the document — the designer corrects rather than retypes — and the owner
+  is whoever will approve and publish the guide. Kept deliberately short for
+  now: title, owner and type, with room to grow.
+
+  Values live in the session (app/routes.js), so coming back via a Change
+  link on the check page shows what was entered.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Confirm the guide's details" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">Confirm the guide's details</h1>
+
+  <p class="govuk-body">
+    We have read these from the document. Check them, and correct anything
+    that is wrong.
+  </p>
+
+  <form method="post" action="/v3/upload-guide/metadata">
+
+    {{ govukInput({
+      id: "guide-title",
+      name: "guideTitle",
+      value: guideTitle,
+      label: { text: "Guidance title", classes: "govuk-label--s" },
+      hint: { text: "What the guide will be called in the hub" }
+    }) }}
+
+    {{ govukInput({
+      id: "owner",
+      name: "owner",
+      value: owner,
+      label: { text: "Owner", classes: "govuk-label--s" },
+      hint: { text: "Who approves and publishes this guide" }
+    }) }}
+
+    {{ govukRadios({
+      idPrefix: "guidance-type",
+      name: "guidanceType",
+      value: guidanceType,
+      fieldset: {
+        legend: { text: "Type of guidance", classes: "govuk-fieldset__legend--s" }
+      },
+      items: [
+        { value: "process-guide", text: "Process guide" },
+        { value: "policy-guidance", text: "Policy guidance" },
+        { value: "reference-document", text: "Reference document" }
+      ]
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+
+  </form>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,53 @@
+{#
+  "Add new" beside Home's search bar — v3's copy of create-guidance.html on
+  the full-width layout, with its back link pointing at /v3/search.
+
+  Posts to v3's own handler in app/routes.js: both options are v3 journeys
+  ending in the v3 editor. Updating an existing guide is deliberately not
+  offered here — that starts from searching (result → document overview →
+  Edit guide) rather than from Add new.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "What would you like to do?" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <form method="post" action="/v3/create-guidance">
+
+    {{ govukRadios({
+      idPrefix: "create-guidance",
+      name: "createGuidance",
+      fieldset: {
+        legend: {
+          text: "What would you like to do?",
+          isPageHeading: true,
+          classes: "govuk-fieldset__legend--l"
+        }
+      },
+      items: [
+        {
+          value: "upload",
+          text: "Upload guidance",
+          hint: { text: "Upload an existing Word document to convert and review" }
+        },
+        {
+          value: "create-new",
+          text: "Create a new guide",
+          hint: { text: "Start a new guidance document from scratch" }
+        }
+      ]
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+
+  </form>
+
+</div>
+
+{% endblock %}
