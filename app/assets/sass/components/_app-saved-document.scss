@@ -1,7 +1,4 @@
-// Read-only view of a saved document. Additional information sits at the
-// bottom of the main content area as its own bordered box — a lighter touch
-// than .app-additional-info's grey fill elsewhere in the prototype, kept up
-// to date per section by the IntersectionObserver script in the view itself.
+// Guided, step-based view of a saved document.
 
 .app-document-content__toggle {
   display: inline-block;
@@ -33,7 +30,9 @@
 // Scrolls independently once it has more sections and subsections than fit
 // comfortably, rather than growing the column — and, with it, the page —
 // indefinitely. The toggle button above stays outside this, so it is never
-// scrolled out of reach.
+// scrolled out of reach. The step content column opposite it has no
+// equivalent any more — with one step shown at a time there is nothing long
+// enough inside it to need its own scroll box.
 .app-document-content__scroll {
   max-height: 80vh;
   overflow-y: auto;
@@ -62,10 +61,30 @@
   gap: govuk-spacing(2);
 }
 
+// Both nav-link and subnav-link below are <button>s now, not <a>s — a step
+// is something the page shows or hides, not an anchor on it — so each resets
+// the browser's default button chrome to keep the same plain-link look.
 .app-document-content__nav-link {
   display: block;
+  width: 100%;
   padding: govuk-spacing(1) 0;
+  border: 0;
+  background: none;
   color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 19px;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
 }
 
 .app-document-content__section-toggle {
@@ -128,96 +147,176 @@
 // enough to show the hierarchy without also greying it out.
 .app-document-content__subnav-link {
   display: block;
+  width: 100%;
   padding: govuk-spacing(1) 0;
-  font-size: 14px;
+  border: 0;
+  background: none;
   color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
 }
 
-// Scrolls normally with the page — its own govuk-grid-row/govuk-grid-column-full
-// (see the view) keeps it the same width as the two columns below, rather
-// than the full browser width a bare direct child of <main> would otherwise
-// have room to stretch to.
-.app-document-search {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: govuk-spacing(3);
+// Fixed regardless of which step is showing, so Back/Next and everything
+// below them stay in the same place on the page rather than shifting up for
+// a short step — comfortably taller than the longest step's own caption,
+// heading and content (around 350px rendered), so only a step that grows
+// noticeably longer than any current one would push past it.
+[data-document-steps] {
+  min-height: 400px;
+}
+
+// One step visible at a time — [hidden] already does the work natively,
+// this just gives whichever step is showing some breathing room before the
+// Back/Next buttons under it.
+.app-document-step {
   margin-bottom: govuk-spacing(6);
 }
 
-.app-document-search__input {
-  flex: 1 1 auto;
-}
-
-// Pinned to the top of the viewport as the reader scrolls, rather than
-// scrolling away with the rest of the page — the Defra header above it is
-// not sticky itself, so this only starts overlapping it once the reader has
-// scrolled past where the header would otherwise be. A solid background
-// stops page content scrolling underneath from bleeding through once it is
-// pinned; no border of its own is needed for the same job, since the
-// visible section break at the bottom of this element already draws one.
-.app-document-sticky-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding-top: govuk-spacing(3);
-  background-color: $govuk-white;
-}
-
-// "Currently viewing" left, "Save my place here" right — wraps on narrow
-// screens instead of squeezing the button under the button-group's usual
-// row/column breakpoint, since there is no button-group here, just the one.
-.app-document-header-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: govuk-spacing(3);
+// Below Back/Next rather than beside them — its own row, with the inset
+// text explaining it sitting directly underneath.
+.app-document-step-actions__save {
   margin-bottom: govuk-spacing(3);
 }
 
-.app-document-header-row__current-section {
-  margin-bottom: 0;
-  font-weight: 700;
+// Looks like a link, not a button — same treatment as
+// .app-document-content__toggle, the established pattern elsewhere on this
+// page for a plain-text action that is not really navigating anywhere.
+.app-document-save-place-link {
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 19px;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+    box-shadow:
+      0 -2px $govuk-yellow,
+      0 4px $govuk-black;
+    text-decoration: none;
+  }
 }
 
-// Shown once "Save my place here" is clicked — see the view's pageScripts.
-// Green rather than a plain govuk-body-s, so it reads as confirmation
-// rather than more explanatory text like the line above it.
+// Shown once "Save progress" is clicked — see the view's pageScripts. Green
+// rather than a plain govuk-body-s, so it reads as confirmation next to the
+// link rather than more explanatory text.
 .app-save-place__confirmation {
-  margin-top: govuk-spacing(2);
+  margin-left: govuk-spacing(2);
   color: $defra-green;
   font-weight: 700;
 }
 
-// .app-document-text itself carries no styling any more — plain flowing
-// content, no border or height of its own. It stays in the markup only as a
-// hook for the search-highlight script and the IntersectionObserver's
-// :scope > h2[id] query. See .app-document-text-column__scroll below, which
-// is what actually scrolls.
-
-// Mirrors .app-document-content__scroll opposite it — its own bounded,
-// independently scrolling box, so a long document does not push Additional
-// information (or the page) down indefinitely, and scrolling it never moves
-// the sidebar.
-.app-document-text-column__scroll {
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-// $app-highlight-background comes from _app-review.scss (imported before
-// this file) — the same soft amber used to flag text in change-review.html,
-// rather than the browser's jarring default <mark> yellow.
-.app-document-search-highlight {
-  padding: 0 2px;
-  background-color: $app-highlight-background;
-}
-
 // A simple border rather than .app-additional-info's grey fill — full width
-// of the main content column, sitting below the document text rather than
+// of the main content column, sitting below the step content rather than
 // beside it.
 .app-additional-info-panel {
   padding: govuk-spacing(4);
   margin-top: govuk-spacing(6);
   border: 1px solid $govuk-mid-grey;
+}
+
+// Extra breathing room between the two columns, on top of the grid's own
+// gutter — added to the sidebar column specifically (padding-right) rather
+// than the content column, so it only widens the gap between them rather
+// than also pushing the content column's own right edge in.
+#document-content-panel {
+  padding-right: govuk-spacing(6);
+}
+
+// Sidebar nav for a document with its own accurate step content (see
+// customSteps in app/routes.js) — a flat list of exactly as many items as
+// that document has steps, in place of the generic nested section/subnav
+// list above. Same collapsed-vs-open visual language as organic-search.html's
+// filter group headers (blue link with a chevron vs bold black with none),
+// reimplemented here with its own classes since the two pages do not share
+// a stylesheet.
+.app-document-content__custom-nav {
+  margin: 0 0 govuk-spacing(6);
+  padding: 0;
+  list-style: none;
+}
+
+.app-document-content__custom-nav-item {
+  margin-bottom: govuk-spacing(2);
+}
+
+.app-document-content__custom-nav-link {
+  display: flex;
+  align-items: center;
+  padding: govuk-spacing(1) 0;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 19px;
+  text-decoration: underline;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+// Points toward the step it links to, rather than indicating expand/collapse
+// like .app-document-content__chevron above — this list has no disclosure
+// behaviour, so there is only ever the one (right-pointing) state.
+.app-document-content__custom-nav-chevron {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-right: govuk-spacing(2);
+  border-right: 2px solid $govuk-black;
+  border-bottom: 2px solid $govuk-black;
+  transform: rotate(-45deg);
+}
+
+.app-document-content__custom-nav-current {
+  display: block;
+  padding: govuk-spacing(1) 0;
+  color: $govuk-text-colour;
+  font-family: $govuk-font-family;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+// The fixed case-note template text in the "Close case" step — a light grey
+// quoted-block treatment, distinct from the surrounding step content, so it
+// reads as something to be copied out rather than guidance prose.
+.app-case-note {
+  padding: govuk-spacing(4);
+  margin-bottom: govuk-spacing(2);
+  background-color: $govuk-light-grey;
+
+  > *:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.app-case-note__caption {
+  color: $govuk-secondary-text-colour;
 }

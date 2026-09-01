@@ -1,35 +1,39 @@
 {#
-  Confirms removing a row from either tab on find-guidance.html.
-  `searchName` comes from app/routes.js, looked up from
-  app/data/guided-searches.js or app/data/favourited-guidance.js by the :id
-  in the URL. `verb` follows which of the two the id matched — "remove" for
-  Recently opened, "delete" for Favourited guidance (and for an id that
-  matched neither), so the wording matches whichever row this was opened
-  from.
+  Confirms removing a row from either tab on find-guidance.html. documentTitle
+  and listName come from app/routes.js, looked up from
+  app/data/guidance-documents.js by ?id= and mapped from ?tab= on the
+  /find-guidance/remove-confirm URL — a direct visit with no id/tab, or one
+  that matches neither, leaves both undefined, so the generic fallback below
+  is shown instead of erroring.
 
-  A static prototype has nothing real to delete, so both buttons just return
-  to the list — "Yes, {{ verb }}" does not actually remove the row.
+  A static prototype has nothing real to remove, so "Yes, remove" just
+  returns to find-guidance.html, at the correct tab's own #anchor
+  (returnHref, also from app/routes.js) — it does not actually remove the
+  row. Cancel always returns to find-guidance.html's default tab.
 #}
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
-{% set verb = verb | default("delete") %}
-{% set pageName = "Are you sure you want to " + verb + " this?" %}
+{% set pageName = "Are you sure you want to remove this guidance?" %}
 
 {% block content %}
 
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-l">Are you sure you want to {{ verb }} this?</h1>
+    <h1 class="govuk-heading-l">Are you sure you want to remove this guidance?</h1>
 
-    <p class="govuk-body govuk-!-font-weight-bold">{{ searchName }}</p>
+    {% if documentTitle and listName %}
+      <p class="govuk-body govuk-!-font-weight-bold">You are about to remove '{{ documentTitle }}' from your {{ listName }} list.</p>
+    {% else %}
+      <p class="govuk-body govuk-!-font-weight-bold">You are about to remove this guidance.</p>
+    {% endif %}
 
     <div class="govuk-button-group">
       {{ govukButton({
-        text: "Yes, " + verb,
-        href: "/find-guidance",
+        text: "Yes, remove",
+        href: returnHref,
         classes: "govuk-button--warning"
       }) }}
       {{ govukButton({

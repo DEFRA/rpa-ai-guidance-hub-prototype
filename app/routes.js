@@ -12,7 +12,7 @@ const { guidedSearches } = require('./data/guided-searches')
 const { favouritedGuidance } = require('./data/favourited-guidance')
 const { savedDocuments } = require('./data/saved-documents')
 const { searchResults } = require('./data/search-results')
-const { documentOverviews } = require('./data/document-overviews')
+const { guidanceDocuments } = require('./data/guidance-documents')
 const sampleDocument = require('./data/sample-document')
 // Shared with the browser — see the scripts block in app/views/layouts/main.html.
 const qualityChecks = require('./assets/javascripts/quality-checks')
@@ -170,9 +170,46 @@ router.get('/v2/start', (req, res) => {
 
 // Not designed yet — a placeholder so "Find and locate guidance" leads
 // somewhere rather than a 404. See app/views/find-guidance.html.
+//
+// Both tabs' rows are built here from app/data/guidance-documents.js, looked
+// up by title against a fixed list of (title, lastOpened) pairs, rather than
+// from res.locals.guidedSearches/favouritedGuidance (still set above, for
+// other pages) — those two files predate guidance-documents.js and do not
+// have the version field this page's rows now need. A title with no match is
+// skipped with a console warning rather than breaking the page.
 router.get('/find-guidance', (req, res) => {
-  res.locals.backHref = '/v2/start'
-  res.render('find-guidance')
+  // No backHref — find-guidance.html shows breadcrumbs instead of a Back
+  // link now (see the template).
+  const findGuidanceDocumentRows = (entries) =>
+    entries.reduce((rows, entry) => {
+      const document = guidanceDocuments.find((candidate) => candidate.title === entry.title)
+      if (!document) {
+        console.warn(`find-guidance: no guidance-documents entry found for title "${entry.title}"`)
+        return rows
+      }
+      rows.push({
+        id: document.id,
+        title: document.title,
+        version: document.version,
+        lastOpened: entry.lastOpened
+      })
+      return rows
+    }, [])
+
+  const recentlyOpenedDocuments = findGuidanceDocumentRows([
+    { title: 'CS MA Claim - Revenue Options Claim Rule at Signoff 2026', lastOpened: '17 August 2026' },
+    { title: 'CS MA Claim - Land User or Land Cover not compatible with Option at Signoff 2026', lastOpened: '15 August 2026' },
+    { title: 'CS MA Claim - Agreement Level Options not Verified 2026', lastOpened: '10 August 2026' },
+    { title: 'CS MA Claim - Claim Refresh Signoff Check 2026', lastOpened: '2 August 2026' }
+  ])
+
+  const savedGuidanceDocuments = findGuidanceDocumentRows([
+    { title: 'Countryside Stewardship: capital grants', lastOpened: '28 July 2026' },
+    { title: 'Basic Payment Scheme: closing rules', lastOpened: '19 July 2026' },
+    { title: 'Sustainable Farming Incentive: soil health actions', lastOpened: '5 July 2026' }
+  ])
+
+  res.render('find-guidance', { recentlyOpenedDocuments, savedGuidanceDocuments })
 })
 
 // "Start a new search" — neither journey off it is designed yet, so both are
@@ -188,69 +225,131 @@ router.post('/find-guidance/new', (req, res) => {
   )
 })
 
-// Deleting a guided search or a favourited document from the list. A static
-// prototype has nothing real to delete, so both buttons on the confirmation
-// page just return to the list — see app/views/delete-search-confirm.html.
-//
-// Wording differs by source: Recently opened rows say "remove" (see
-// find-guidance.html), Favourited guidance rows keep the original "delete"
-// wording unchanged — same default an unmatched id already fell back to.
-router.get('/find-guidance/delete/:id', (req, res) => {
-  const guidedSearch = guidedSearches.find((candidate) => candidate.id === req.params.id)
-  const favourite = favouritedGuidance.find((candidate) => candidate.id === req.params.id)
-  const match = guidedSearch || favourite
+// Confirms removing a row from either tab on find-guidance.html — reached
+// from that page's own "Remove" links, which carry ?id= (a
+// guidance-documents.js id) and ?tab= (recently-opened or saved-guidance) so
+// this page can say which document, from which list. A static prototype has
+// nothing real to remove, so "Yes, remove" just returns to find-guidance.html
+// at the correct tab's own #anchor — see app/views/delete-search-confirm.html.
+// tab's anchor is "favourited-guidance" for saved-guidance specifically,
+// matching that tab's own id in the govukTabs call on find-guidance.html
+// (its label reads "Saved guidance", but the id/anchor was never renamed to
+// match). A direct visit with no id/tab, or one that matches neither, falls
+// back to a generic message rather than erroring.
+const REMOVE_CONFIRM_TABS = {
+  'recently-opened': { listName: 'Recently opened', anchor: 'recently-opened' },
+  'saved-guidance': { listName: 'Saved guidance', anchor: 'favourited-guidance' }
+}
+
+router.get('/find-guidance/remove-confirm', (req, res) => {
+  const document = guidanceDocuments.find((candidate) => candidate.id === req.query.id)
+  const tab = REMOVE_CONFIRM_TABS[req.query.tab]
 
   res.locals.backHref = '/find-guidance'
   res.render('delete-search-confirm', {
-    searchName: match ? match.name : 'this search',
-    verb: guidedSearch ? 'remove' : 'delete'
+    documentTitle: document ? document.title : null,
+    listName: tab ? tab.listName : null,
+    returnHref: tab ? '/find-guidance#' + tab.anchor : '/find-guidance'
   })
 })
 
 // A document's read-only view — opened from the "Saved documents" tab on
-// find-guidance.html, or from a result on organic-search.html for a
-// document not saved yet. Name and status come from app/data/saved-documents.js
-// or, failing that, app/data/search-results.js; the section content itself
-// is fixed placeholder text local to app/views/saved-document-view.html, one
-// set per document id, covering both sources.
+// find-guidance.html, or from a result on organic-search.html (by way of
+// document-overview.html) for a document not saved yet. guidanceDocuments is
+// tried first, since that is what every organic-search.html result now links
+// through as, then savedDocuments/searchResults for the older ids still used
+// by find-guidance.html's "Recently opened"/"Favourited guidance" tabs, then
+// guidanceDocuments[0] if the id matches neither — so this route never 404s
+// or shows "Document not found", whichever flow reached it. The section
+// content itself is fixed placeholder text local to
+// app/views/saved-document-view.html, one set per (legacy) document id — an
+// id from guidanceDocuments that is not also one of those keys just shows
+// the same placeholder content as countryside-stewardship-capital-grants,
+// which is expected: only the heading and Version tag need to be correct.
+//
+// A guidanceDocuments entry can carry its own "steps" array (currently only
+// cs-ma-revenue-options-claim-rule-signoff-2026 does) — when it does, that
+// replaces the generic placeholder content entirely, and which step is
+// showing is server-side state driven by ?step=, not client-side JS like the
+// generic flow's Back/Next. req.query.step is clamped to a valid step
+// number, defaulting to 1, so an out-of-range or missing/non-numeric step
+// never breaks the page.
 router.get('/find-guidance/document/:id', (req, res) => {
-  const document =
+  const guidanceDocument = guidanceDocuments.find((candidate) => candidate.id === req.params.id)
+  const legacyDocument =
     savedDocuments.find((candidate) => candidate.id === req.params.id) ||
     searchResults.find((candidate) => candidate.id === req.params.id)
 
   res.locals.backHref = '/find-guidance'
+
+  const documentName = guidanceDocument
+    ? guidanceDocument.title
+    : legacyDocument ? legacyDocument.name : guidanceDocuments[0].title
+  // Legacy savedDocuments/searchResults entries have a status, not a
+  // version — every id that matters here is also in guidanceDocuments
+  // though (see the comment above), so this only ever falls back to
+  // guidanceDocuments[0].version for a genuinely unmatched id.
+  const version = guidanceDocument ? guidanceDocument.version : guidanceDocuments[0].version
+
+  if (guidanceDocument && guidanceDocument.steps) {
+    const totalSteps = guidanceDocument.steps.length
+    const requestedStep = parseInt(req.query.step, 10)
+    const stepNumber = requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
+
+    res.render('saved-document-view', {
+      id: req.params.id,
+      documentName,
+      version,
+      customSteps: guidanceDocument.steps,
+      currentStep: guidanceDocument.steps[stepNumber - 1],
+      stepNumber,
+      totalSteps
+    })
+    return
+  }
+
   res.render('saved-document-view', {
     id: req.params.id,
-    documentName: document ? document.name : 'Document not found',
-    status: document ? document.status : 'Up to date'
+    documentName,
+    version
   })
 })
 
 // Search by document name, date or type. The search bar and filters are not
 // wired up to anything real — see app/views/organic-search.html — so this
-// always shows the same fixed set of example results.
+// always shows the same fixed set of example results: the guidanceDocuments
+// entries flagged showOnOrganicSearch, not every entry in that file — it
+// also holds a few documents (see find-guidance.html's "Saved guidance" tab)
+// that were never organic-search results to begin with.
 router.get('/find-guidance/organic-search', (req, res) => {
-  res.locals.backHref = '/find-guidance/new'
-  res.render('organic-search', { results: searchResults })
+  // No backHref — organic-search.html shows breadcrumbs instead of a Back
+  // link now (see the template).
+  res.render('organic-search', { results: guidanceDocuments.filter((document) => document.showOnOrganicSearch) })
 })
 
 // A stop between a result on organic-search.html and the document itself
 // (saved-document-view.html, at /find-guidance/document/:id) — see
-// app/views/document-overview.html. id matches app/data/search-results.js,
-// which also covers the three ids also in app/data/saved-documents.js.
+// app/views/document-overview.html. Falls back to the first entry in
+// app/data/guidance-documents.js if the id does not match, so this page
+// never breaks — including when visited with no id at all.
+//
+// defaultVersionKey tells the template which of document.versions.version1/
+// version2 to show initially, matching document.version. versionsJson is
+// that same versions object serialised once here, rather than with a
+// template filter, so the page's own inline script can read both versions'
+// lastUpdated/published/versionNotes and swap between them as the Version
+// dropdown changes — no server round trip needed for a prototype.
 router.get('/document-overview/:id', (req, res) => {
-  const result = searchResults.find((candidate) => candidate.id === req.params.id)
-  const overview = documentOverviews[req.params.id] || {}
+  const document =
+    guidanceDocuments.find((candidate) => candidate.id === req.params.id) ||
+    guidanceDocuments[0]
 
-  res.locals.backHref = '/find-guidance/organic-search'
+  // No backHref — document-overview.html shows breadcrumbs instead of a
+  // Back link now (see the template).
   res.render('document-overview', {
-    id: req.params.id,
-    documentName: result ? result.name : 'Document not found',
-    description: result ? result.description : '',
-    status: result ? result.status : 'Up to date',
-    scheme: overview.scheme || '',
-    type: overview.type || '',
-    lastUpdated: overview.lastUpdated || ''
+    document,
+    defaultVersionKey: document.version === 'Version 1' ? 'version1' : 'version2',
+    versionsJson: JSON.stringify(document.versions)
   })
 })
 
@@ -412,7 +511,8 @@ router.get('/designer/documents/review-reset', (req, res) => {
 // All guidance documents in the hub, tabbed by status. See
 // app/views/all-guidance-docs.html.
 router.get('/all-guidance-docs', (req, res) => {
-  res.locals.backHref = '/v2/start'
+  // No backHref — all-guidance-docs.html shows breadcrumbs instead of a
+  // Back link now (see the template).
   res.render('all-guidance-docs')
 })
 
@@ -440,7 +540,8 @@ router.post('/create-guidance', (req, res) => {
 // A single guidance document's overview. Placeholder until the content panel
 // is designed — see app/views/guidance-document.html.
 router.get('/guidance-document/:id', (req, res) => {
-  res.locals.backHref = '/all-guidance-docs'
+  // No backHref — guidance-document.html shows breadcrumbs instead of a
+  // Back link now (see the template).
   res.render('guidance-document')
 })
 
@@ -914,3 +1015,10 @@ router.get('/v1/designer/documents/review-complete', (req, res) => {
 })
 
 // Add your routes here
+
+// Standalone design experiment — not linked from anywhere else yet, and not
+// part of the v1 snapshot or any live journey. Hardcoded sample data lives
+// in the view itself, so no session/form logic is needed here.
+router.get('/v2/editor-experiment', (req, res) => {
+  res.render('v2/editor-experiment')
+})

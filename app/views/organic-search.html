@@ -2,123 +2,205 @@
   "Search organically" from find-guidance-new.html — search by document name,
   date or type, as opposed to explaining a problem in your own words (see
   ai-search.html). Not built: the search bar and every filter here are for
-  show, so this always renders the same fixed list from
-  app/data/search-results.js regardless of what is searched or ticked.
+  show, so this always renders the same fixed list of results regardless of
+  what is searched or ticked.
 
-  Three of the five results are already in app/data/saved-documents.js — the
-  same document, found again — and two are not. All five link to a document
-  overview first (/document-overview/:id, see app/views/document-overview.html)
-  rather than straight to the document itself. "Save to your searches" does
-  not add anything there for real; it only sends the designer to the tab
-  where it would appear, per the task this page was built from — nothing in
-  this static prototype persists that kind of state.
+  results (id, title, description, version, lastUpdated, published) comes
+  from app/data/guidance-documents.js via app/routes.js, not
+  app/data/search-results.js any more — that older file only has a name and
+  a status, not the version/date fields this page's cards need, and had no
+  entries at all for the CS MA results. Using the same guidance-documents.js
+  file here as document-overview.html and saved-document-view.html also read
+  from (by id, via /document-overview/:id and /find-guidance/document/:id)
+  means whichever result is clicked shows the same title/description/version
+  all the way through, rather than each page defaulting to its own hardcoded
+  document.
+
+  Filters sidebar: four collapsible groups rather than one flat list, each
+  toggled by its own button (not the accordion component — plain show/hide
+  is enough for four independent groups with no shared state between them).
+  Category alone starts open; the other three start collapsed. Each
+  toggle's own [aria-expanded] state drives its link-blue-vs-bold-black
+  styling directly in CSS, so it never needs to be tracked separately in JS.
+
+  Search bar: the label is kept for screen readers but visually hidden,
+  since a visible label would sit above the input and make it taller than
+  the Search button beside it — with the label out of the flow, input and
+  button are the only two things left in the row, so align-items: stretch
+  makes them match height with nothing else to account for.
 #}
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
-{% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 
-{% set pageName = "Search organically" %}
+{% set pageName = "Search for guidance" %}
 
-{% set statusTags = {
-  "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
-  "Partially updated": { text: "Partially updated", classes: "govuk-tag--orange" },
-  "Out of date": { text: "Out of date", classes: "govuk-tag--red" }
+{% set versionTags = {
+  "Version 1": { text: "Version 1", classes: "govuk-tag--green" },
+  "Version 2": { text: "Version 2", classes: "govuk-tag--purple" }
 } %}
 
 {% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Guidance hub", href: "/v2/start" },
+        { text: "Find guidance", href: "/find-guidance" },
+        { text: pageName }
+      ]
+    }) }}
+  </div>
+</div>
 
 <form method="get" action="/find-guidance/organic-search">
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
 
-      <h1 class="govuk-heading-l">Search organically</h1>
-
-      <div class="app-search-bar">
-        <div class="app-search-bar__input">
-          {{ govukInput({
-            id: "search",
-            name: "search",
-            label: { text: "Search guidance", classes: "govuk-label--s" }
-          }) }}
-        </div>
-        {{ govukButton({ text: "Search", classes: "govuk-!-margin-bottom-0" }) }}
-      </div>
+      <h1 class="govuk-heading-l">Search for guidance</h1>
 
     </div>
   </div>
 
   <div class="govuk-grid-row">
 
-    <div class="govuk-grid-column-one-third">
+    <div class="govuk-grid-column-one-quarter"></div>
+
+    <div class="govuk-grid-column-three-quarters">
+
+      <div class="app-search-bar">
+        <div class="app-search-bar__input">
+          {{ govukInput({
+            id: "search",
+            name: "search",
+            label: { text: "Search guidance", classes: "govuk-visually-hidden" },
+            formGroup: { classes: "govuk-!-margin-bottom-0" }
+          }) }}
+        </div>
+        {{ govukButton({ text: "Search", classes: "govuk-!-margin-bottom-0" }) }}
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="govuk-grid-row">
+
+    <div class="govuk-grid-column-one-quarter">
 
       <h2 class="govuk-heading-m">Filters</h2>
 
-      {{ govukCheckboxes({
-        idPrefix: "scheme",
-        name: "scheme",
-        fieldset: {
-          legend: { text: "Scheme or topic", classes: "govuk-fieldset__legend--s" }
-        },
-        items: [
-          { value: "sfi", text: "Sustainable Farming Incentive" },
-          { value: "countryside-stewardship", text: "Countryside Stewardship" },
-          { value: "cross-compliance", text: "Cross Compliance" }
-        ]
-      }) }}
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="true" aria-controls="filter-group-category">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            Category
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-category" data-filter-panel>
+          {{ govukSelect({
+            id: "category",
+            name: "category",
+            label: { text: "Category", classes: "govuk-visually-hidden" },
+            items: [
+              { value: "all", text: "All categories", selected: true },
+              { value: "sfi", text: "Sustainable Farming Incentive" },
+              { value: "countryside-stewardship", text: "Countryside Stewardship" },
+              { value: "cross-compliance", text: "Cross Compliance" }
+            ]
+          }) }}
+        </div>
+      </div>
 
-      {{ govukCheckboxes({
-        idPrefix: "document-type",
-        name: "documentType",
-        fieldset: {
-          legend: { text: "Document type", classes: "govuk-fieldset__legend--s" }
-        },
-        items: [
-          { value: "guidance-document", text: "Guidance document" },
-          { value: "form", text: "Form" },
-          { value: "policy", text: "Policy" }
-        ]
-      }) }}
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="false" aria-controls="filter-group-scheme">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            Scheme
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-scheme" data-filter-panel hidden>
+          {{ govukCheckboxes({
+            idPrefix: "scheme",
+            name: "scheme",
+            classes: "govuk-checkboxes--small",
+            fieldset: {
+              legend: { text: "Scheme", classes: "govuk-visually-hidden" }
+            },
+            items: [
+              { value: "countryside-stewardship", text: "Countryside Stewardship" },
+              { value: "sustainable-farming-incentive", text: "Sustainable Farming Incentive" }
+            ]
+          }) }}
+        </div>
+      </div>
 
-      {{ govukRadios({
-        idPrefix: "date-updated",
-        name: "dateUpdated",
-        fieldset: {
-          legend: { text: "Date updated", classes: "govuk-fieldset__legend--s" }
-        },
-        items: [
-          { value: "last-week", text: "Last week" },
-          { value: "last-month", text: "Last month" },
-          { value: "last-year", text: "Last year" }
-        ]
-      }) }}
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="false" aria-controls="filter-group-year">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            Year
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-year" data-filter-panel hidden>
+          {{ govukSelect({
+            id: "year",
+            name: "year",
+            label: { text: "Year", classes: "govuk-visually-hidden" },
+            items: [
+              { value: "all", text: "All years", selected: true },
+              { value: "2026", text: "2026" },
+              { value: "2025", text: "2025" },
+              { value: "2024", text: "2024" },
+              { value: "2023", text: "2023" },
+              { value: "2022", text: "2022" },
+              { value: "2021", text: "2021" },
+              { value: "2020", text: "2020" },
+              { value: "2019", text: "2019" }
+            ]
+          }) }}
+        </div>
+      </div>
 
-      {{ govukCheckboxes({
-        idPrefix: "status",
-        name: "status",
-        fieldset: {
-          legend: { text: "Status", classes: "govuk-fieldset__legend--s" }
-        },
-        items: [
-          { value: "up-to-date", text: "Up to date" },
-          { value: "partially-updated", text: "Partially updated" },
-          { value: "out-of-date", text: "Out of date" }
-        ]
-      }) }}
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="false" aria-controls="filter-group-version">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            Version
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-version" data-filter-panel hidden>
+          {{ govukCheckboxes({
+            idPrefix: "version",
+            name: "version",
+            classes: "govuk-checkboxes--small",
+            fieldset: {
+              legend: { text: "Version", classes: "govuk-visually-hidden" }
+            },
+            items: [
+              { value: "version-1", text: "Version 1" },
+              { value: "version-2", text: "Version 2" }
+            ]
+          }) }}
+        </div>
+      </div>
 
       {{ govukButton({
         text: "Apply filters",
-        classes: "govuk-button--secondary"
+        classes: "govuk-button--secondary govuk-!-margin-top-4"
       }) }}
 
     </div>
 
-    <div class="govuk-grid-column-two-thirds">
+    <div class="govuk-grid-column-three-quarters">
 
       <h2 class="govuk-heading-m app-search-results__count">24 results</h2>
 
@@ -140,20 +222,15 @@
         {% for result in results %}
           <li class="app-search-results__item">
 
+            <div class="govuk-!-margin-bottom-2">{{ govukTag(versionTags[result.version]) }}</div>
+
             <h3 class="govuk-heading-s app-search-results__name">
-              <a class="govuk-link" href="/document-overview/{{ result.id }}">{{ result.name }}</a>
+              <a class="govuk-link" href="/document-overview/{{ result.id }}">{{ result.title }}</a>
             </h3>
 
             <p class="govuk-body app-search-results__description">{{ result.description }}</p>
 
-            <div class="app-search-results__meta">
-              {{ govukTag(statusTags[result.status]) }}
-              {{ govukButton({
-                text: "Save to your searches",
-                href: "/find-guidance#saved-documents",
-                classes: "govuk-button--secondary govuk-!-margin-bottom-0"
-              }) }}
-            </div>
+            <p class="govuk-body-s app-search-results__dates">Last updated: {{ result.lastUpdated }} &middot; Published: {{ result.published }}</p>
 
           </li>
         {% endfor %}
@@ -165,4 +242,18 @@
 
 </form>
 
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    document.querySelectorAll('[data-filter-toggle]').forEach(function (toggle) {
+      toggle.addEventListener('click', function () {
+        var panel = document.getElementById(toggle.getAttribute('aria-controls'))
+        if (!panel) return
+        var expanded = toggle.getAttribute('aria-expanded') === 'true'
+        toggle.setAttribute('aria-expanded', String(!expanded))
+        panel.hidden = expanded
+      })
+    })
+  </script>
 {% endblock %}

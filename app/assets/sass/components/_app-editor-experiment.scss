@@ -1,0 +1,301 @@
+// Standalone editor/changes-panel layout experiment (/v2/editor-experiment).
+// Not used by any other page.
+
+// Breaks out of govuk-width-container (which the kit's own template.njk
+// wraps every content block in) regardless of that container's own
+// max-width — 100vw sized and re-centred on the viewport rather than the
+// container, with the container's own padding replaced by a small fixed
+// amount here.
+.app-experiment-page {
+  position: relative;
+  left: 50%;
+  width: 100vw;
+  padding-right: 40px;
+  padding-left: 40px;
+  margin-left: -50vw;
+  box-sizing: border-box;
+}
+
+.app-experiment-nav {
+  margin: 0 0 govuk-spacing(4);
+  padding: 0;
+  list-style: none;
+}
+
+.app-experiment-nav__item {
+  margin-bottom: govuk-spacing(1);
+}
+
+// Active state kept deliberately simple — a bar and a tint, not a full
+// component treatment, per the brief's "don't overengineer" steer.
+.app-experiment-nav__item--active {
+  position: relative;
+  padding-left: govuk-spacing(2);
+  background-color: $govuk-light-grey;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background-color: govuk-colour("blue");
+  }
+
+  .app-experiment-nav__link {
+    font-weight: 700;
+    text-decoration: none;
+  }
+}
+
+.app-experiment-nav__link {
+  display: block;
+  padding: govuk-spacing(1) 0;
+}
+
+// The single bordered box holding both panes — flat, no shadow or radius,
+// per the brief. Flex so the two panes sit side by side with one dividing
+// border between them, and so the editor pane can grow to fill the space
+// left behind when the changes pane is hidden.
+//
+// Height is fixed to the viewport (minus a fixed allowance for everything
+// above it — Defra header, service nav, phase banner, main-wrapper padding
+// and the page heading, roughly 290px stacked at desktop — plus a small
+// safety margin) rather than growing with content, so the box itself never
+// needs the page to scroll to see all of it; overflow: hidden keeps each
+// pane's own fixed header/toolbar pinned at the box's edge rather than the
+// box growing taller than its own height.
+.app-experiment-box {
+  display: flex;
+  align-items: stretch;
+  height: calc(100vh - 300px);
+  min-height: 400px;
+  overflow: hidden;
+  border: 1px solid $govuk-mid-grey;
+}
+
+// flex-grow ratio (3:2) approximates the ~60/40 split. When the changes
+// pane is hidden ([hidden] takes it out of flow entirely) this pane simply
+// becomes the only flex item left, so it fills the full width with no JS
+// needed to add a width class to it.
+//
+// A column flex container itself, so the toolbar (a fixed-size flex item)
+// and the content (the flex item that grows and scrolls) stack vertically
+// without needing position: sticky — the toolbar is simply outside the
+// content's own overflow: auto area, so it can never scroll with it.
+.app-experiment-editor {
+  display: flex;
+  flex: 3 1 0;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-experiment-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  gap: govuk-spacing(1);
+  padding: govuk-spacing(4) govuk-spacing(4) govuk-spacing(2);
+}
+
+.app-experiment-toolbar__button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid $govuk-mid-grey;
+  background-color: $govuk-white;
+  font-family: $govuk-font-family;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $govuk-light-grey;
+  }
+
+  &[aria-pressed="true"] {
+    background-color: $govuk-mid-grey;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+// The only part of the editor pane that scrolls — min-height: 0 overrides
+// flexbox's default of never shrinking a flex item below its content size,
+// which would otherwise stop this from scrolling at all inside a fixed-height
+// column flex container.
+.app-experiment-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: govuk-spacing(4);
+  overflow-y: auto;
+
+  // Focus ring on the contenteditable region itself, so it reads as "this is
+  // editable text" the same way a normal text field would.
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: -3px;
+  }
+
+  h2,
+  h3 {
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+}
+
+// Subtle amber, not full saturation — readable body text sits on top of it.
+.text-highlight-active {
+  background-color: #fff3d6;
+}
+
+// A column flex container, same reasoning as .app-experiment-editor above —
+// __fixed (header, "Changes" heading, tabs) stays outside the scrolling
+// area, __scroll is the only part that scrolls.
+.app-experiment-changes {
+  display: flex;
+  flex: 2 1 0;
+  flex-direction: column;
+  min-width: 0;
+  border-left: 1px solid $govuk-mid-grey;
+}
+
+.app-experiment-changes__fixed {
+  flex: 0 0 auto;
+  padding: govuk-spacing(4) govuk-spacing(4) 0;
+}
+
+.app-experiment-changes__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: govuk-spacing(4);
+  overflow-y: auto;
+}
+
+.app-experiment-changes__header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: govuk-spacing(2);
+}
+
+// Looks like a link, not a button — same reset pattern used on
+// saved-document-view.html's toggle controls.
+.app-experiment-hide-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+    box-shadow:
+      0 -2px $govuk-yellow,
+      0 4px $govuk-black;
+    text-decoration: none;
+  }
+}
+
+// Underlined active tab, matching the tab style used elsewhere in this
+// prototype (change-review.html) — plain blue link text for the inactive
+// tab, bold with a bottom border for the active one.
+.app-experiment-tabs {
+  display: flex;
+  gap: govuk-spacing(4);
+  margin-bottom: govuk-spacing(4);
+  border-bottom: 1px solid $govuk-mid-grey;
+}
+
+.app-experiment-tab {
+  padding: 0 0 govuk-spacing(2);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+.app-experiment-tab--active {
+  border-bottom-color: govuk-colour("blue");
+  color: govuk-colour("blue");
+  font-weight: 700;
+}
+
+.app-experiment-comment {
+  padding: govuk-spacing(3);
+  margin-bottom: govuk-spacing(3);
+  border: 1px solid $govuk-mid-grey;
+  background-color: $govuk-light-grey;
+  cursor: pointer;
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+.app-experiment-comment__meta {
+  margin-bottom: govuk-spacing(1);
+  color: $govuk-secondary-text-colour;
+}
+
+.app-experiment-comment__text {
+  margin-bottom: 0;
+}
+
+.app-experiment-add-comment {
+  display: flex;
+  align-items: flex-end;
+  gap: govuk-spacing(2);
+}
+
+.app-experiment-add-comment__input {
+  flex-grow: 1;
+}
+
+.app-experiment-checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-experiment-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+  padding: govuk-spacing(3);
+  margin-bottom: govuk-spacing(2);
+  border: 1px solid $govuk-mid-grey;
+  cursor: pointer;
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+.app-experiment-check__text {
+  flex-grow: 1;
+}

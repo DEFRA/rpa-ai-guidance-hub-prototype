@@ -4,69 +4,99 @@
   controls, and no link into change-review.html or the markdown editor: this
   is what the document looks like, not a place to work on it.
 
-  `id`, `documentName` and `status` come from app/routes.js, looked up from
-  app/data/saved-documents.js. The section content itself is fixed
-  placeholder text local to this template, one set per document id, since it
-  is presentational rather than something anything else in the prototype
-  needs to share.
+  `id`, `documentName` and `version` come from app/routes.js — `version`
+  from app/data/guidance-documents.js, matched by id the same way
+  document-overview.html's own Version tag is, so the two agree. The tag
+  itself uses the same green-1/purple-2 styling already established on
+  find-guidance.html, organic-search.html and document-overview.html. The
+  section content itself is fixed placeholder text local to this template,
+  one set per document id, since it is presentational rather than something
+  anything else in the prototype needs to share.
 
-  Unlike the Content panel on the markdown editor (partials/markdown-editor-content.html),
-  the links here are real anchors: the document text is plain rendered HTML,
-  not a <textarea>'s opaque value, so the browser can jump to a heading's id
-  on its own with no JavaScript involved. That covers subsection links too.
+  Guided, step-based reading rather than one long scrollable document: each
+  document.sections[].subsections entry is a step (steps is built by
+  flattening sections → subsections below), shown one at a time, with a
+  sidebar to jump to any step directly and Back/Next to move through them in
+  order. There is no "Search for information" box any more — searching a
+  document that only shows one step at a time does not carry over from the
+  old fully-scrollable version.
 
-  Search scrolls normally, in its own full-width row matching the two
-  columns' own width below. .app-document-sticky-header is what is sticky
-  (position: sticky, see _app-saved-document.scss) — pinned to the top of the
-  viewport as the reader scrolls, it carries the "Currently viewing"
-  indicator, "Save my place here" and the explanatory text underneath, down
-  to the visible section break that closes it off from the two columns.
-  Status and the title above it are normal flow, not part of what is sticky.
+  No "Save my place here" or "Currently viewing" at the top any more. A
+  phase caption (govuk-caption-l, "Phase X of 3: ...") sits above each
+  step's own heading instead — baked into every step's own markup rather
+  than a single element kept in sync by JavaScript, so it is never at risk
+  of drifting out of step with whichever one is actually showing — see
+  phaseNames below for how document sections map to the three phases. Below
+  the step, in order: Back/Next, then "Save progress" (renamed from "Save
+  my place here") as a plain-text link rather than a button, then a
+  govukInsetText explaining what it does.
 
-  "Currently viewing" reuses the same IntersectionObserver that already
-  drove Additional information below — one more thing it updates on the
-  same scroll, rather than a second observer doing the same work twice. It
-  reads the heading text directly off entry.target, the h2 that came into
-  view, so there is no separate lookup to keep in sync with document.sections.
+  Two columns: Content sidebar (independently scrollable if the list is
+  long — .app-document-content__scroll, unchanged) and the step content
+  column, which no longer scrolls independently itself: with one step shown
+  at a time there is nothing long enough inside it to need its own scroll
+  box any more, so the page just scrolls normally if a step runs past the
+  viewport.
 
-  Two columns below that, each scrolling independently within its own fixed
-  max-height rather than the whole page scrolling: Content sidebar (so a long
-  subsection list does not push anything else down) and the document text
-  column, which also carries Additional information underneath the text —
-  one bordered box, not a column of its own, but still inside the same
-  scrolling area as the text above it. Additional information still updates
-  as the reader scrolls — see the IntersectionObserver script below —
-  showing whichever section's own notes are currently in view. Its content
-  per section is duplicated into a <template> near the visible box, so the
-  script has something to swap in without keeping a second copy of the text
-  in JavaScript.
+  No Additional information panel for now — removed rather than adapted to
+  update per step. document.sections[].additionalInfo is left in place in
+  case it comes back, it just is not read anywhere on this page any more.
 
-  The document text itself is plain flowing content, not a bordered box —
-  only the column around it (.app-document-text-column__scroll) is bounded
-  and scrollable, mirroring .app-document-content__scroll for the sidebar
-  opposite it.
-
-  Each section in the sidebar is collapsed by default: its own link still
-  jumps straight to that section, same as before, but its subsections are
-  hidden behind a separate chevron toggle next to it rather than shown
-  automatically — a link and a disclosure control both being interactive
-  cannot be nested inside one another, so they sit side by side instead of
-  one being wrapped in the other.
+  Each section in the sidebar is collapsed by default: its own heading is
+  also a step link, to that section's first step, so clicking it is never a
+  dead end — its subsections are hidden behind a separate chevron toggle next
+  to it rather than shown automatically. A link and a disclosure control both
+  being interactive cannot be nested inside one another, so they sit side by
+  side instead of one being wrapped in the other. Sidebar step links are
+  <button>s, not <a href="#...">s, now that a step is something the page
+  shows or hides rather than an anchor on it.
 
   The whole-sidebar show/hide toggle sets an inline display:none on the
   sidebar column itself, not just its contents, and gives the freed width to
   the main content column — see the toggle script below for why that has to
   be inline style rather than the [hidden] attribute or a class.
+
+  All the click handling below (content toggle, section toggle, save my
+  place, sidebar step links, Back/Next) is one delegated listener on
+  document rather than one addEventListener per element — fewer listeners to
+  set up, and it keeps working exactly the same way if a step's markup is
+  ever changed to be generated rather than fixed at render time.
+
+  customSteps/currentStep/stepNumber/totalSteps (from app/routes.js) are only
+  set for a document with its own accurate step content — currently
+  cs-ma-revenue-options-claim-rule-signoff-2026 and
+  cs-ma-land-user-or-land-cover-not-compatible-signoff-2026 — in which case
+  they replace the sidebar nav, step content and Back/Next below entirely.
+  Unlike the generic flow above, which renders every step and shows/hides
+  them with the client-side JS at the bottom of this file, a custom-steps
+  document renders only the current step and moves between steps via real
+  links carrying ?step=, since which step is showing is server-side state
+  here, not something kept in the DOM. The sidebar's current-vs-other-steps
+  styling (bold black, no chevron vs blue link with a chevron) reuses the
+  same visual language as organic-search.html's filter group headers, just
+  with its own CSS classes since the two pages don't share a stylesheet.
+
+  Every body paragraph/bullet in a custom step is piped through the
+  renderLinkMarkers filter (app/filters.js), which turns any
+  {{LINK:label text}} marker in that string into a non-navigating,
+  govuk-link-styled placeholder and leaves everything else as plain escaped
+  text — a no-op for the (most) body strings that have no marker at all.
 #}
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 
-{% set statusTags = {
-  "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
-  "Partially updated": { text: "Partially updated", classes: "govuk-tag--orange" },
-  "Out of date": { text: "Out of date", classes: "govuk-tag--red" }
+{#
+  Spelled out in full, unlike find-guidance.html's table — this tag sits on
+  its own above the heading with no "Version" column header alongside it to
+  give the bare number context, the same reasoning organic-search.html's
+  cards already spell it out for.
+#}
+{% set versionTags = {
+  "Version 1": { text: "Version 1", classes: "govuk-tag--green" },
+  "Version 2": { text: "Version 2", classes: "govuk-tag--purple" }
 } %}
 
 {% set documents = {
@@ -76,12 +106,23 @@
       {
         id: "introduction",
         heading: "Introduction",
-        paragraphs: [
-          "This document explains what capital grants are available under Countryside Stewardship, the items they cover, and how to apply for one alongside or separately from an existing agreement."
-        ],
         subsections: [
-          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of what capital grants pay for and who they're for." },
-          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Sets expectations before you start an application, so you know what's involved." }
+          {
+            id: "introduction-overview",
+            heading: "Overview",
+            content: [
+              "Capital grants under Countryside Stewardship pay towards physical improvements on your land, such as new fencing, hedgerow restoration and watercourse fencing. They're aimed at land managers who want to invest in specific items rather than commit to an ongoing management agreement.",
+              "Payment is a fixed rate per item rather than a percentage of what you spend, so you'll know in advance what a grant is worth before you apply."
+            ]
+          },
+          {
+            id: "introduction-purpose-of-this-guidance",
+            heading: "Purpose of this guidance",
+            content: [
+              "This guidance sets out what to expect before you start an application, including which items are eligible, how applications are assessed, and what happens once your grant is approved.",
+              "It's designed to be read before you contact an adviser or begin drafting a capital works plan, so you understand the process from the outset."
+            ]
+          }
         ],
         additionalInfo: [
           "This document only covers capital grants — ongoing management options are covered separately in the main Countryside Stewardship handbook."
@@ -90,13 +131,23 @@
       {
         id: "whats-covered",
         heading: "What's covered",
-        paragraphs: [
-          "Capital grants pay towards physical items such as fencing, hedgerow restoration and watercourse fencing, listed in the capital items list. Payment is a fixed rate per item, not a percentage of cost.",
-          "A grant can be claimed alongside an existing Mid Tier or Higher Tier agreement, or on its own with no ongoing management commitment attached."
-        ],
         subsections: [
-          { id: "whats-covered-eligible-items", heading: "Eligible items", paragraph: "Fencing, hedgerow restoration and watercourse fencing are the most commonly claimed items." },
-          { id: "whats-covered-exclusions", heading: "Exclusions", paragraph: "Routine maintenance of existing infrastructure is not covered — only new capital works." }
+          {
+            id: "whats-covered-eligible-items",
+            heading: "Eligible items",
+            content: [
+              "The most commonly claimed items are fencing, hedgerow restoration and watercourse fencing, all listed in the capital items list along with their fixed payment rates.",
+              "A grant can be claimed alongside an existing Mid Tier or Higher Tier Countryside Stewardship agreement, or applied for on its own with no ongoing management commitment attached."
+            ]
+          },
+          {
+            id: "whats-covered-exclusions",
+            heading: "Exclusions",
+            content: [
+              "Routine maintenance of existing infrastructure, such as repairing an existing fence line, is not covered — the scheme only funds new capital works.",
+              "If you're unsure whether an item counts as new work or maintenance, check the capital items list or speak to an adviser before you apply, since misclassified items can delay your application."
+            ]
+          }
         ],
         additionalInfo: [
           "Capital item rates are reviewed annually and can change between application windows."
@@ -105,13 +156,23 @@
       {
         id: "how-to-apply",
         heading: "How to apply",
-        paragraphs: [
-          "Applications are submitted through the Rural Payments service, listing the items and quantities you are applying for. Larger items, such as new hedgerows, need a capital works plan or map.",
-          "Applications are assessed in batches, so there is a fixed application window each year rather than a rolling deadline."
-        ],
         subsections: [
-          { id: "how-to-apply-application-process", heading: "Application process", paragraph: "Submitted through the Rural Payments service within the published application window." },
-          { id: "how-to-apply-supporting-evidence", heading: "Supporting evidence", paragraph: "A capital works plan or map is required for larger items such as new hedgerows." }
+          {
+            id: "how-to-apply-application-process",
+            heading: "Application process",
+            content: [
+              "Applications are submitted through the Rural Payments service, where you'll list each item and quantity you're applying for.",
+              "Applications are assessed in batches rather than on a rolling basis, so you'll need to submit within the published application window for that year — missing it means waiting for the next round."
+            ]
+          },
+          {
+            id: "how-to-apply-supporting-evidence",
+            heading: "Supporting evidence",
+            content: [
+              "Larger items, such as new hedgerows or extensive fencing runs, need a capital works plan or map submitted alongside your application.",
+              "Keep any supporting photos, quotes or measurements you used to prepare your application, since these may be requested during assessment."
+            ]
+          }
         ],
         additionalInfo: [
           "The application window is published separately from the main SFI application dates."
@@ -120,16 +181,72 @@
       {
         id: "payments",
         heading: "Payments",
-        paragraphs: [
-          "Payment is made once an item is complete and evidence has been submitted — usually photos and, for some items, a supplier invoice.",
-          "Items must be maintained for a minimum period after payment, set out in the agreement, or the payment may be reclaimed."
-        ],
         subsections: [
-          { id: "payments-payment-rates", heading: "Payment rates", paragraph: "Set per item, published in the capital items list, and reviewed annually." },
-          { id: "payments-payment-schedule", heading: "Payment schedule", paragraph: "Paid once the item is complete and evidence has been submitted." }
+          {
+            id: "payments-payment-rates",
+            heading: "Payment rates",
+            content: [
+              "Payment rates are set per item and published in the capital items list. They're reviewed annually, so the rate that applied when you applied may differ slightly from a later application window.",
+              "Rates reflect a fixed contribution towards the item rather than the full cost, so your own costings should account for any difference."
+            ]
+          },
+          {
+            id: "payments-payment-schedule",
+            heading: "Payment schedule",
+            content: [
+              "Payment is made once an item is complete and evidence has been submitted — usually photographs and, for some items, a supplier invoice.",
+              "Items must then be maintained for a minimum period set out in your agreement. If an item is removed or falls into disrepair within that period, the payment may be reclaimed."
+            ]
+          }
         ],
         additionalInfo: [
           "This document does not cover Higher Tier capital items, which are agreed individually as part of that agreement."
+        ]
+      },
+      {
+        id: "common-mistakes",
+        heading: "Common mistakes",
+        subsections: [
+          {
+            id: "common-mistakes-applying-for-ineligible-items",
+            heading: "Applying for ineligible items",
+            content: [
+              "Some land managers apply for items not on the capital items list, such as general repairs, which are rejected at assessment rather than during application."
+            ]
+          },
+          {
+            id: "common-mistakes-missing-supporting-evidence",
+            heading: "Missing supporting evidence",
+            content: [
+              "Applications without a capital works plan for larger items are one of the most common reasons for a request for further information."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Checking an application against the capital items list before submitting avoids most of these delays."
+        ]
+      },
+      {
+        id: "related-schemes",
+        heading: "Related schemes",
+        subsections: [
+          {
+            id: "related-schemes-mid-tier",
+            heading: "Countryside Stewardship Mid Tier",
+            content: [
+              "Capital grants can sit alongside a Mid Tier agreement, which covers ongoing management options rather than one-off items."
+            ]
+          },
+          {
+            id: "related-schemes-higher-tier",
+            heading: "Countryside Stewardship Higher Tier",
+            content: [
+              "Higher Tier agreements can also include capital items, agreed individually as part of that wider agreement."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "A capital grant does not commit you to either tier — it can be applied for on its own."
         ]
       }
     ]
@@ -140,12 +257,23 @@
       {
         id: "introduction",
         heading: "Introduction",
-        paragraphs: [
-          "The Basic Payment Scheme (BPS) closed to new claims in 2024. This document explains what still applies to farmers with entitlements or open legacy claims."
-        ],
         subsections: [
-          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of what still applies now BPS has closed to new claims." },
-          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Helps farmers with existing entitlements or open claims understand what happens next." }
+          {
+            id: "introduction-overview",
+            heading: "Overview",
+            content: [
+              "The Basic Payment Scheme (BPS) closed to new claims in 2024, but a number of obligations and rights still apply to farmers who hold entitlements or have an open legacy claim.",
+              "This document summarises what those farmers still need to know, without covering the closed application process itself."
+            ]
+          },
+          {
+            id: "introduction-purpose-of-this-guidance",
+            heading: "Purpose of this guidance",
+            content: [
+              "This guidance is aimed at farmers who already hold BPS entitlements or have a claim still being processed, helping them understand what happens next now the scheme has closed.",
+              "It does not cover new applications, since none can be submitted — for ongoing land management support, see the Sustainable Farming Incentive guidance instead."
+            ]
+          }
         ],
         additionalInfo: [
           "BPS is fully replaced by Environmental Land Management schemes going forward."
@@ -154,12 +282,23 @@
       {
         id: "closing-timetable",
         heading: "Closing timetable",
-        paragraphs: [
-          "The final BPS claim window closed in May 2024. No new claims can be submitted, but queries on claims made before closure are still being resolved."
-        ],
         subsections: [
-          { id: "closing-timetable-final-claim-window", heading: "Final claim window", paragraph: "Closed in May 2024 — no new claims can be submitted after this date." },
-          { id: "closing-timetable-open-queries", heading: "What happens to open queries", paragraph: "Claims made before closure are still being resolved individually." }
+          {
+            id: "closing-timetable-final-claim-window",
+            heading: "Final claim window",
+            content: [
+              "The final BPS claim window closed in May 2024. No new claims can be submitted after this date, regardless of whether you held entitlements before closure.",
+              "If you missed the final window, your only options now are the schemes that have replaced BPS, such as the Sustainable Farming Incentive."
+            ]
+          },
+          {
+            id: "closing-timetable-open-queries",
+            heading: "What happens to open queries",
+            content: [
+              "Claims made before the scheme closed are still being resolved individually, so you may still hear from the Rural Payments Agency about a claim submitted before May 2024.",
+              "Response times vary depending on the complexity of the claim and whether further evidence is needed, so it's worth keeping your own records until a claim is fully settled."
+            ]
+          }
         ],
         additionalInfo: [
           "No further claim windows will open — this was the final one."
@@ -168,12 +307,23 @@
       {
         id: "entitlements",
         heading: "Entitlements",
-        paragraphs: [
-          "Unused entitlements have no value outside an active claim, and cannot be transferred or sold now the scheme has closed."
-        ],
         subsections: [
-          { id: "entitlements-entitlement-value", heading: "Entitlement value", paragraph: "Entitlements have no value outside an active claim." },
-          { id: "entitlements-transfers-and-sales", heading: "Transfers and sales", paragraph: "Cannot be transferred or sold now the scheme has closed." }
+          {
+            id: "entitlements-entitlement-value",
+            heading: "Entitlement value",
+            content: [
+              "Entitlements only ever had value as part of an active BPS claim, and that value has not carried over to any other scheme.",
+              "Holding unused entitlements does not entitle you to any ongoing payment or benefit now that BPS itself has closed."
+            ]
+          },
+          {
+            id: "entitlements-transfers-and-sales",
+            heading: "Transfers and sales",
+            content: [
+              "Entitlements can no longer be transferred or sold, since the market for them closed along with the scheme itself.",
+              "If you were part-way through a transfer when the scheme closed, contact the Rural Payments Agency directly, as standard transfer processes are no longer available."
+            ]
+          }
         ],
         additionalInfo: [
           "Entitlement records are retained for reference even though they can no longer be used."
@@ -182,15 +332,72 @@
       {
         id: "final-claims-and-appeals",
         heading: "Final claims and appeals",
-        paragraphs: [
-          "If you believe a final BPS payment was calculated incorrectly, you can still request a review within the standard 60-day appeal window from the date of the decision."
-        ],
         subsections: [
-          { id: "final-claims-and-appeals-requesting-a-review", heading: "Requesting a review", paragraph: "Available if you believe a final payment was calculated incorrectly." },
-          { id: "final-claims-and-appeals-appeal-timescales", heading: "Appeal timescales", paragraph: "Standard 60-day window from the date of the decision." }
+          {
+            id: "final-claims-and-appeals-requesting-a-review",
+            heading: "Requesting a review",
+            content: [
+              "If you believe a final BPS payment was calculated incorrectly, you can still request a review even though the scheme itself has closed.",
+              "Reviews are handled the same way they always were — you'll need to explain what you believe is wrong and provide any evidence that supports your case."
+            ]
+          },
+          {
+            id: "final-claims-and-appeals-appeal-timescales",
+            heading: "Appeal timescales",
+            content: [
+              "You have the standard 60-day window from the date of the decision to request a review, so it's worth acting quickly once you receive a final payment notice.",
+              "Requests made outside this window are unlikely to be considered, except in exceptional circumstances."
+            ]
+          }
         ],
         additionalInfo: [
           "Historic claim data is retained for 6 years for audit purposes."
+        ]
+      },
+      {
+        id: "common-mistakes",
+        heading: "Common mistakes",
+        subsections: [
+          {
+            id: "common-mistakes-assuming-entitlements-still-have-value",
+            heading: "Assuming entitlements still have value",
+            content: [
+              "Some farmers mistakenly believe unused entitlements can still be sold or transferred now the scheme has closed."
+            ]
+          },
+          {
+            id: "common-mistakes-missing-the-appeal-window",
+            heading: "Missing the appeal window",
+            content: [
+              "Requests for a review submitted after the 60-day window are rarely accepted, even with a strong case."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Acting as soon as a final payment notice arrives leaves the most time to prepare a review request."
+        ]
+      },
+      {
+        id: "related-schemes",
+        heading: "Related schemes",
+        subsections: [
+          {
+            id: "related-schemes-sfi",
+            heading: "Sustainable Farming Incentive",
+            content: [
+              "SFI is one of the schemes farmers have moved to since BPS closed to new claims."
+            ]
+          },
+          {
+            id: "related-schemes-elm",
+            heading: "Environmental Land Management schemes",
+            content: [
+              "BPS has been fully replaced by the wider Environmental Land Management offer."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Neither scheme carries over BPS entitlements — each has its own separate eligibility rules."
         ]
       }
     ]
@@ -201,12 +408,23 @@
       {
         id: "introduction",
         heading: "Introduction",
-        paragraphs: [
-          "This document sets out the management standards that apply to hedgerows under cross compliance and the relevant SFI actions, and when they can be relaxed."
-        ],
         subsections: [
-          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of the standards that apply to hedgerow management." },
-          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Sets out when cutting restrictions apply and when they can be relaxed." }
+          {
+            id: "introduction-overview",
+            heading: "Overview",
+            content: [
+              "Hedgerows are protected by a combination of cross compliance rules and specific SFI actions, both of which set out when they can and cannot be cut, and what must be left in place.",
+              "This document brings those standards together in one place, since they're often referenced separately across different scheme handbooks."
+            ]
+          },
+          {
+            id: "introduction-purpose-of-this-guidance",
+            heading: "Purpose of this guidance",
+            content: [
+              "This guidance sets out when hedgerow cutting restrictions apply, and the specific circumstances in which they can be relaxed, such as clearing a public right of way.",
+              "It's intended for anyone responsible for hedgerow management on land within an SFI or Countryside Stewardship agreement, or subject to cross compliance."
+            ]
+          }
         ],
         additionalInfo: [
           "These standards apply whether or not the hedgerow sits within an SFI or Countryside Stewardship agreement."
@@ -215,12 +433,23 @@
       {
         id: "cutting-and-management-dates",
         heading: "Cutting and management dates",
-        paragraphs: [
-          "Hedgerows must not be cut between 1 March and 31 August, to protect nesting birds, except where a specific exemption applies — clearing a public right of way, for example."
-        ],
         subsections: [
-          { id: "cutting-and-management-dates-restricted-period", heading: "Restricted period", paragraph: "No cutting between 1 March and 31 August, to protect nesting birds." },
-          { id: "cutting-and-management-dates-exemptions", heading: "Exemptions", paragraph: "Clearing a public right of way is one example of a permitted exception." }
+          {
+            id: "cutting-and-management-dates-restricted-period",
+            heading: "Restricted period",
+            content: [
+              "Hedgerows must not be cut between 1 March and 31 August each year, since this covers the main nesting period for farmland birds.",
+              "This restriction applies regardless of which scheme your land is in, since it also forms part of cross compliance."
+            ]
+          },
+          {
+            id: "cutting-and-management-dates-exemptions",
+            heading: "Exemptions",
+            content: [
+              "A small number of exemptions apply during the restricted period, such as clearing a public right of way or dealing with a safety hazard.",
+              "Exemptions should be used sparingly and only for the specific circumstance they cover — routine cutting cannot be brought forward using an exemption."
+            ]
+          }
         ],
         additionalInfo: [
           "Some counties have byelaws with earlier cutting restrictions than the national dates above."
@@ -229,12 +458,23 @@
       {
         id: "buffer-strips",
         heading: "Buffer strips",
-        paragraphs: [
-          "A buffer strip must be maintained alongside a hedgerow next to arable land. Its minimum width is set by whichever specific action or cross compliance rule applies."
-        ],
         subsections: [
-          { id: "buffer-strips-minimum-width", heading: "Minimum width", paragraph: "Set by whichever specific action or cross compliance rule applies." },
-          { id: "buffer-strips-where-they-apply", heading: "Where buffer strips apply", paragraph: "Required alongside a hedgerow next to arable land." }
+          {
+            id: "buffer-strips-minimum-width",
+            heading: "Minimum width",
+            content: [
+              "The minimum buffer strip width is not fixed across the board — it's set by whichever specific SFI action or cross compliance rule applies to that hedgerow.",
+              "Where more than one rule could apply, the wider of the two minimum widths should be used."
+            ]
+          },
+          {
+            id: "buffer-strips-where-they-apply",
+            heading: "Where buffer strips apply",
+            content: [
+              "A buffer strip is required alongside any hedgerow that sits next to arable land, to protect it from cultivation and spray drift.",
+              "Buffer strips next to grassland are not always required in the same way, so check the specific rule that applies to your land."
+            ]
+          }
         ],
         additionalInfo: [
           "Buffer strip widths can vary between actions — check the specific one that applies to your agreement."
@@ -243,15 +483,72 @@
       {
         id: "record-keeping-and-enforcement",
         heading: "Record keeping and enforcement",
-        paragraphs: [
-          "Keep a simple record of cutting dates and any exemption used. Repeated breaches can affect payments across every scheme claimed on the holding, not just one action."
-        ],
         subsections: [
-          { id: "record-keeping-and-enforcement-what-to-record", heading: "What to record", paragraph: "Cutting dates and any exemption used, kept as a simple record." },
-          { id: "record-keeping-and-enforcement-consequences", heading: "Consequences of a breach", paragraph: "Repeated breaches can affect payments across every scheme on the holding." }
+          {
+            id: "record-keeping-and-enforcement-what-to-record",
+            heading: "What to record",
+            content: [
+              "Keep a simple record of when hedgerows were cut and, where relevant, which exemption was used and why.",
+              "A dated photo or note is usually enough — the record just needs to show you can account for what was done and when if it's ever queried."
+            ]
+          },
+          {
+            id: "record-keeping-and-enforcement-consequences",
+            heading: "Consequences of a breach",
+            content: [
+              "A single breach is usually dealt with as an isolated issue, but repeated breaches can affect payments across every scheme claimed on the holding, not just the action or agreement involved.",
+              "If you think a breach may have occurred, it's better to record what happened and seek advice than to wait for it to be identified during an inspection."
+            ]
+          }
         ],
         additionalInfo: [
           "Local nature recovery strategies may set additional hedgerow requirements beyond this document."
+        ]
+      },
+      {
+        id: "common-mistakes",
+        heading: "Common mistakes",
+        subsections: [
+          {
+            id: "common-mistakes-cutting-during-the-restricted-period",
+            heading: "Cutting during the restricted period",
+            content: [
+              "Cutting between 1 March and 31 August without a valid exemption is the most common breach reported."
+            ]
+          },
+          {
+            id: "common-mistakes-incorrect-buffer-strip-width",
+            heading: "Incorrect buffer strip width",
+            content: [
+              "Using the wrong action's minimum width, rather than the widest rule that applies, is a frequent recording error."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Checking every applicable rule before cutting, not just the most familiar one, avoids most width errors."
+        ]
+      },
+      {
+        id: "appeals-process",
+        heading: "Appeals process",
+        subsections: [
+          {
+            id: "appeals-process-requesting-a-review",
+            heading: "Requesting a review",
+            content: [
+              "A breach finding can be reviewed if you believe the restricted period or an exemption was applied incorrectly."
+            ]
+          },
+          {
+            id: "appeals-process-evidence-for-an-appeal",
+            heading: "Evidence for an appeal",
+            content: [
+              "Dated photos or records of the cutting date and any exemption used are the main evidence used in a review."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Keeping records at the time, rather than reconstructing them later, makes a review far more straightforward."
         ]
       }
     ]
@@ -262,12 +559,23 @@
       {
         id: "introduction",
         heading: "Introduction",
-        paragraphs: [
-          "This document explains the soil health actions available under SFI 23, what they ask you to do, and how they interact with other actions on the same land."
-        ],
         subsections: [
-          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of the soil health actions available under SFI 23." },
-          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Explains what each action asks you to do and how they interact." }
+          {
+            id: "introduction-overview",
+            heading: "Overview",
+            content: [
+              "SFI 23 includes a small group of soil health actions covering organic matter, soil structure and herbal leys, each aimed at improving the condition of your soil over time.",
+              "They're designed to work together, so most land managers taking one soil health action will find it complements the others rather than competing for the same land."
+            ]
+          },
+          {
+            id: "introduction-purpose-of-this-guidance",
+            heading: "Purpose of this guidance",
+            content: [
+              "This guidance explains what each soil health action asks you to do, the evidence you'll need to keep, and how the actions interact with each other and with other SFI actions on the same parcel.",
+              "It's worth reading in full before you select actions, since some combinations work better together than others."
+            ]
+          }
         ],
         additionalInfo: [
           "This document does not cover soil actions specific to Countryside Stewardship, which follow a separate handbook."
@@ -276,12 +584,23 @@
       {
         id: "actions-available",
         heading: "Actions available",
-        paragraphs: [
-          "Soil health actions include adding organic matter, testing soil structure, and establishing herbal leys, each with its own payment rate and management requirement."
-        ],
         subsections: [
-          { id: "actions-available-action-types", heading: "Action types", paragraph: "Include adding organic matter, testing soil structure, and establishing herbal leys." },
-          { id: "actions-available-payment-rates", heading: "Payment rates", paragraph: "Each action has its own rate and management requirement." }
+          {
+            id: "actions-available-action-types",
+            heading: "Action types",
+            content: [
+              "The three main soil health actions are adding organic matter, testing soil structure, and establishing herbal leys, each targeting a different aspect of soil condition.",
+              "You don't need to take all three — many land managers choose the one or two actions that best suit their existing rotation and soil type."
+            ]
+          },
+          {
+            id: "actions-available-payment-rates",
+            heading: "Payment rates",
+            content: [
+              "Each action has its own payment rate and its own management requirement, so the evidence and record-keeping expected differs from one to the next.",
+              "Rates are published in the SFI 23 handbook and are reviewed annually alongside the rest of the scheme."
+            ]
+          }
         ],
         additionalInfo: [
           "Actions can usually be combined with other SFI actions on the same parcel."
@@ -290,12 +609,23 @@
       {
         id: "evidence-you-need-to-keep",
         heading: "Evidence you need to keep",
-        paragraphs: [
-          "Keep soil test results and a simple record of any organic matter added, dated and located to the parcel it relates to."
-        ],
         subsections: [
-          { id: "evidence-you-need-to-keep-soil-test-results", heading: "Soil test results", paragraph: "Keep dated results for each parcel the action applies to." },
-          { id: "evidence-you-need-to-keep-organic-matter-records", heading: "Records of organic matter added", paragraph: "Note what was added, when, and to which parcel." }
+          {
+            id: "evidence-you-need-to-keep-soil-test-results",
+            heading: "Soil test results",
+            content: [
+              "Keep dated soil test results for every parcel the soil structure action applies to, since results are the main evidence used to confirm the action has been carried out.",
+              "Results more than a few years old are unlikely to be accepted as current evidence, so testing needs to be repeated periodically."
+            ]
+          },
+          {
+            id: "evidence-you-need-to-keep-organic-matter-records",
+            heading: "Records of organic matter added",
+            content: [
+              "For the organic matter action, keep a simple record of what was added, when it was applied, and which parcel it relates to.",
+              "A delivery note or supplier invoice alongside your own application record is usually enough to demonstrate what was used."
+            ]
+          }
         ],
         additionalInfo: [
           "Soil testing frequency requirements are reviewed as part of the annual scheme update."
@@ -304,15 +634,72 @@
       {
         id: "combining-with-other-actions",
         heading: "Combining with other actions",
-        paragraphs: [
-          "Most soil health actions can be combined with other SFI actions on the same parcel, as long as the combined management requirements do not conflict."
-        ],
         subsections: [
-          { id: "combining-with-other-actions-compatible-actions", heading: "Compatible actions", paragraph: "Most soil health actions can be combined on the same parcel." },
-          { id: "combining-with-other-actions-where-requirements-conflict", heading: "Where requirements conflict", paragraph: "Check the combined management requirements before combining actions." }
+          {
+            id: "combining-with-other-actions-compatible-actions",
+            heading: "Compatible actions",
+            content: [
+              "Most soil health actions can be combined with other SFI actions on the same parcel, since they typically address different aspects of land management.",
+              "Combining actions can increase the total payment for a parcel, but each action still needs to be fully delivered on its own terms."
+            ]
+          },
+          {
+            id: "combining-with-other-actions-where-requirements-conflict",
+            heading: "Where requirements conflict",
+            content: [
+              "Before combining actions, check their combined management requirements don't conflict — for example, a cultivation-based action alongside a no-till requirement on the same parcel.",
+              "Where a genuine conflict exists, you'll need to choose which action takes priority on that parcel rather than attempting both."
+            ]
+          }
         ],
         additionalInfo: [
           "Check the combined management requirements before adding a new action to a parcel already in another."
+        ]
+      },
+      {
+        id: "common-mistakes",
+        heading: "Common mistakes",
+        subsections: [
+          {
+            id: "common-mistakes-outdated-soil-test-results",
+            heading: "Outdated soil test results",
+            content: [
+              "Soil test results more than a few years old are a common reason evidence is not accepted."
+            ]
+          },
+          {
+            id: "common-mistakes-incomplete-organic-matter-records",
+            heading: "Incomplete organic matter records",
+            content: [
+              "Records that do not note the parcel an application relates to are often queried during assessment."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Repeating soil tests on a regular cycle avoids evidence being rejected as out of date."
+        ]
+      },
+      {
+        id: "related-schemes",
+        heading: "Related schemes",
+        subsections: [
+          {
+            id: "related-schemes-countryside-stewardship-soil-options",
+            heading: "Countryside Stewardship soil options",
+            content: [
+              "Countryside Stewardship has its own separate soil actions, covered in a different handbook to SFI 23."
+            ]
+          },
+          {
+            id: "related-schemes-nutrient-management-planning",
+            heading: "Nutrient management planning",
+            content: [
+              "Soil health actions often complement a wider nutrient management plan for the same land."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Checking both handbooks before applying avoids duplicating an action already covered elsewhere."
         ]
       }
     ]
@@ -323,12 +710,23 @@
       {
         id: "introduction",
         heading: "Introduction",
-        paragraphs: [
-          "This document gives an overview of the options available under a Higher Tier Countryside Stewardship agreement, and how they differ from Mid Tier."
-        ],
         subsections: [
-          { id: "introduction-overview", heading: "Overview", paragraph: "A short summary of what Higher Tier offers compared with Mid Tier." },
-          { id: "introduction-purpose-of-this-guidance", heading: "Purpose of this guidance", paragraph: "Helps you decide whether Higher Tier is the right fit before an expression of interest." }
+          {
+            id: "introduction-overview",
+            heading: "Overview",
+            content: [
+              "Higher Tier Countryside Stewardship offers a wider and more tailored set of options than Mid Tier, aimed at land with particularly high environmental value.",
+              "Where Mid Tier options are largely chosen from a fixed list, Higher Tier options are worked out individually with an adviser based on what your land can support."
+            ]
+          },
+          {
+            id: "introduction-purpose-of-this-guidance",
+            heading: "Purpose of this guidance",
+            content: [
+              "This guidance is intended to help you decide whether Higher Tier is the right fit for your land before you submit an expression of interest.",
+              "It covers who Higher Tier is aimed at, how options are agreed, and what a typical agreement looks like once it's in place."
+            ]
+          }
         ],
         additionalInfo: [
           "Existing Mid Tier agreements can sometimes be uplifted to Higher Tier without starting a new application."
@@ -337,12 +735,23 @@
       {
         id: "who-higher-tier-is-for",
         heading: "Who Higher Tier is for",
-        paragraphs: [
-          "Higher Tier is aimed at land with the highest environmental value, such as sites within a protected landscape or with significant habitat already present."
-        ],
         subsections: [
-          { id: "who-higher-tier-is-for-high-value-land", heading: "Land with high environmental value", paragraph: "Sites with significant habitat already present are a good fit." },
-          { id: "who-higher-tier-is-for-protected-landscapes", heading: "Protected landscapes", paragraph: "Land within a protected landscape is often prioritised." }
+          {
+            id: "who-higher-tier-is-for-high-value-land",
+            heading: "Land with high environmental value",
+            content: [
+              "Land that already supports significant habitat, such as species-rich grassland or ancient woodland, is generally a strong fit for Higher Tier.",
+              "An adviser assessment is used to confirm environmental value, since it isn't judged on land type alone."
+            ]
+          },
+          {
+            id: "who-higher-tier-is-for-protected-landscapes",
+            heading: "Protected landscapes",
+            content: [
+              "Land within a protected landscape, such as a National Park or Area of Outstanding Natural Beauty, is often prioritised for Higher Tier funding.",
+              "Being within a protected landscape does not guarantee acceptance on its own, but it does strengthen an expression of interest."
+            ]
+          }
         ],
         additionalInfo: [
           "Not all high-value land automatically qualifies — an adviser assessment is still required."
@@ -351,12 +760,23 @@
       {
         id: "how-options-are-agreed",
         heading: "How options are agreed",
-        paragraphs: [
-          "Unlike Mid Tier, Higher Tier options are agreed individually with an adviser rather than chosen from a fixed list, based on a site visit."
-        ],
         subsections: [
-          { id: "how-options-are-agreed-adviser-site-visit", heading: "Adviser site visit", paragraph: "Options are worked out together during a site visit, not chosen from a list." },
-          { id: "how-options-are-agreed-individually-agreed-options", heading: "Individually agreed options", paragraph: "Tailored to the land rather than a standard package." }
+          {
+            id: "how-options-are-agreed-adviser-site-visit",
+            heading: "Adviser site visit",
+            content: [
+              "Higher Tier options are worked out together with an adviser during a site visit, rather than chosen upfront from a fixed list as they are under Mid Tier.",
+              "The site visit is used to assess what the land can realistically support, so it's worth preparing any existing habitat records or management history beforehand."
+            ]
+          },
+          {
+            id: "how-options-are-agreed-individually-agreed-options",
+            heading: "Individually agreed options",
+            content: [
+              "The options that come out of the site visit are tailored specifically to your land, rather than being a standard package applied the same way everywhere.",
+              "This means two neighbouring holdings with similar land types can still end up with quite different Higher Tier agreements."
+            ]
+          }
         ],
         additionalInfo: [
           "Applying for Higher Tier usually starts with an expression of interest rather than a full application."
@@ -365,15 +785,72 @@
       {
         id: "agreement-length-and-review",
         heading: "Agreement length and review",
-        paragraphs: [
-          "Higher Tier agreements typically run for 10 years, with a formal review at the mid-point to check the agreed options are still appropriate."
-        ],
         subsections: [
-          { id: "agreement-length-and-review-10-year-term", heading: "10-year term", paragraph: "Higher Tier agreements typically run for 10 years." },
-          { id: "agreement-length-and-review-mid-point-review", heading: "Mid-point review", paragraph: "A formal check that agreed options are still appropriate." }
+          {
+            id: "agreement-length-and-review-10-year-term",
+            heading: "10-year term",
+            content: [
+              "Higher Tier agreements typically run for 10 years, longer than the standard Mid Tier term, reflecting the more significant environmental outcomes they aim to deliver.",
+              "The longer term also gives options like habitat creation enough time to establish properly before the agreement ends."
+            ]
+          },
+          {
+            id: "agreement-length-and-review-mid-point-review",
+            heading: "Mid-point review",
+            content: [
+              "A formal review takes place at the mid-point of the agreement to check the agreed options are still appropriate and delivering as expected.",
+              "The review can lead to options being adjusted if circumstances on the land have changed significantly since the agreement started."
+            ]
+          }
         ],
         additionalInfo: [
           "A poor mid-point review does not automatically end the agreement, but may require an action plan."
+        ]
+      },
+      {
+        id: "common-mistakes",
+        heading: "Common mistakes",
+        subsections: [
+          {
+            id: "common-mistakes-applying-without-an-expression-of-interest",
+            heading: "Applying without an expression of interest",
+            content: [
+              "Higher Tier applications usually need to start with an expression of interest rather than a direct application."
+            ]
+          },
+          {
+            id: "common-mistakes-assuming-automatic-acceptance",
+            heading: "Assuming automatic acceptance",
+            content: [
+              "High environmental value land is not automatically accepted — an adviser assessment is always required."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Starting with an expression of interest, rather than preparing a full application first, avoids wasted work."
+        ]
+      },
+      {
+        id: "related-schemes",
+        heading: "Related schemes",
+        subsections: [
+          {
+            id: "related-schemes-mid-tier",
+            heading: "Countryside Stewardship Mid Tier",
+            content: [
+              "Some existing Mid Tier agreements can be uplifted to Higher Tier without a new application."
+            ]
+          },
+          {
+            id: "related-schemes-sfi",
+            heading: "Sustainable Farming Incentive",
+            content: [
+              "SFI actions can sometimes run alongside a Higher Tier agreement on different parcels of the same holding."
+            ]
+          }
+        ],
+        additionalInfo: [
+          "Checking with an adviser before combining schemes on the same land avoids a conflict between agreements."
         ]
       }
     ]
@@ -383,6 +860,47 @@
 
 {% set document = documents[id] if documents[id] else documents["countryside-stewardship-capital-grants"] %}
 
+{#
+  A fixed mapping by section position rather than something read from each
+  document — section 1 and 2 make up the first phase, section 3 the second,
+  every section from the 4th on the third. "sfi-soil-health-actions" is the
+  document these names were actually written for (Introduction + Actions
+  available, Evidence you need to keep, Combining with other actions) — the
+  same 3 names are reused for every other document too, including the two
+  extra sidebar-only sections every document now has (Common mistakes and,
+  depending on the document, Related schemes or Appeals process): both land
+  in the third phase, which fits them well enough as supplementary content
+  rather than the guidance's own main sections.
+#}
+{% set phaseNames = [
+  "Understanding the guidance",
+  "Actions and evidence",
+  "Combining and applying"
+] %}
+
+{#
+  Flattened once here rather than nested sections/subsections loops wherever
+  a step is needed — one entry per subsection, in document order, each
+  carrying the phase its section maps to. phaseName is looked up from
+  phaseNumber, not sectionIndex directly — phaseNames only has 3 entries, one
+  per phase, however many sections a document has.
+#}
+{% set steps = [] %}
+{% for section in document.sections %}
+  {% set sectionIndex = loop.index0 %}
+  {% set phaseNumber = 1 if sectionIndex < 2 else (2 if sectionIndex == 2 else 3) %}
+  {% set phaseName = phaseNames[phaseNumber - 1] %}
+  {% for subsection in section.subsections %}
+    {% set steps = (steps.push({
+      id: subsection.id,
+      heading: subsection.heading,
+      content: subsection.content,
+      phaseNumber: phaseNumber,
+      phaseName: phaseName
+    }), steps) %}
+  {% endfor %}
+{% endfor %}
+
 {% set pageName = documentName %}
 
 {% block content %}
@@ -390,63 +908,11 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
 
-    <form class="app-document-search" data-document-search-form>
-      <div class="govuk-form-group govuk-!-margin-bottom-0 app-document-search__input">
-        <label class="govuk-label govuk-label--s" for="document-search">Search for information</label>
-        <input class="govuk-input" id="document-search" name="documentSearch" type="text" data-document-search-input>
-      </div>
-      <button type="submit" class="govuk-button govuk-!-margin-bottom-0" data-document-search-button>Search</button>
-    </form>
-
-  </div>
-</div>
-
-<div class="govuk-grid-row">
-  <div class="govuk-grid-column-full">
-
     <div class="govuk-!-margin-bottom-4">
-      {{ govukTag(statusTags[status]) }}
+      {{ govukTag(versionTags[version]) }}
     </div>
 
     <h1 class="govuk-heading-xl">{{ documentName }}</h1>
-
-    {#
-      Sticky instead of the search box above — pinned to the top of the
-      viewport as the reader scrolls, background included, so this reads as
-      a fixed header for the two columns below rather than the search box
-      above it. See _app-saved-document.scss.
-    #}
-    <div class="app-document-sticky-header" data-document-sticky-header>
-
-      <div class="app-document-header-row">
-        {#
-          Initial text matches document.sections[0], the same section the
-          IntersectionObserver script below would pick on load if it fired
-          immediately — same reasoning as Additional information's own
-          starting content further down.
-        #}
-        <p class="govuk-body app-document-header-row__current-section" data-current-section>
-          Currently viewing: {{ document.sections[0].heading }}
-        </p>
-        {{ govukButton({
-          text: "Save my place here",
-          type: "button",
-          classes: "govuk-button--secondary govuk-!-margin-bottom-0",
-          attributes: { "data-save-place": true }
-        }) }}
-      </div>
-
-      <p class="govuk-body-s">
-        This will save your current position in the document so you can
-        return to it later.
-      </p>
-      <p class="govuk-body-s app-save-place__confirmation" data-save-place-confirmation role="status" hidden>
-        Your place has been saved
-      </p>
-
-      <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l">
-
-    </div>
 
     {#
       Lives outside the column it controls, rather than inside it, so it is
@@ -471,35 +937,60 @@
     <div class="app-document-content__scroll">
       <h2 class="govuk-heading-m">Content</h2>
       <nav aria-label="Content">
-        <ul class="app-document-content__nav">
-          {% for section in document.sections %}
-            <li class="app-document-content__nav-item">
-              <div class="app-document-content__section-row">
-                <a class="govuk-link app-document-content__nav-link" href="#{{ section.id }}">{{ section.heading }}</a>
-                {% if section.subsections.length %}
+        {% if customSteps %}
+          <ul class="app-document-content__custom-nav">
+            {% for step in customSteps %}
+              <li class="app-document-content__custom-nav-item">
+                {% if step.sectionNumber == stepNumber %}
+                  <span class="app-document-content__custom-nav-current">{{ step.sectionName }}</span>
+                {% else %}
+                  <a class="app-document-content__custom-nav-link" href="/find-guidance/document/{{ id }}?step={{ step.sectionNumber }}">
+                    <span class="app-document-content__custom-nav-chevron" aria-hidden="true"></span>
+                    {{ step.sectionName }}
+                  </a>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <ul class="app-document-content__nav">
+            {% for section in document.sections %}
+              <li class="app-document-content__nav-item">
+                <div class="app-document-content__section-row">
                   <button
                     type="button"
-                    class="app-document-content__section-toggle"
-                    data-section-toggle
-                    aria-expanded="false"
-                    aria-controls="content-sub-{{ section.id }}"
-                    aria-label="Show subsections for {{ section.heading }}">
-                    <span class="app-document-content__chevron" aria-hidden="true"></span>
-                  </button>
+                    class="app-document-content__nav-link"
+                    data-step-link
+                    data-step-id="{{ section.subsections[0].id }}">{{ section.heading }}</button>
+                  {% if section.subsections.length %}
+                    <button
+                      type="button"
+                      class="app-document-content__section-toggle"
+                      data-section-toggle
+                      aria-expanded="false"
+                      aria-controls="content-sub-{{ section.id }}"
+                      aria-label="Show subsections for {{ section.heading }}">
+                      <span class="app-document-content__chevron" aria-hidden="true"></span>
+                    </button>
+                  {% endif %}
+                </div>
+                {% if section.subsections.length %}
+                  <ul class="app-document-content__subnav" id="content-sub-{{ section.id }}" hidden>
+                    {% for subsection in section.subsections %}
+                      <li class="app-document-content__subnav-item">
+                        <button
+                          type="button"
+                          class="app-document-content__subnav-link"
+                          data-step-link
+                          data-step-id="{{ subsection.id }}">{{ subsection.heading }}</button>
+                      </li>
+                    {% endfor %}
+                  </ul>
                 {% endif %}
-              </div>
-              {% if section.subsections.length %}
-                <ul class="app-document-content__subnav" id="content-sub-{{ section.id }}" hidden>
-                  {% for subsection in section.subsections %}
-                    <li class="app-document-content__subnav-item">
-                      <a class="govuk-link app-document-content__subnav-link" href="#{{ subsection.id }}">{{ subsection.heading }}</a>
-                    </li>
-                  {% endfor %}
-                </ul>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
       </nav>
     </div>
 
@@ -507,49 +998,88 @@
 
   <div class="govuk-grid-column-three-quarters" data-document-text-column>
 
-    {#
-      The only scrollable element on this side now — the document text
-      itself is plain flowing content with no border or height of its own,
-      so this is what mirrors .app-document-content__scroll opposite it.
-    #}
-    <div class="app-document-text-column__scroll">
-
-      <div class="app-document-text" data-document-text>
-        {% for section in document.sections %}
-          <h2 class="govuk-heading-m" id="{{ section.id }}">{{ section.heading }}</h2>
-          {% for paragraph in section.paragraphs %}
-            <p class="govuk-body">{{ paragraph }}</p>
+    <div data-document-steps>
+      {% if customSteps %}
+        <div class="app-document-step">
+          <span class="govuk-caption-l">Step {{ stepNumber }} of {{ totalSteps }}: {{ currentStep.sectionName }}</span>
+          <h2 class="govuk-heading-l">{{ currentStep.heading }}</h2>
+          {% for entry in currentStep.body %}
+            {% if entry == "CASE_NOTE_BLOCK" %}
+              <div class="app-case-note">
+                <p class="govuk-body">Is the option being checked <span style="color: #d4351c">AB5</span> against the <span style="color: #d4351c">Historical layer and Moorland</span>?</p>
+                <p class="govuk-body">If "Yes" cross check the options map (found on CRM) with the HEFER/FER to ensure the option is eligible. If the options map is unavailable, request an updated options map that confirms the <span style="color: #d4351c">AB5</span> location for the current revenue claim year from the Agreement Holder.</p>
+                <p class="govuk-body">If "No" continue</p>
+                <p class="govuk-body">Have other options been identified that relate to other checks not mentioned above?</p>
+                <ul class="govuk-list govuk-list--bullet">
+                  <li>If 'No', go to section 4.2 Close Case.</li>
+                  <li>If 'Yes', continue to section 3 Work the anomaly</li>
+                </ul>
+              </div>
+              <p class="govuk-body-s app-case-note__caption">Replace the highlighted text with the case-specific details, then format to black before saving.</p>
+            {% elif entry is string %}
+              <p class="govuk-body">{{ entry | renderLinkMarkers }}</p>
+            {% else %}
+              <ul class="govuk-list govuk-list--bullet">
+                {% for item in entry %}
+                  <li>{{ item | renderLinkMarkers }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
           {% endfor %}
-          {% for subsection in section.subsections %}
-            <h3 class="govuk-heading-s" id="{{ subsection.id }}">{{ subsection.heading }}</h3>
-            <p class="govuk-body">{{ subsection.paragraph }}</p>
-          {% endfor %}
+        </div>
+      {% else %}
+        {% for step in steps %}
+          <div class="app-document-step" data-step data-step-id="{{ step.id }}"{% if not loop.first %} hidden{% endif %}>
+            <span class="govuk-caption-l">Phase {{ step.phaseNumber }} of 3: {{ step.phaseName }}</span>
+            <h2 class="govuk-heading-l">{{ step.heading }}</h2>
+            {% for paragraph in step.content %}
+              <p class="govuk-body">{{ paragraph }}</p>
+            {% endfor %}
+          </div>
         {% endfor %}
-      </div>
-
-      {#
-        Initial content matches document.sections[0], the same section the
-        IntersectionObserver script below would pick on load if it fired
-        immediately — so there is nothing to visually update until the
-        reader actually scrolls past the first section.
-      #}
-      <div class="app-additional-info-panel" data-additional-info>
-        <h3 class="govuk-heading-s">Additional information</h3>
-        {% for note in document.sections[0].additionalInfo %}
-          <p class="govuk-body">{{ note }}</p>
-        {% endfor %}
-      </div>
-
-      {% for section in document.sections %}
-        <template data-info-for="{{ section.id }}">
-          <h3 class="govuk-heading-s">Additional information</h3>
-          {% for note in section.additionalInfo %}
-            <p class="govuk-body">{{ note }}</p>
-          {% endfor %}
-        </template>
-      {% endfor %}
-
+      {% endif %}
     </div>
+
+    <div class="govuk-button-group">
+      {% if customSteps %}
+        {% if stepNumber > 1 %}
+          {{ govukButton({
+            text: "Back",
+            href: "/find-guidance/document/" + id + "?step=" + (stepNumber - 1),
+            classes: "govuk-button--secondary"
+          }) }}
+        {% endif %}
+        {% if stepNumber < totalSteps %}
+          {{ govukButton({
+            text: "Next",
+            href: "/find-guidance/document/" + id + "?step=" + (stepNumber + 1)
+          }) }}
+        {% endif %}
+      {% else %}
+        {{ govukButton({
+          text: "Back",
+          type: "button",
+          classes: "govuk-button--secondary",
+          attributes: { "data-step-back": true, hidden: true }
+        }) }}
+        {{ govukButton({
+          text: "Next",
+          type: "button",
+          attributes: { "data-step-next": true }
+        }) }}
+      {% endif %}
+    </div>
+
+    <div class="app-document-step-actions__save">
+      <button type="button" class="app-document-save-place-link" data-save-place>Save progress</button>
+      <span class="govuk-body-s app-save-place__confirmation" data-save-place-confirmation role="status" hidden>
+        Your place has been saved
+      </span>
+    </div>
+
+    {{ govukInsetText({
+      text: "Saving your progress lets you return to this exact step later without starting over."
+    }) }}
 
   </div>
 
@@ -559,163 +1089,97 @@
 
 {% block pageScripts %}
   <script>
-    // Collapses the Content column to nothing — not just its contents —
-    // and gives the freed width to the document text column, rather than
-    // leaving an empty quarter-width gap where Content used to be.
-    document.querySelectorAll('[data-content-toggle]').forEach(function (button) {
-      var panel = document.getElementById(button.getAttribute('aria-controls'))
-      var textColumn = document.querySelector('[data-document-text-column]')
-
-      button.addEventListener('click', function () {
-        var expanded = button.getAttribute('aria-expanded') === 'true'
-
-        button.setAttribute('aria-expanded', String(!expanded))
-        button.textContent = expanded ? 'Show content' : 'Hide content'
-
-        // Inline style rather than [hidden], so this cannot be overridden by
-        // the govuk-grid-column-* width class still set on the same element.
-        panel.style.display = expanded ? 'none' : ''
-
-        if (textColumn) {
-          textColumn.classList.toggle('govuk-grid-column-three-quarters', expanded)
-          textColumn.classList.toggle('govuk-grid-column-full', !expanded)
-        }
-      })
-    })
-
-    // Each section in the sidebar starts collapsed; this reveals its
-    // subsections without affecting the section's own link next to it.
-    document.querySelectorAll('[data-section-toggle]').forEach(function (button) {
-      var target = document.getElementById(button.getAttribute('aria-controls'))
-      if (!target) return
-
-      button.addEventListener('click', function () {
-        var expanded = button.getAttribute('aria-expanded') === 'true'
-
-        button.setAttribute('aria-expanded', String(!expanded))
-        target.hidden = expanded
-      })
-    })
-
-    // Nothing persists in a static prototype — this just confirms the click
-    // in place. role="status" on the message means a screen reader announces
-    // it as soon as it is shown, with no focus move needed.
     (function () {
-      var button = document.querySelector('[data-save-place]')
-      var confirmation = document.querySelector('[data-save-place-confirmation]')
-      if (!button || !confirmation) return
+      var steps = Array.prototype.slice.call(document.querySelectorAll('[data-step]'))
+      var backButton = document.querySelector('[data-step-back]')
+      var nextButton = document.querySelector('[data-step-next]')
+      var currentIndex = 0
 
-      button.addEventListener('click', function () {
-        confirmation.hidden = false
-      })
-    })()
+      // Each step carries its own phase caption and heading already, so
+      // showing one is just a matter of hiding the rest — nothing else on
+      // the page needs to be kept in sync with which step this is.
+      function showStep (index) {
+        if (!steps.length || index < 0 || index >= steps.length) return
+        currentIndex = index
 
-    // Wraps every match of the search term in the document text in a <mark>,
-    // and scrolls to the first one. A straightforward text-node walk and
-    // wrap — not a full search engine, just enough to find a word on a page
-    // long enough that scanning it by eye is slow.
-    (function () {
-      var form = document.querySelector('[data-document-search-form]')
-      var input = document.querySelector('[data-document-search-input]')
-      var documentText = document.querySelector('[data-document-text]')
-      if (!form || !input || !documentText) return
-
-      function clearHighlights () {
-        documentText.querySelectorAll('mark[data-search-highlight]').forEach(function (mark) {
-          var text = document.createTextNode(mark.textContent)
-          mark.replaceWith(text)
+        steps.forEach(function (step, i) {
+          step.hidden = i !== index
         })
-        documentText.normalize()
+
+        if (backButton) backButton.hidden = index === 0
+        if (nextButton) nextButton.hidden = index === steps.length - 1
       }
 
-      function highlight (query) {
-        clearHighlights()
-        if (!query) return []
+      // One delegated listener for every click on the page, rather than one
+      // addEventListener per button — content toggle, section toggle, save
+      // my place, sidebar step links and Back/Next all go through this one
+      // handler. event.target.closest() finds whichever of them, if any,
+      // was actually clicked, the same way it would with individual
+      // listeners, just registered once.
+      document.addEventListener('click', function (event) {
+        var contentToggle = event.target.closest('[data-content-toggle]')
+        if (contentToggle) {
+          var panel = document.getElementById(contentToggle.getAttribute('aria-controls'))
+          var textColumn = document.querySelector('[data-document-text-column]')
+          var expanded = contentToggle.getAttribute('aria-expanded') === 'true'
 
-        var lowerQuery = query.toLowerCase()
-        var matches = []
+          contentToggle.setAttribute('aria-expanded', String(!expanded))
+          contentToggle.textContent = expanded ? 'Show content' : 'Hide content'
 
-        var walker = document.createTreeWalker(documentText, NodeFilter.SHOW_TEXT, null)
-        var textNodes = []
-        var node
-        while ((node = walker.nextNode())) {
-          if (node.nodeValue.toLowerCase().indexOf(lowerQuery) !== -1) textNodes.push(node)
+          // Inline style rather than [hidden], so this cannot be overridden
+          // by the govuk-grid-column-* width class still set on the panel.
+          if (panel) panel.style.display = expanded ? 'none' : ''
+
+          // expanded is the state before this click — collapsing (expanded
+          // true going in) should give the freed width to this column, so
+          // that is the govuk-grid-column-full case, not three-quarters.
+          if (textColumn) {
+            textColumn.classList.toggle('govuk-grid-column-three-quarters', !expanded)
+            textColumn.classList.toggle('govuk-grid-column-full', expanded)
+          }
+          return
         }
 
-        textNodes.forEach(function (textNode) {
-          var text = textNode.nodeValue
-          var lowerText = text.toLowerCase()
-          var fragment = document.createDocumentFragment()
-          var lastIndex = 0
-          var index = lowerText.indexOf(lowerQuery)
+        var sectionToggle = event.target.closest('[data-section-toggle]')
+        if (sectionToggle) {
+          var subnav = document.getElementById(sectionToggle.getAttribute('aria-controls'))
+          if (!subnav) return
+          var subnavExpanded = sectionToggle.getAttribute('aria-expanded') === 'true'
 
-          while (index !== -1) {
-            if (index > lastIndex) {
-              fragment.appendChild(document.createTextNode(text.slice(lastIndex, index)))
-            }
+          sectionToggle.setAttribute('aria-expanded', String(!subnavExpanded))
+          subnav.hidden = subnavExpanded
+          return
+        }
 
-            var mark = document.createElement('mark')
-            mark.className = 'app-document-search-highlight'
-            mark.setAttribute('data-search-highlight', 'true')
-            mark.textContent = text.slice(index, index + query.length)
-            fragment.appendChild(mark)
-            matches.push(mark)
+        // Nothing persists in a static prototype — this just confirms the
+        // click in place. role="status" on the message means a screen
+        // reader announces it as soon as it is shown, with no focus move
+        // needed.
+        var savePlace = event.target.closest('[data-save-place]')
+        if (savePlace) {
+          var confirmation = document.querySelector('[data-save-place-confirmation]')
+          if (confirmation) confirmation.hidden = false
+          return
+        }
 
-            lastIndex = index + query.length
-            index = lowerText.indexOf(lowerQuery, lastIndex)
-          }
+        var stepLink = event.target.closest('[data-step-link]')
+        if (stepLink) {
+          var index = steps.findIndex(function (step) {
+            return step.dataset.stepId === stepLink.dataset.stepId
+          })
+          if (index !== -1) showStep(index)
+          return
+        }
 
-          if (lastIndex < text.length) {
-            fragment.appendChild(document.createTextNode(text.slice(lastIndex)))
-          }
+        if (event.target.closest('[data-step-back]')) {
+          showStep(currentIndex - 1)
+          return
+        }
 
-          textNode.parentNode.replaceChild(fragment, textNode)
-        })
-
-        return matches
-      }
-
-      form.addEventListener('submit', function (event) {
-        event.preventDefault()
-
-        var matches = highlight(input.value.trim())
-        if (matches.length) matches[0].scrollIntoView({ block: 'center' })
+        if (event.target.closest('[data-step-next]')) {
+          showStep(currentIndex + 1)
+        }
       })
     })()
-
-    // Swaps the Additional information box's content, and updates "Currently
-    // viewing" above the columns, to match whichever top-level section is
-    // currently in view in the scrollable document text column — root is
-    // that scrolling wrapper (.app-document-text-column__scroll), not the
-    // viewport, and not .app-document-text either, since that no longer
-    // scrolls on its own — see the comment on it further up.
-    var scrollContainer = document.querySelector('.app-document-text-column__scroll')
-    var textContainer = document.querySelector('.app-document-text')
-    var infoPanel = document.querySelector('[data-additional-info]')
-    var currentSection = document.querySelector('[data-current-section]')
-
-    if (scrollContainer && textContainer && infoPanel && 'IntersectionObserver' in window) {
-      var headings = textContainer.querySelectorAll(':scope > h2[id]')
-
-      var observer = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return
-
-          var template = document.querySelector('template[data-info-for="' + entry.target.id + '"]')
-          if (template) infoPanel.innerHTML = template.innerHTML
-
-          if (currentSection) currentSection.textContent = 'Currently viewing: ' + entry.target.textContent
-        })
-      }, {
-        root: scrollContainer,
-        // Treats a section as "current" once it has scrolled into the top
-        // 30% of the text panel, rather than waiting for it to fill the
-        // whole box — the next heading down is usually already visible too.
-        rootMargin: '0px 0px -70% 0px',
-        threshold: 0
-      })
-
-      headings.forEach(function (heading) { observer.observe(heading) })
-    }
   </script>
 {% endblock %}
