@@ -4,59 +4,120 @@
   (saved-document-view.html), showing enough to decide whether to open it or
   save it for later without leaving the results.
 
-  Name, description and status come from app/data/search-results.js; scheme,
-  type and last updated come from app/data/document-overviews.js, keyed by
-  the same id.
+  The whole document object (id, title, description, version, lastUpdated,
+  published, versions) comes from app/data/guidance-documents.js, looked up
+  by id in app/routes.js — the same file organic-search.html's results and
+  saved-document-view.html both read, so whichever result was clicked shows
+  the same title/description/version everywhere rather than each page
+  defaulting to its own hardcoded document.
+
+  The Version row is a dropdown rather than a static tag — see pageScripts
+  below. defaultVersionKey/versionsJson (also from app/routes.js) tell it
+  which of document.versions.version1/version2 to show first and give it
+  both versions' Version notes/Last updated/Published to switch between
+  entirely client-side; document.lastUpdated/published themselves are left
+  untouched by this (they still drive organic-search.html and
+  find-guidance.html's Version tags), so the row's starting text is written
+  from document.versions[defaultVersionKey] instead, not those top-level
+  fields directly — the two happen to be the same value already (see
+  app/data/guidance-documents.js).
 
   "Save to search" does not add anything to app/data/saved-documents.js for
-  real — nothing in this static prototype persists that kind of state — it
-  only sends the designer to find-guidance.html, per the task this page was
-  built from.
+  real — nothing in this static prototype persists that kind of state.
+  Clicking it reveals the success notification banner above the heading
+  (govuk-notification-banner--success, hidden until then), moves focus to it,
+  and turns the button itself into a disabled "Saved" — all client-side, see
+  pageScripts below, since there is nothing to actually save. The banner
+  starts with role="alert" and tabindex="-1" already in its markup rather
+  than relying on govuk-frontend's own notification-banner.mjs to add these
+  on init, since that component only auto-focuses once, when the page first
+  loads — which is before this banner is ever shown. Neither button's
+  behaviour changes with the Version dropdown — both stay exactly as they are
+  regardless of which version is selected.
 
-  The back link comes from res.locals.backHref, set in app/routes.js,
-  following the pattern every other page here uses.
+  Breadcrumbs (Guidance hub > Find guidance > Search for guidance > this
+  document) replace the old single Back link — a fixed trail regardless of
+  whether the designer actually came from find-guidance.html or
+  organic-search.html, rather than something detected from the referrer.
 #}
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 
-{% set pageName = documentName %}
+{% set pageName = document.title %}
 
-{% set statusTags = {
-  "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
-  "Partially updated": { text: "Partially updated", classes: "govuk-tag--orange" },
-  "Out of date": { text: "Out of date", classes: "govuk-tag--red" }
-} %}
+{% set saveNotificationText = document.title + " has been saved to your Saved guidance." %}
+
+{% set currentVersion = document.versions[defaultVersionKey] %}
+
+{% set versionSelectCell %}
+  {{ govukSelect({
+    id: "document-version",
+    name: "version",
+    label: { text: "Version", classes: "govuk-visually-hidden" },
+    formGroup: { classes: "govuk-!-margin-bottom-0" },
+    attributes: { "data-version-select": true },
+    items: [
+      { value: "version1", text: "Version 1", selected: defaultVersionKey == "version1" },
+      { value: "version2", text: "Version 2", selected: defaultVersionKey == "version2" }
+    ]
+  }) }}
+{% endset %}
+
+{% set versionNotesCell %}<span data-version-field="versionNotes">{{ currentVersion.versionNotes }}</span>{% endset %}
+{% set lastUpdatedCell %}<span data-version-field="lastUpdated">{{ currentVersion.lastUpdated }}</span>{% endset %}
+{% set publishedCell %}<span data-version-field="published">{{ currentVersion.published }}</span>{% endset %}
 
 {% block content %}
 
 <div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Guidance hub", href: "/v2/start" },
+        { text: "Find guidance", href: "/find-guidance" },
+        { text: "Search for guidance", href: "/find-guidance/organic-search" },
+        { text: document.title }
+      ]
+    }) }}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <span class="govuk-caption-l">{{ type }}</span>
-    <h1 class="govuk-heading-l">{{ documentName }}</h1>
+    {{ govukNotificationBanner({
+      type: "success",
+      text: saveNotificationText,
+      attributes: { hidden: true, tabindex: "-1", "data-save-notification-banner": true }
+    }) }}
 
-    <p class="govuk-body">{{ description }}</p>
+    <h1 class="govuk-heading-l">{{ document.title }}</h1>
+
+    <p class="govuk-body">{{ document.description }}</p>
 
     {{ govukSummaryList({
       rows: [
         {
-          key: { text: "Scheme or topic" },
-          value: { text: scheme }
+          key: { text: "Version" },
+          value: { html: versionSelectCell }
         },
         {
-          key: { text: "Document type" },
-          value: { text: type }
-        },
-        {
-          key: { text: "Status" },
-          value: { html: govukTag(statusTags[status]) }
+          key: { text: "Version notes" },
+          value: { html: versionNotesCell }
         },
         {
           key: { text: "Last updated" },
-          value: { text: lastUpdated }
+          value: { html: lastUpdatedCell }
+        },
+        {
+          key: { text: "Published" },
+          value: { html: publishedCell }
         }
       ]
     }) }}
@@ -64,16 +125,60 @@
     <div class="govuk-button-group">
       {{ govukButton({
         text: "Open",
-        href: "/find-guidance/document/" + id
+        href: "/find-guidance/document/" + document.id
       }) }}
       {{ govukButton({
         text: "Save to search",
-        href: "/find-guidance",
-        classes: "govuk-button--secondary"
+        type: "button",
+        classes: "govuk-button--secondary",
+        attributes: { "data-save-to-search": true }
       }) }}
     </div>
 
   </div>
 </div>
 
+{% endblock %}
+
+{% block pageScripts %}
+  <script type="application/json" data-version-data>{{ versionsJson | safe }}</script>
+  <script>
+    (function () {
+      var dataScript = document.querySelector('[data-version-data]')
+      var select = document.querySelector('[data-version-select]')
+      if (!dataScript || !select) return
+
+      var versions = JSON.parse(dataScript.textContent)
+      var fields = {
+        versionNotes: document.querySelector('[data-version-field="versionNotes"]'),
+        lastUpdated: document.querySelector('[data-version-field="lastUpdated"]'),
+        published: document.querySelector('[data-version-field="published"]')
+      }
+
+      select.addEventListener('change', function () {
+        var selected = versions[select.value]
+        if (!selected) return
+
+        if (fields.versionNotes) fields.versionNotes.textContent = selected.versionNotes
+        if (fields.lastUpdated) fields.lastUpdated.textContent = selected.lastUpdated
+        if (fields.published) fields.published.textContent = selected.published
+      })
+    })()
+  </script>
+  <script>
+    (function () {
+      var saveButton = document.querySelector('[data-save-to-search]')
+      var banner = document.querySelector('[data-save-notification-banner]')
+      if (!saveButton || !banner) return
+
+      saveButton.addEventListener('click', function () {
+        banner.hidden = false
+        banner.focus()
+
+        saveButton.textContent = 'Saved'
+        saveButton.disabled = true
+        saveButton.classList.add('govuk-button--disabled')
+      })
+    })()
+  </script>
 {% endblock %}

@@ -3,31 +3,32 @@
   landing page: previous searches, so one can be picked up again, and a way to
   start a new one.
 
-  Only guided searches are shown here now, as "Recently opened" — read as
-  plain document titles rather than the enquiry that found them. "Open" goes
-  straight to the document itself (saved-document-view.html, via
-  search.documentId — the closest existing document to that row's original
-  enquiry, see app/data/guided-searches.js) rather than resuming the
-  step-by-step guided results screen (ai-search-results.html) that produced
-  it — that page and its routes are unchanged and still reachable from a new
-  AI search, just not linked from here any more. Each row can also be
-  removed — see delete-search-confirm.html, whose wording follows which of
-  guidedSearches/favouritedGuidance the id matched in app/routes.js — which
-  does not need to remove anything real in a static prototype.
+  Both tabs' rows come from app/data/guidance-documents.js — via
+  recentlyOpenedDocuments/savedGuidanceDocuments, built in app/routes.js by
+  looking up a fixed list of titles against that file — rather than
+  res.locals.guidedSearches/favouritedGuidance
+  (app/data/guided-searches.js / app/data/favourited-guidance.js), which are
+  still set for other pages that read them, but no longer drive this page's
+  tables: neither of those older files has the version field these rows now
+  show. "Open" goes via document-overview.html this time
+  (/document-overview/:id), the same stop-page a result on organic-search.html
+  goes through, rather than straight to saved-document-view.html as it did
+  when these rows came from guided-searches.js/favourited-guidance.js.
+
+  Each row's "Remove" link carries its guidance-documents.js id and which tab
+  it came from as ?id=/?tab= to /find-guidance/remove-confirm — see
+  delete-search-confirm.html — so that page can say which document, from
+  which list, rather than falling back to a generic message.
 
   Saved documents (found by searching organically) used to have a second tab
   here, but are not shown on this page any more. app/data/saved-documents.js
   and saved-document-view.html are unchanged and still reachable from a
   result on organic-search.html — this page just no longer lists them.
 
-  Favourited guidance is a second tab alongside Recently opened instead —
-  see app/data/favourited-guidance.js — for a document favourited directly
-  rather than found through a search. Unlike Recently opened, it keeps its
-  Steps left column and "Delete" wording exactly as before.
-
-  The rows are fixed examples, not a live list — each table always shows all
-  of res.locals.guidedSearches / res.locals.favouritedGuidance, and the tab
-  counts are just those rows counted.
+  "Saved guidance" is a second tab alongside "Recently opened" instead — for
+  a document saved directly rather than found through a search. Both tabs
+  now share the same Title/Last opened/Version/Action column structure, so
+  the Steps left column favourited guidance rows used to show is gone.
 
   The back link comes from res.locals.backHref, set in app/routes.js,
   following the pattern every other page here uses.
@@ -37,103 +38,84 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 
 {% set pageName = "Find and locate guidance" %}
 
 {#
-  -- Recently opened ---------------------------------------------------------
-
-  Data comes from res.locals.guidedSearches (app/data/guided-searches.js),
-  shared with app/routes.js so the id used to open or remove a row here is
-  the same id that page and the delete confirmation page look it up by. No
-  Steps left column — these read as plain document titles now, not searches
-  with a step count left to show.
+  Just the number — the "Version" column header next to it already says what
+  it is, unlike organic-search.html's cards, which have no such header to
+  lean on and so still spell out "Version 1"/"Version 2" in the tag itself.
 #}
-
-{% set guidedSearchRows = [] %}
-{% for search in guidedSearches %}
-  {% set actionCell %}
-    <div class="app-guided-search-actions">
-      {{ govukButton({
-        text: "Open",
-        href: "/find-guidance/document/" + search.documentId,
-        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
-      }) }}
-      <a class="govuk-link" href="/find-guidance/delete/{{ search.id }}">
-        Remove<span class="govuk-visually-hidden"> {{ search.name }}</span>
-      </a>
-    </div>
-  {% endset %}
-  {% set guidedSearchRows = (guidedSearchRows.push([
-    { text: search.name },
-    { text: search.lastOpened },
-    { html: actionCell }
-  ]), guidedSearchRows) %}
-{% endfor %}
-
-{% set recentlyOpenedTable %}
-  {{ govukTable({
-    head: [
-      { text: "Name", classes: "govuk-!-width-two-thirds" },
-      { text: "Last opened", classes: "govuk-!-width-one-third" },
-      { html: '<span class="govuk-visually-hidden">Action</span>' }
-    ],
-    rows: guidedSearchRows
-  }) }}
-{% endset %}
+{% set versionTags = {
+  "Version 1": { text: "1", classes: "govuk-tag--green" },
+  "Version 2": { text: "2", classes: "govuk-tag--purple" }
+} %}
 
 {#
-  -- Favourited guidance -----------------------------------------------------
-
-  Data comes from res.locals.favouritedGuidance
-  (app/data/favourited-guidance.js). Steps left does not really apply to a
-  document rather than a search in progress, so it reads "-" here instead of
-  the column being dropped — see that file for why the table still has it.
+  Both tabs build their table the same way, just from a different row list
+  and a different Remove/Delete word — called twice below rather than
+  duplicating this block once per tab.
 #}
-
-{% set favouritedRows = [] %}
-{% for favourite in favouritedGuidance %}
-  {% set actionCell %}
-    <div class="app-guided-search-actions">
-      {{ govukButton({
-        text: "Open",
-        href: "/find-guidance/document/" + favourite.documentId,
-        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
-      }) }}
-      <a class="govuk-link" href="/find-guidance/delete/{{ favourite.id }}">
-        Delete<span class="govuk-visually-hidden"> {{ favourite.name }}</span>
+{% macro documentsTable(documents, removeWord, tabName) %}
+  {% set rows = [] %}
+  {% for doc in documents %}
+    {% set titleCell %}<a class="govuk-link" href="/document-overview/{{ doc.id }}">{{ doc.title }}</a>{% endset %}
+    {% set versionCell %}{{ govukTag(versionTags[doc.version]) }}{% endset %}
+    {% set actionCell %}
+      <a class="govuk-link" href="/find-guidance/remove-confirm?id={{ doc.id }}&amp;tab={{ tabName }}">
+        {{ removeWord }}<span class="govuk-visually-hidden"> {{ doc.title }}</span>
       </a>
-    </div>
-  {% endset %}
-  {% set favouritedRows = (favouritedRows.push([
-    { text: favourite.name },
-    { text: favourite.lastOpened },
-    { text: "-" },
-    { html: actionCell }
-  ]), favouritedRows) %}
-{% endfor %}
+    {% endset %}
+    {% set rows = (rows.push([
+      { html: titleCell },
+      { text: doc.lastOpened },
+      { html: versionCell },
+      { html: actionCell }
+    ]), rows) %}
+  {% endfor %}
 
-{% set favouritedGuidanceTable %}
   {{ govukTable({
     head: [
-      { text: "Name", classes: "govuk-!-width-one-half" },
+      { text: "Title", classes: "govuk-!-width-one-half" },
       { text: "Last opened", classes: "govuk-!-width-one-quarter" },
-      { text: "Steps left", classes: "govuk-!-width-one-quarter" },
-      { html: '<span class="govuk-visually-hidden">Action</span>' }
+      { text: "Version" },
+      { text: "Action" }
     ],
-    rows: favouritedRows
+    rows: rows
   }) }}
+{% endmacro %}
+
+{% set recentlyOpenedTable %}
+  {{ documentsTable(recentlyOpenedDocuments, "Remove", "recently-opened") }}
+{% endset %}
+
+{% set savedGuidanceTable %}
+  {{ documentsTable(savedGuidanceDocuments, "Remove", "saved-guidance") }}
 {% endset %}
 
 {% block content %}
 
 <div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Guidance hub", href: "/v2/start" },
+        { text: "Find guidance" }
+      ]
+    }) }}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-l">Find and locate guidance</h1>
+    <h1 class="govuk-heading-l">Find guidance</h1>
 
     <p class="govuk-body">
-      Pick up a search you've already started, or start a new one.
+      Continue your search or start a new one.
     </p>
 
     {{ govukButton({ text: "Start a new search", href: "/find-guidance/organic-search" }) }}
@@ -148,14 +130,14 @@
       idPrefix: "find-guidance-tabs",
       items: [
         {
-          label: "Recently opened (" + guidedSearchRows.length + ")",
+          label: "Recently opened (" + recentlyOpenedDocuments.length + ")",
           id: "recently-opened",
           panel: { html: recentlyOpenedTable }
         },
         {
-          label: "Favourited guidance (" + favouritedRows.length + ")",
+          label: "Saved guidance (" + savedGuidanceDocuments.length + ")",
           id: "favourited-guidance",
-          panel: { html: favouritedGuidanceTable }
+          panel: { html: savedGuidanceTable }
         }
       ]
     }) }}

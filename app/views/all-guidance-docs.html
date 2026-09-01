@@ -21,6 +21,7 @@
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 
 {% set pageName = "All your guidance docs" %}
 
@@ -208,13 +209,25 @@
 {% block content %}
 
 <div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Guidance hub", href: "/v2/start" },
+        { text: pageName }
+      ]
+    }) }}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-l">Manage all guidances
+    <h1 class="govuk-heading-l">Manage guidance
     </h1>
 
     <p class="govuk-body">
-      View, upload and manage guidance documents. Track which ones are
+      View, upload and manage guidance. Track which ones are
       awaiting approval or have been published.
     </p>
 

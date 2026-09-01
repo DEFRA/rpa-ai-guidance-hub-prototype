@@ -1,0 +1,382 @@
+{#
+  Fully standalone design experiment — not linked from anywhere else, not
+  part of the live flow or the /v1/ snapshot, and this route does not touch
+  session data. Everything on the page (sections, comments, checks) is
+  hardcoded sample data local to this template, so it has no dependency on
+  app/data or app/routes.js beyond the one route that renders it.
+
+  Layout: Content sidebar (left) and a single bordered box (right) split
+  into an editor pane and a Changes pane, divided by one vertical border
+  rather than two separate boxes. Comments and Checks are two tabs inside
+  the Changes pane — hand-rolled rather than govukTabs(), since that macro
+  pipes each panel through Nunjucks' indent() filter (a known issue with
+  markdown/code-like content elsewhere in this prototype) and these tabs
+  also need a different look (underline, not boxed) to the ones used
+  elsewhere, so reusing that markup pattern would not fit anyway.
+
+  Clicking a comment or a check does two things: clears .text-highlight-active
+  from wherever it currently is (the initial page load has it on one
+  sentence in section-3, matching comment 3 below — see the class on that
+  span), then adds it to the *section* the clicked item is linked to
+  (data-target-section), and scrolls the editor pane there. So the
+  highlight can land on a single sentence (the fixed starting example) or a
+  whole section (anything clicked after that) — the CSS makes no
+  distinction between the two, since both are just "this is what the
+  comment/check is about".
+
+  The sidebar's active item (Overview) is a fixed example of what that
+  state looks like, not something the page keeps in sync with real scroll
+  position — nothing here reads scroll position at all.
+
+  Full width: govuk-width-container (from the kit's own template.njk, not a
+  file this page can touch) caps and centres everything passed to the
+  content block, so .app-experiment-page uses the standard "break out via
+  100vw" trick to escape it regardless of that container's own max-width,
+  rather than trying to override govuk-width-container itself.
+
+  Fixed-height box: .app-experiment-box gets a viewport-relative height, and
+  each pane splits into a fixed header/toolbar (outside the scroll area, so
+  it simply never scrolls) and a separate overflow-y: auto region below it,
+  rather than using position: sticky — with the fixed part already outside
+  the scrolling flow there is nothing for sticky to do here.
+
+  Editable content: [data-editor-content] is contenteditable, with the
+  toolbar wired to document.execCommand — a deprecated API, but the
+  lightest-weight way to get real bold/italic/heading formatting without a
+  rich text library, which is all this experiment needs. The section divs
+  and ids inside it are unchanged, so the sidebar's plain #section-x anchor
+  links and the comment/check highlight-and-scroll logic both still work
+  exactly as before; contenteditable only affects typing and selection
+  inside the text, not clicks on the sidebar or the comments/checks list.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% set pageName = "SFI 23 Guidance document" %}
+
+{% set sections = [
+  { id: "section-1", name: "Overview" },
+  { id: "section-2", name: "Eligibility criteria" },
+  { id: "section-3", name: "Payment rates" },
+  { id: "section-4", name: "Application process" },
+  { id: "section-5", name: "Supporting evidence" },
+  { id: "section-6", name: "Review dates" }
+] %}
+
+{% set comments = [
+  {
+    author: "Jane Smith",
+    timestamp: "2 days ago",
+    text: "This paragraph needs updating to reflect the new payment threshold.",
+    section: "section-1"
+  },
+  {
+    author: "Tom Reeves",
+    timestamp: "5 days ago",
+    text: "Can we double check this is still accurate after the scheme review?",
+    section: "section-2"
+  },
+  {
+    author: "Priya Shah",
+    timestamp: "1 week ago",
+    text: "Worth adding a worked example here for first-time applicants.",
+    section: "section-3"
+  }
+] %}
+
+{% set checks = [
+  { text: "Payment rate figure is outdated", severity: "High", section: "section-3" },
+  { text: "Missing alt text on supporting image", severity: "Medium", section: "section-5" },
+  { text: "Heading level skips from H2 to H4", severity: "Low", section: "section-4" },
+  { text: "Broken internal link to related guidance", severity: "Medium", section: "section-6" },
+  { text: "Sentence exceeds recommended reading age", severity: "Low", section: "section-2" }
+] %}
+
+{% set severityTags = {
+  "High": { text: "High", classes: "govuk-tag--red" },
+  "Medium": { text: "Medium", classes: "govuk-tag--yellow" },
+  "Low": { text: "Low", classes: "govuk-tag--blue" }
+} %}
+
+{% block content %}
+
+<div class="app-experiment-page">
+
+<h1 class="govuk-heading-l">SFI 23 Guidance document</h1>
+
+<div class="govuk-grid-row">
+
+  <div class="govuk-grid-column-one-quarter">
+
+    <h2 class="govuk-heading-m">Content</h2>
+
+    <nav aria-label="Content">
+      <ul class="app-experiment-nav">
+        {% for section in sections %}
+          <li class="app-experiment-nav__item{% if loop.first %} app-experiment-nav__item--active{% endif %}">
+            <a class="govuk-link app-experiment-nav__link" href="#{{ section.id }}">{{ section.name }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+    {{ govukButton({
+      text: "Save",
+      classes: "govuk-button--secondary govuk-!-width-full govuk-!-margin-bottom-0"
+    }) }}
+    {{ govukButton({
+      text: "Publish",
+      classes: "govuk-!-width-full govuk-!-margin-top-2"
+    }) }}
+
+  </div>
+
+  <div class="govuk-grid-column-three-quarters">
+
+    <div class="app-experiment-box" data-experiment-box>
+
+      <div class="app-experiment-editor" data-editor-pane>
+
+        <div class="app-experiment-toolbar" role="group" aria-label="Formatting">
+          <button type="button" class="app-experiment-toolbar__button" data-toolbar-button="bold" aria-label="Bold" aria-pressed="false"><strong>B</strong></button>
+          <button type="button" class="app-experiment-toolbar__button" data-toolbar-button="italic" aria-label="Italic" aria-pressed="false"><em>I</em></button>
+          <button type="button" class="app-experiment-toolbar__button" data-toolbar-button="heading" aria-label="Heading" aria-pressed="false">H</button>
+        </div>
+
+        <div class="app-experiment-content" contenteditable="true" data-editor-content>
+
+          <div id="section-1">
+            <h2 class="govuk-heading-m">Overview</h2>
+            <p class="govuk-body">This guidance explains the Sustainable Farming Incentive (SFI) 2023 offer, including who can apply, what actions are available, and how payments are calculated.</p>
+            <p class="govuk-body">It's aimed at farmers who manage land in England and want to understand how the scheme fits alongside other funding they may already receive.</p>
+          </div>
+
+          <div id="section-2">
+            <h2 class="govuk-heading-m">Eligibility criteria</h2>
+            <h3 class="govuk-heading-s">Land eligibility</h3>
+            <p class="govuk-body">You can apply if you have management control of the land and it is registered on the Rural Payments service.</p>
+            <h3 class="govuk-heading-s">Business eligibility</h3>
+            <p class="govuk-body">Applicants must have a valid Single Business Identifier and be actively farming the land included in the application.</p>
+          </div>
+
+          <div id="section-3">
+            <h2 class="govuk-heading-m">Payment rates</h2>
+            <p class="govuk-body">Payment rates are published annually and reviewed each scheme year. <span class="text-highlight-active">The current baseline payment is £22 per hectare for the standard soil management action.</span></p>
+            <p class="govuk-body">Rates can vary depending on which actions are combined and the total area entered into the scheme.</p>
+          </div>
+
+          <div id="section-4">
+            <h2 class="govuk-heading-m">Application process</h2>
+            <p class="govuk-body">Applications are submitted through the Rural Payments service and assessed in the order they are received.</p>
+            <p class="govuk-body">You'll need to confirm your land parcels and select the actions you want to include before submitting.</p>
+          </div>
+
+          <div id="section-5">
+            <h2 class="govuk-heading-m">Supporting evidence</h2>
+            <p class="govuk-body">Keep records of any actions carried out, including dates and photographs where relevant.</p>
+            <p class="govuk-body">Evidence should be retained for the duration of the agreement in case it is requested during an inspection.</p>
+          </div>
+
+          <div id="section-6">
+            <h2 class="govuk-heading-m">Review dates</h2>
+            <p class="govuk-body">This guidance is reviewed annually alongside the wider scheme update.</p>
+            <p class="govuk-body">The next scheduled review is due in the spring, ahead of the following scheme year's application window.</p>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="app-experiment-changes" data-changes-pane>
+
+        <div class="app-experiment-changes__fixed">
+
+          <div class="app-experiment-changes__header">
+            <button type="button" class="govuk-link app-experiment-hide-link" data-hide-changes>Hide</button>
+          </div>
+
+          <h2 class="govuk-heading-m">Changes</h2>
+
+          <div class="app-experiment-tabs" role="tablist">
+            <button type="button" class="app-experiment-tab app-experiment-tab--active" data-tab-button="comments" role="tab" aria-selected="true">Comments</button>
+            <button type="button" class="app-experiment-tab" data-tab-button="checks" role="tab" aria-selected="false">Checks</button>
+          </div>
+
+        </div>
+
+        <div class="app-experiment-changes__scroll">
+
+          <div data-tab-panel="comments">
+
+            {% for comment in comments %}
+              <div class="app-experiment-comment" data-highlight-trigger data-target-section="{{ comment.section }}" tabindex="0" role="button">
+                <p class="govuk-body-s app-experiment-comment__meta">{{ comment.author }} &middot; {{ comment.timestamp }}</p>
+                <p class="govuk-body app-experiment-comment__text">{{ comment.text }}</p>
+              </div>
+            {% endfor %}
+
+            <div class="app-experiment-add-comment">
+              {{ govukInput({
+                id: "new-comment",
+                name: "newComment",
+                label: { text: "Add a comment", classes: "govuk-visually-hidden" },
+                classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__input"
+              }) }}
+              {{ govukButton({
+                text: "Add",
+                type: "button",
+                classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__button"
+              }) }}
+            </div>
+
+          </div>
+
+          <div data-tab-panel="checks" hidden>
+
+            <ul class="app-experiment-checks">
+              {% for check in checks %}
+                <li class="app-experiment-check" data-highlight-trigger data-target-section="{{ check.section }}" tabindex="0" role="button">
+                  <span class="app-experiment-check__text">{{ check.text }}</span>
+                  {{ govukTag(severityTags[check.severity]) }}
+                </li>
+              {% endfor %}
+            </ul>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    {{ govukButton({
+      text: "Show changes",
+      type: "button",
+      classes: "govuk-button--secondary govuk-!-margin-top-4",
+      attributes: { "data-show-changes": true, hidden: true }
+    }) }}
+
+  </div>
+
+</div>
+
+</div>
+
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    (function () {
+      var editorContent = document.querySelector('[data-editor-content]')
+      var toolbarButtons = document.querySelectorAll('[data-toolbar-button]')
+
+      // execCommand is deprecated but still the lightest way to get real
+      // bold/italic/heading formatting on a contenteditable region without
+      // pulling in a rich text library — plenty for this experiment.
+      var toolbarCommands = {
+        bold: function () { document.execCommand('bold') },
+        italic: function () { document.execCommand('italic') },
+        // A collapsed selection (just a caret) still formats the block the
+        // caret is in — this is native execCommand behaviour, nothing extra
+        // needed for the "nothing selected" case.
+        heading: function () { document.execCommand('formatBlock', false, 'h3') }
+      }
+
+      function updateToolbarState () {
+        toolbarButtons.forEach(function (button) {
+          var command = button.dataset.toolbarButton
+          var active = false
+          if (command === 'heading') {
+            active = document.queryCommandValue('formatBlock') === 'h3'
+          } else {
+            active = document.queryCommandState(command)
+          }
+          button.setAttribute('aria-pressed', String(active))
+        })
+      }
+
+      toolbarButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          editorContent.focus()
+          var applyCommand = toolbarCommands[button.dataset.toolbarButton]
+          if (applyCommand) applyCommand()
+          updateToolbarState()
+        })
+      })
+
+      // Keeps the toolbar's pressed state in sync with wherever the caret or
+      // selection actually is, same as a normal rich text toolbar — only
+      // while the selection is inside the editable content, so selecting
+      // text elsewhere on the page (a comment, for instance) doesn't touch it.
+      document.addEventListener('selectionchange', function () {
+        var selection = document.getSelection()
+        if (!selection.anchorNode || !editorContent.contains(selection.anchorNode)) return
+        updateToolbarState()
+      })
+
+      // Comments / Checks tabs.
+      var tabButtons = document.querySelectorAll('[data-tab-button]')
+      tabButtons.forEach(function (tabButton) {
+        tabButton.addEventListener('click', function () {
+          tabButtons.forEach(function (button) {
+            var active = button === tabButton
+            button.classList.toggle('app-experiment-tab--active', active)
+            button.setAttribute('aria-selected', String(active))
+
+            var panel = document.querySelector('[data-tab-panel="' + button.dataset.tabButton + '"]')
+            if (panel) panel.hidden = !active
+          })
+        })
+      })
+
+      // Clicking a comment or a check highlights the section it is linked
+      // to and scrolls it into view — clearing whichever element (a single
+      // sentence to start with, or a whole section after that) currently
+      // has the highlight first, so there is only ever one at a time.
+      document.querySelectorAll('[data-highlight-trigger]').forEach(function (trigger) {
+        trigger.addEventListener('click', function () {
+          var target = document.getElementById(trigger.dataset.targetSection)
+          if (!target) return
+
+          document.querySelectorAll('.text-highlight-active').forEach(function (highlighted) {
+            highlighted.classList.remove('text-highlight-active')
+          })
+
+          target.classList.add('text-highlight-active')
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
+
+        // role="button" on a <div>/<li> needs its own keyboard activation —
+        // a real <button> would get this for free.
+        trigger.addEventListener('keydown', function (event) {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          trigger.click()
+        })
+      })
+
+      // "Hide" collapses the Changes pane and gives the editor pane the
+      // freed width — see .app-experiment-editor's flex-grow in
+      // _app-editor-experiment.scss for why no extra class is needed on it.
+      var changesPane = document.querySelector('[data-changes-pane]')
+      var hideLink = document.querySelector('[data-hide-changes]')
+      var showButton = document.querySelector('[data-show-changes]')
+
+      if (changesPane && hideLink && showButton) {
+        hideLink.addEventListener('click', function () {
+          changesPane.hidden = true
+          showButton.hidden = false
+        })
+
+        showButton.addEventListener('click', function () {
+          changesPane.hidden = false
+          showButton.hidden = true
+        })
+      }
+    })()
+  </script>
+{% endblock %}

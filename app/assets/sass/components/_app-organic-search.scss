@@ -1,16 +1,111 @@
 // "Search organically": a full-width search bar, filters down the left, and
 // a list of results down the right.
 
+.app-filter-group {
+  border-bottom: 1px solid $govuk-mid-grey;
+}
+
+.app-filter-group__heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+// Blue, underlined, normal weight by default — reads as a plain text link,
+// same as any other govuk-link, until its own [aria-expanded] flips to true
+// below.
+.app-filter-group__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: govuk-spacing(3) 0;
+  border: 0;
+  background: none;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 19px;
+  font-weight: 400;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+  }
+}
+
+// The open group reads as bold black text rather than a link, so it stands
+// out from the three (still blue, still link-styled) collapsed ones.
+.app-filter-group__toggle[aria-expanded="true"] {
+  color: $govuk-text-colour;
+  font-weight: 700;
+
+  &:hover {
+    color: $govuk-text-colour;
+  }
+}
+
+// Down (▼) by default, rotating to up (▲) once its panel is expanded — a
+// border-drawn corner rather than an icon font or SVG, same technique as
+// .app-document-content__chevron on saved-document-view.html. Leads the
+// label rather than trailing it, so it needs a right margin, not a left one.
+.app-filter-group__chevron {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-right: govuk-spacing(2);
+  border-right: 2px solid $govuk-black;
+  border-bottom: 2px solid $govuk-black;
+  transform: rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+.app-filter-group__toggle[aria-expanded="true"] .app-filter-group__chevron {
+  transform: rotate(-135deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-filter-group__chevron {
+    transition: none;
+  }
+}
+
+.app-filter-group__panel {
+  padding-bottom: govuk-spacing(4);
+}
+
 .app-search-bar {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: govuk-spacing(3);
   margin-bottom: govuk-spacing(6);
 }
 
+// A nested flex container of its own, so its child (.govuk-form-group,
+// holding just the input now the label is visually hidden) stretches to
+// fill whatever height .app-search-bar's own stretch gives this wrapper —
+// and the input itself is told to fill that in turn, so the visible input
+// box, not just its invisible wrapper, ends up exactly as tall as the
+// button beside it.
 .app-search-bar__input {
+  display: flex;
   flex: 1 1 auto;
 
+  .govuk-form-group {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .govuk-input {
+    height: 100%;
+  }
   // The input's form group carries GOV.UK's usual bottom margin, which held
   // the field 20-30px above the baseline the Search button sits on. Flushing
   // it lets align-items: flex-end actually line the two up.
@@ -62,9 +157,7 @@
   margin-bottom: govuk-spacing(3);
 }
 
-.app-search-results__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: govuk-spacing(3);
+.app-search-results__dates {
+  margin-bottom: govuk-spacing(3);
+  color: $govuk-secondary-text-colour;
 }
