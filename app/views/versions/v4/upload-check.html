@@ -1,0 +1,77 @@
+{#
+  The check page before converting — everything captured on one summary
+  list, with Change links back into the metadata step. The free-text answers
+  from the metadata step appear here too, so nothing is converted without a
+  last look. Converting leads to the success page; no quality checks run for
+  now.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Check the details before converting" %}
+
+{% set metadataChange = "/v4/upload-guide/metadata" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">Check the details before you convert</h1>
+
+  {{ govukSummaryList({
+    rows: [
+      {
+        key: { text: "File" },
+        value: { text: details.name + ".docx" },
+        actions: { items: [{ href: "/v4/upload-guide", text: "Change", visuallyHiddenText: "the file" }] }
+      },
+      {
+        key: { text: "Guidance title" },
+        value: { text: details.name },
+        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "the guidance title" }] }
+      },
+      {
+        key: { text: "Owner email" },
+        value: { text: details.owner or "Not provided" },
+        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "the owner email" }] }
+      },
+      {
+        key: { text: "Type of guidance" },
+        value: { text: typeLabel }
+      },
+      {
+        key: { text: "Who it is for" },
+        value: { text: details.audience or "Not provided" },
+        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "who the guidance is for" }] }
+      },
+      {
+        key: { text: "What it aims to achieve" },
+        value: { text: details.goal or "Not provided" },
+        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "what the guidance aims to achieve" }] }
+      },
+      {
+        key: { text: "What users need to do" },
+        value: { text: details.requirements or "Not provided" },
+        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "what users need to do" }] }
+      },
+      {
+        key: { text: "Needs system access" },
+        value: { text: accessLabel },
+        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "whether users need system access" }] }
+      },
+      {
+        key: { text: "Status after converting" },
+        value: { text: "Draft" }
+      }
+    ]
+  }) }}
+
+  <form method="post" action="/v4/upload-guide/check">
+    {{ govukButton({ text: "Convert document" }) }}
+  </form>
+
+</div>
+
+{% endblock %}

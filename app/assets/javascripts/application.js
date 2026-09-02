@@ -23,7 +23,12 @@ const PREVIEW_KEY = 'rpa-guidance-hub.preview'
 // a full markdown implementation and does not need to be: the prototype only
 // has to look right, not to publish anything. GOV.UK renders its preview on the
 // server, which is what a real build would do.
-function renderMarkdown (markdown) {
+function renderMarkdown (markdown, options) {
+  // With { images: true } an image renders as a real <img> (safe URLs only);
+  // by default it renders as a placeholder, the behaviour the editor preview
+  // wants. v4's guide viewer opts in to real images.
+  const renderImages = Boolean(options && options.images)
+
   function escapeHtml (text) {
     return text
       .replace(/&/g, '&amp;')
@@ -55,7 +60,14 @@ function renderMarkdown (markdown) {
   // marks anything up as a problem. Quality issues belong in the issue list.
   function inline (text) {
     return escapeHtml(text)
-      .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, function (match, alt) {
+      .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, function (match, alt, url) {
+        if (renderImages) {
+          const src = safeUrl(url)
+          if (src) {
+            return '<img class="app-markdown-preview__img" src="' + src +
+              '" alt="' + alt.trim() + '">'
+          }
+        }
         return '<span class="app-markdown-preview__image">' +
           (alt.trim() ? 'Image: ' + alt : 'Image') +
           '</span>'
@@ -805,4 +817,167 @@ window.GOVUKPrototypeKit.documentReady(() => {
     if (surfaceVisible && anchorInSurface(surface, button)) return
     if (textarea) anchorInTextarea(button)
   })
+})
+
+// ---------------------------------------------------------------------------
+// v4 guide viewer
+// ---------------------------------------------------------------------------
+
+// Renders the converted guidance on one page (with images), builds a contents
+// list from its section headings, and drives a simple in-document search —
+// the two-column reading layout without v2's page-by-page stepping. Uses
+// window.appRenderMarkdown (exported above) so it does not depend on the
+// standalone-preview module or its local-storage source.
+window.GOVUKPrototypeKit.documentReady(() => {
+  const root = document.querySelector('[data-module="app-guide-view"]')
+  if (!root || !window.appRenderMarkdown) return
+
+  const source = root.querySelector('[data-guide-view-source]')
+  const content = root.querySelector('[data-guide-view-content]')
+  const contents = root.querySelector('[data-guide-contents]')
+  if (!source || !content) return
+
+  content.innerHTML = window.appRenderMarkdown(source.value, { images: true })
+
+  // -- Contents, and showing/hiding it -----------------------------------
+
+  const headings = Array.from(content.querySelectorAll('h2, h3, h4, h5, h6'))
+  const contentsList = root.querySelector('[data-guide-contents-list]')
+  const contentsToggle = root.querySelector('[data-guide-contents-toggle]')
+
+  if (headings.length && contentsList) {
+    const used = Object.create(null)
+    const slugify = (text) => {
+      const base =
+        text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') ||
+        'section'
+      let slug = base
+      let n = 2
+      while (used[slug]) {
+        slug = base + '-' + n
+        n++
+      }
+      used[slug] = true
+      return slug
+    }
+
+    headings.forEach((heading) => {
+      heading.id = slugify(heading.textContent)
+      const item = document.createElement('li')
+      item.className =
+        'app-guide-view__contents-item app-guide-view__contents-item--' +
+        heading.tagName.toLowerCase()
+      const link = document.createElement('a')
+      link.className = 'govuk-link'
+      link.href = '#' + heading.id
+      link.textContent = heading.textContent
+      item.appendChild(link)
+      contentsList.appendChild(item)
+    })
+
+    // Show/hide the contents, the way the editor's panels toggle: a link-
+    // styled control that flips its label. Hiding gives the document the
+    // full width.
+    if (contentsToggle) {
+      contentsToggle.addEventListener('click', () => {
+        const hidden = root.classList.toggle('app-guide-view--contents-hidden')
+        contentsToggle.setAttribute('aria-expanded', String(!hidden))
+        contentsToggle.textContent = hidden ? 'Show contents' : 'Hide contents'
+      })
+    }
+  } else {
+    // Nothing to list, so no contents column and no toggle.
+    if (contents) contents.hidden = true
+    if (contentsToggle) contentsToggle.hidden = true
+  }
+
+  // -- Simple in-document search -----------------------------------------
+  //
+  // Highlights every match in the document, reports the count, and scrolls
+  // the first match into view. Clearing the box removes the highlights.
+
+  const searchInput = root.querySelector('[data-guide-search]')
+  const searchStatus = root.querySelector('[data-guide-search-status]')
+  const HIGHLIGHT = 'app-guide-view__match'
+
+  function clearHighlights () {
+    const marks = content.querySelectorAll('mark.' + HIGHLIGHT)
+    marks.forEach((mark) => {
+      const text = document.createTextNode(mark.textContent)
+      mark.parentNode.replaceChild(text, mark)
+    })
+    content.normalize()
+  }
+
+  function highlight (query) {
+    let count = 0
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT)
+    const targets = []
+    let node
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue.toLowerCase().includes(query)) targets.push(node)
+    }
+
+    targets.forEach((textNode) => {
+      const value = textNode.nodeValue
+      const lower = value.toLowerCase()
+      const fragment = document.createDocumentFragment()
+      let from = 0
+      let at = lower.indexOf(query, from)
+      while (at !== -1) {
+        if (at > from) {
+          fragment.appendChild(document.createTextNode(value.slice(from, at)))
+        }
+        const mark = document.createElement('mark')
+        mark.className = HIGHLIGHT
+        mark.textContent = value.slice(at, at + query.length)
+        fragment.appendChild(mark)
+        count++
+        from = at + query.length
+        at = lower.indexOf(query, from)
+      }
+      if (from < value.length) {
+        fragment.appendChild(document.createTextNode(value.slice(from)))
+      }
+      textNode.parentNode.replaceChild(fragment, textNode)
+    })
+
+    return count
+  }
+
+  function runSearch () {
+    clearHighlights()
+    const query = searchInput.value.trim().toLowerCase()
+
+    if (query.length < 2) {
+      searchStatus.textContent = ''
+      return
+    }
+
+    const count = highlight(query)
+    searchStatus.textContent = count
+      ? count + (count === 1 ? ' match' : ' matches')
+      : 'No matches'
+
+    const first = content.querySelector('mark.' + HIGHLIGHT)
+    if (first) first.scrollIntoView({ block: 'center' })
+  }
+
+  if (searchInput && searchStatus) {
+    let pending
+    searchInput.addEventListener('input', () => {
+      window.clearTimeout(pending)
+      pending = window.setTimeout(runSearch, 150)
+    })
+
+    // The magnifying-glass button matches the search component elsewhere.
+    // Search is already live, so it just runs it and returns focus.
+    const searchSubmit = root.querySelector('[data-guide-search-submit]')
+    if (searchSubmit) {
+      searchSubmit.addEventListener('click', () => {
+        runSearch()
+        searchInput.focus()
+      })
+    }
+  }
 })
