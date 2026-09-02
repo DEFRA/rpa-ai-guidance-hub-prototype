@@ -14,6 +14,7 @@ const { savedDocuments } = require('./data/saved-documents')
 const { searchResults } = require('./data/search-results')
 const { guidanceDocuments } = require('./data/guidance-documents')
 const sampleDocument = require('./data/sample-document')
+const v4SampleDocument = require('./data/v4-sample-document')
 // Shared with the browser — see the scripts block in app/views/layouts/main.html.
 const qualityChecks = require('./assets/javascripts/quality-checks')
 
@@ -1594,4 +1595,121 @@ router.get('/v3/document-overview/:id', (req, res) => {
 // in the view itself, so no session/form logic is needed here.
 router.get('/v2/editor-experiment', (req, res) => {
   res.render('v2/editor-experiment')
+})
+
+// ===========================================================================
+// Version 4 — a simple guidance upload journey, based on v3's, with the
+// richer metadata captured in v2's upload journey (who it is for, what it
+// aims to achieve, what users need to do, whether they need system access)
+// added at the details step — after the upload scan and before the
+// conversion, the position v3 established.
+//
+// No quality checks run after converting for now, so the success page
+// confirms the conversion and offers to view the converted guidance rather
+// than sending the designer into an editor to fix findings. Views live in
+// app/views/versions/v4/. Guidance types and the default title are reused
+// from the v3 constants above.
+// ===========================================================================
+
+router.get('/v4/upload-guide', (req, res) => {
+  res.render('versions/v4/upload-guide')
+})
+
+router.post('/v4/upload-guide', (req, res) => {
+  // A new upload is a new guide, so clear any details left in the session
+  // from a previous run — the details step then starts fresh (title from
+  // the document, owner blank for the author to enter). The file itself goes
+  // nowhere in a static prototype.
+  delete req.session.data.v4UploadedGuide
+  res.redirect('/v4/upload-guide/processing')
+})
+
+router.get('/v4/upload-guide/processing', (req, res) => {
+  res.render('versions/v4/upload-processing')
+})
+
+// Capture the guide's details. Title prefills as if read out of the
+// document; owner is a user-entered email; the type is a single fixed value
+// for now; the free-text answers start empty.
+router.get('/v4/upload-guide/metadata', (req, res) => {
+  const details = req.session.data.v4UploadedGuide || {}
+
+  res.locals.backHref = '/v4/upload-guide'
+  res.render('versions/v4/upload-metadata', {
+    details: {
+      name: details.name || V3_UPLOAD_DEFAULT_TITLE,
+      owner: details.owner || '',
+      type: 'Process guide',
+      audience: details.audience || '',
+      goal: details.goal || '',
+      requirements: details.requirements || '',
+      systemAccess: details.systemAccess || ''
+    }
+  })
+})
+
+router.post('/v4/upload-guide/metadata', (req, res) => {
+  req.session.data.v4UploadedGuide = {
+    name: (req.body.guideTitle || '').trim() || V3_UPLOAD_DEFAULT_TITLE,
+    owner: (req.body.owner || '').trim(),
+    type: 'Process guide',
+    audience: (req.body.audience || '').trim(),
+    goal: (req.body.goal || '').trim(),
+    requirements: (req.body.requirements || '').trim(),
+    systemAccess: ['yes', 'no'].includes(req.body.systemAccess)
+      ? req.body.systemAccess
+      : ''
+  }
+  res.redirect('/v4/upload-guide/check')
+})
+
+// The check page before converting — everything on one summary list, with
+// Change links back to the details step.
+router.get('/v4/upload-guide/check', (req, res) => {
+  const details = req.session.data.v4UploadedGuide
+  if (!details) return res.redirect('/v4/upload-guide')
+
+  res.locals.backHref = '/v4/upload-guide/metadata'
+  res.render('versions/v4/upload-check', {
+    details,
+    typeLabel: details.type,
+    accessLabel:
+      details.systemAccess === 'yes'
+        ? 'Yes'
+        : details.systemAccess === 'no'
+          ? 'No'
+          : 'Not provided'
+  })
+})
+
+router.post('/v4/upload-guide/check', (req, res) => {
+  res.redirect('/v4/upload-guide/converted')
+})
+
+// The success page — no quality checks, so it offers to view the converted
+// guidance rather than fix findings.
+router.get('/v4/upload-guide/converted', (req, res) => {
+  const details = req.session.data.v4UploadedGuide
+  if (!details) return res.redirect('/v4/upload-guide')
+
+  res.render('versions/v4/upload-converted', { guideName: details.name })
+})
+
+// A read-only view of the converted guidance on one page, with a contents
+// list down the left — the two-column reading layout v2 used, but without
+// its page-by-page stepping. The shared sample document is rendered client-
+// side by the app-guide-view module, which also builds the contents from
+// the rendered section headings. No editing, no quality checks.
+//
+// The document's own leading title is stripped, since the page heading
+// already shows it — so it does not appear twice.
+router.get('/v4/upload-guide/view', (req, res) => {
+  const details = req.session.data.v4UploadedGuide
+  if (!details) return res.redirect('/v4/upload-guide')
+
+  res.locals.backHref = '/v4/upload-guide/converted'
+  res.render('versions/v4/guide-view', {
+    guideName: details.name,
+    markdown: v4SampleDocument.replace(/^#[^\n]*\n+/, '')
+  })
 })

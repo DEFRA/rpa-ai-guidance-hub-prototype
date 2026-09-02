@@ -1,0 +1,65 @@
+{#
+  A read-only view of the converted guidance — the two-column reading layout
+  v2 used (a contents list down the left, the document on the right), on one
+  page rather than stepping through it page by page, and using the full page
+  width.
+
+  The converted markdown is the longer example in app/data/v4-sample-document.js
+  with its leading title stripped (app/routes.js), since the page heading
+  already shows the title. The app-guide-view module in application.js renders
+  the markdown (with images), builds the contents from the section headings,
+  drives the simple in-document search, and shows/hides the contents. No
+  editing and no quality checks.
+#}
+{% extends "layouts/v3.html" %}
+
+{% set pageName = guideName %}
+
+{% block content %}
+
+<h1 class="govuk-heading-l">{{ guideName }}</h1>
+
+<div class="app-guide-view" data-module="app-guide-view">
+
+  <div class="app-guide-view__search">
+    <label class="govuk-label govuk-label--s" for="guide-search">Search this document</label>
+    <div class="app-search-box">
+      <input
+        class="govuk-input app-search-box__input"
+        id="guide-search"
+        type="search"
+        data-guide-search
+        autocomplete="off"
+        spellcheck="false">
+      <button class="app-search-box__button" type="button" data-guide-search-submit>
+        <span class="govuk-visually-hidden">Search</span>
+        <svg width="20" height="20" viewBox="0 0 27 27" aria-hidden="true" focusable="false">
+          <circle cx="11" cy="11" r="8.5" fill="none" stroke="currentColor" stroke-width="3"/>
+          <line x1="17.5" y1="17.5" x2="25.5" y2="25.5" stroke="currentColor" stroke-width="3"/>
+        </svg>
+      </button>
+    </div>
+    <p class="govuk-body-s app-guide-view__search-status" data-guide-search-status aria-live="polite"></p>
+  </div>
+
+  <div class="app-guide-view__toolbar">
+    <button type="button" class="app-toggle" data-guide-contents-toggle aria-expanded="true" aria-controls="guide-contents">Hide contents</button>
+  </div>
+
+  <div class="app-guide-view__layout">
+
+    <nav class="app-guide-view__contents" id="guide-contents" aria-label="Contents" data-guide-contents>
+      <ol class="app-guide-view__contents-list" data-guide-contents-list></ol>
+    </nav>
+
+    <div class="app-guide-view__body app-markdown-preview" data-guide-view-content></div>
+
+  </div>
+
+  {# Holds the converted markdown, read by the module. A textarea keeps the
+     markdown intact without escaping. #}
+  <textarea hidden data-guide-view-source>{{ markdown }}</textarea>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,102 @@
+{#
+  Capture the guide's details — after the upload scan and before the
+  conversion, the position v3 established. The field set is the richer one
+  from v2's upload journey: title, owner and type (as in v3), plus who the
+  guidance is for, what it aims to achieve, what users need to do, and
+  whether they need system access.
+
+  Title and type arrive prefilled as if read out of the document; the free-
+  text fields start empty for the author to fill. Values live in the session
+  (app/routes.js), so returning via a Change link on the check page shows
+  what was entered.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Add the guide's details" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">Add the guide's details</h1>
+
+  <p class="govuk-body">
+    We have read the title and type from the document. Check those, and add
+    the context that will help review and publish the guidance.
+  </p>
+
+  <form method="post" action="/v4/upload-guide/metadata">
+
+    {{ govukInput({
+      id: "guide-title",
+      name: "guideTitle",
+      value: details.name,
+      label: { text: "Guidance title", classes: "govuk-label--s" },
+      hint: { text: "What the guide will be called in the hub" }
+    }) }}
+
+    {{ govukInput({
+      id: "owner",
+      name: "owner",
+      type: "email",
+      value: details.owner,
+      spellcheck: false,
+      autocomplete: "email",
+      label: { text: "Owner email", classes: "govuk-label--s" },
+      hint: { text: "The email address of who approves and publishes this guide" }
+    }) }}
+
+    {# Type of guidance is fixed ("Process guide") and set in app/routes.js,
+       so it is not asked for here — it appears, uneditable, on the check
+       page. #}
+
+    {{ govukTextarea({
+      id: "audience",
+      name: "audience",
+      value: details.audience,
+      rows: 2,
+      label: { text: "Who is this guidance for?", classes: "govuk-label--s" }
+    }) }}
+
+    {{ govukTextarea({
+      id: "goal",
+      name: "goal",
+      value: details.goal,
+      rows: 2,
+      label: { text: "What does this guidance aim to achieve?", classes: "govuk-label--s" }
+    }) }}
+
+    {{ govukTextarea({
+      id: "requirements",
+      name: "requirements",
+      value: details.requirements,
+      rows: 2,
+      label: { text: "What do users need to perform or understand?", classes: "govuk-label--s" }
+    }) }}
+
+    {{ govukRadios({
+      idPrefix: "system-access",
+      name: "systemAccess",
+      value: details.systemAccess,
+      classes: "govuk-radios--inline",
+      fieldset: {
+        legend: { text: "Do users need access to any systems?", classes: "govuk-fieldset__legend--s" }
+      },
+      items: [
+        { value: "yes", text: "Yes" },
+        { value: "no", text: "No" }
+      ]
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+
+  </form>
+
+</div>
+
+{% endblock %}

@@ -610,3 +610,110 @@
 .app-saved-guides {
   max-width: 720px;
 }
+
+// -- v4 guide viewer ---------------------------------------------------------
+//
+// A single-page reading view using the full page width: a search box across
+// the top, then a contents list down the left with the whole document on the
+// right. The two-column look v2 used, without its page-by-page stepping.
+// Built by the app-guide-view module in application.js.
+
+// The search box and the contents share the page's left edge, so they line
+// up. The box reuses the .app-search-box magnifier component used elsewhere.
+.app-guide-view__search {
+  max-width: 320px;
+  margin-bottom: govuk-spacing(4);
+}
+
+.app-guide-view__search-status {
+  margin-top: govuk-spacing(1);
+  margin-bottom: 0;
+  color: govuk-colour("dark-grey");
+}
+
+// The Show/Hide contents control, aligned with the search box above it.
+.app-guide-view__toolbar {
+  margin-bottom: govuk-spacing(3);
+}
+
+.app-guide-view__layout {
+  @include govuk-media-query($from: desktop) {
+    display: flex;
+    gap: govuk-spacing(7);
+    align-items: flex-start;
+  }
+}
+
+.app-guide-view__contents {
+  margin-bottom: govuk-spacing(6);
+
+  @include govuk-media-query($from: desktop) {
+    flex: 0 0 260px;
+    position: sticky;
+    top: govuk-spacing(3);
+    margin-bottom: 0;
+  }
+}
+
+// Hiding the contents collapses its column and gives the document the width.
+.app-guide-view--contents-hidden .app-guide-view__contents {
+  display: none;
+}
+
+.app-guide-view__contents-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// Links sit flush with the search box and the toggle above — no indent, so
+// the left edge lines up down the column.
+.app-guide-view__contents-item a {
+  display: block;
+  padding: govuk-spacing(1) 0;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Nested headings sit in a little from the top-level ones.
+.app-guide-view__contents-item--h4 a,
+.app-guide-view__contents-item--h5 a,
+.app-guide-view__contents-item--h6 a {
+  padding-left: govuk-spacing(3);
+  font-size: 0.9375rem;
+}
+
+// The document takes the width left of the contents. The shared markdown-
+// preview caps paragraphs to a reading measure; here the viewer is asked to
+// use the full width, so that cap is lifted.
+.app-guide-view__body {
+  min-width: 0;
+
+  @include govuk-media-query($from: desktop) {
+    flex: 1 1 auto;
+  }
+
+  &.app-markdown-preview > p,
+  &.app-markdown-preview > ul,
+  &.app-markdown-preview > ol {
+    max-width: none;
+  }
+}
+
+// Real images in the converted guidance.
+.app-markdown-preview__img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: govuk-spacing(4) 0;
+  border: 1px solid $govuk-mid-grey;
+}
+
+// A search match highlighted in the document.
+.app-guide-view__match {
+  background-color: $govuk-yellow;
+  color: $govuk-black;
+}

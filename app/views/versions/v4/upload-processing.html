@@ -1,0 +1,48 @@
+{#
+  The wait between choosing a file and the hub having it — reuses the
+  app-progress module in application.js (upload, virus scan, done, then on
+  to data-next). It continues to the metadata step, where the guide's
+  details are captured before the check page and the conversion.
+
+  The status is in a role="status" region so it is announced rather than
+  only seen, and the plain link keeps the journey working without
+  JavaScript.
+#}
+{% extends "layouts/v3.html" %}
+
+{% set pageName = "Checking your file" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">Checking your file</h1>
+
+  <p class="govuk-body">
+    We scan every file for viruses before it goes into the hub. This
+    usually takes a few seconds.
+  </p>
+
+  <div
+    class="app-progress"
+    data-module="app-progress"
+    data-next="/v4/upload-guide/metadata">
+
+    <p class="app-progress__status" data-progress-status role="status">
+      Uploading your file
+    </p>
+
+    <div class="app-progress__track">
+      <div class="app-progress__bar" data-progress-bar></div>
+    </div>
+
+  </div>
+
+  <p class="govuk-body">
+    Do not close this page. If nothing happens,
+    <a class="govuk-link" href="/v4/upload-guide/metadata">continue to the guide's details</a>.
+  </p>
+
+</div>
+
+{% endblock %}
