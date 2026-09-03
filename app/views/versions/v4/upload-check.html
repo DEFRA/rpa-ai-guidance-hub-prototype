@@ -12,7 +12,9 @@
 
 {% set pageName = "Check the details before converting" %}
 
-{% set metadataChange = "/v4/upload-guide/metadata" %}
+{% set detailsChange = "/v4/upload-guide/metadata" %}
+{% set purposeChange = "/v4/upload-guide/metadata/purpose" %}
+{% set usageChange = "/v4/upload-guide/metadata/usage" %}
 
 {% block content %}
 
@@ -30,12 +32,25 @@
       {
         key: { text: "Guidance title" },
         value: { text: details.name },
-        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "the guidance title" }] }
+        actions: { items: [{ href: detailsChange, text: "Change", visuallyHiddenText: "the guidance title" }] }
+      },
+      {
+        key: { text: "Version number" },
+        value: { text: details.version }
+      },
+      {
+        key: { text: "Last modified date" },
+        value: { text: details.lastModified }
+      },
+      {
+        key: { text: "Scheme" },
+        value: { text: schemeLabel },
+        actions: { items: [{ href: detailsChange, text: "Change", visuallyHiddenText: "the scheme" }] }
       },
       {
         key: { text: "Owner email" },
         value: { text: details.owner or "Not provided" },
-        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "the owner email" }] }
+        actions: { items: [{ href: purposeChange, text: "Change", visuallyHiddenText: "the owner email" }] }
       },
       {
         key: { text: "Type of guidance" },
@@ -43,23 +58,23 @@
       },
       {
         key: { text: "Who it is for" },
-        value: { text: details.audience or "Not provided" },
-        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "who the guidance is for" }] }
+        value: { text: audienceLabel },
+        actions: { items: [{ href: usageChange, text: "Change", visuallyHiddenText: "who the guidance is for" }] }
       },
       {
         key: { text: "What it aims to achieve" },
         value: { text: details.goal or "Not provided" },
-        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "what the guidance aims to achieve" }] }
+        actions: { items: [{ href: purposeChange, text: "Change", visuallyHiddenText: "what the guidance aims to achieve" }] }
       },
       {
         key: { text: "What users need to do" },
         value: { text: details.requirements or "Not provided" },
-        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "what users need to do" }] }
+        actions: { items: [{ href: usageChange, text: "Change", visuallyHiddenText: "what users need to do" }] }
       },
       {
-        key: { text: "Needs system access" },
-        value: { text: accessLabel },
-        actions: { items: [{ href: metadataChange, text: "Change", visuallyHiddenText: "whether users need system access" }] }
+        key: { text: "Systems used" },
+        value: { text: systemsLabel },
+        actions: { items: [{ href: usageChange, text: "Change", visuallyHiddenText: "which systems this guidance uses" }] }
       },
       {
         key: { text: "Status after converting" },

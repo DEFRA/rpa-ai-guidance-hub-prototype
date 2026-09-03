@@ -1,95 +1,76 @@
 {#
-  Capture the guide's details — after the upload scan and before the
-  conversion, the position v3 established. The field set is the richer one
-  from v2's upload journey: title, owner and type (as in v3), plus who the
-  guidance is for, what it aims to achieve, what users need to do, and
-  whether they need system access.
-
-  Title and type arrive prefilled as if read out of the document; the free-
-  text fields start empty for the author to fill. Values live in the session
-  (app/routes.js), so returning via a Change link on the check page shows
-  what was entered.
+  The guide's details, step 1 of 3 — the facts read from the document plus
+  the scheme it relates to. Title is editable and required; the scheme is
+  required. Version and last modified are read-only (shown as a summary list,
+  since GDS has no read-only input). Owner and purpose follow on step 2; who
+  it is for and system access on step 3. Values live in the session
+  (app/routes.js), so returning via a Change link on the check page shows what
+  was entered.
 #}
 {% extends "layouts/v3.html" %}
 
 {% from "govuk/components/input/macro.njk" import govukInput %}
-{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
-{% set pageName = "Add the guide's details" %}
+{% set pageName = "The guide's details" %}
+{% if errorList and errorList.length %}{% set pageName = "Error: " + pageName %}{% endif %}
 
 {% block content %}
 
 <div class="app-v3-prose">
 
-  <h1 class="govuk-heading-l">Add the guide's details</h1>
+  {% if errorList and errorList.length %}
+    {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+  {% endif %}
+
+  <h1 class="govuk-heading-l">The guide's details</h1>
 
   <p class="govuk-body">
-    We have read the title and type from the document. Check those, and add
-    the context that will help review and publish the guidance.
+    We have read the title, version and date from the document. Check the
+    title and choose the scheme this guidance relates to.
   </p>
 
-  <form method="post" action="/v4/upload-guide/metadata">
+  <form method="post" action="/v4/upload-guide/metadata" novalidate>
 
     {{ govukInput({
       id: "guide-title",
       name: "guideTitle",
       value: details.name,
       label: { text: "Guidance title", classes: "govuk-label--s" },
-      hint: { text: "What the guide will be called in the hub" }
+      hint: { text: "If the guidance relates to a scheme, include the scheme name in the title." },
+      errorMessage: errors.guideTitle
     }) }}
 
-    {{ govukInput({
-      id: "owner",
-      name: "owner",
-      type: "email",
-      value: details.owner,
-      spellcheck: false,
-      autocomplete: "email",
-      label: { text: "Owner email", classes: "govuk-label--s" },
-      hint: { text: "The email address of who approves and publishes this guide" }
+    {# Version and last modified are read from the document and cannot be
+       changed, so they are shown as read-only information (a summary list)
+       rather than form fields — GDS has no read-only input. #}
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Version number" }, value: { text: details.version } },
+        { key: { text: "Last modified date" }, value: { text: details.lastModified } }
+      ]
     }) }}
 
-    {# Type of guidance is fixed ("Process guide") and set in app/routes.js,
-       so it is not asked for here — it appears, uneditable, on the check
-       page. #}
-
-    {{ govukTextarea({
-      id: "audience",
-      name: "audience",
-      value: details.audience,
-      rows: 2,
-      label: { text: "Who is this guidance for?", classes: "govuk-label--s" }
-    }) }}
-
-    {{ govukTextarea({
-      id: "goal",
-      name: "goal",
-      value: details.goal,
-      rows: 2,
-      label: { text: "What does this guidance aim to achieve?", classes: "govuk-label--s" }
-    }) }}
-
-    {{ govukTextarea({
-      id: "requirements",
-      name: "requirements",
-      value: details.requirements,
-      rows: 2,
-      label: { text: "What do users need to perform or understand?", classes: "govuk-label--s" }
-    }) }}
-
+    {# Radios rather than a select: GDS advises against the select component
+       and to prefer radios for a short list of options. #}
     {{ govukRadios({
-      idPrefix: "system-access",
-      name: "systemAccess",
-      value: details.systemAccess,
-      classes: "govuk-radios--inline",
+      idPrefix: "scheme",
+      name: "scheme",
+      value: details.scheme,
       fieldset: {
-        legend: { text: "Do users need access to any systems?", classes: "govuk-fieldset__legend--s" }
+        legend: { text: "Which scheme does this guidance relate to?", classes: "govuk-fieldset__legend--s" }
       },
+      errorMessage: errors.scheme,
       items: [
-        { value: "yes", text: "Yes" },
-        { value: "no", text: "No" }
+        { value: "sfi", text: "Sustainable Farming Incentive" },
+        { value: "countryside-stewardship", text: "Countryside Stewardship" },
+        { value: "cross-compliance", text: "Cross Compliance" },
+        { value: "basic-payment-scheme", text: "Basic Payment Scheme" },
+        { divider: "or" },
+        { value: "none", text: "Not scheme-specific" }
       ]
     }) }}
 

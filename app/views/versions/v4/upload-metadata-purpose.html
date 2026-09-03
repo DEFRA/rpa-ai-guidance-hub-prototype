@@ -1,0 +1,60 @@
+{#
+  The guide's details, step 2 of 3 — who owns it and what it aims to achieve.
+  Both are required. Follows the facts captured on step 1; who it is for and
+  system access come on step 3. Values live in the session (app/routes.js).
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Owner and purpose" %}
+{% if errorList and errorList.length %}{% set pageName = "Error: " + pageName %}{% endif %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  {% if errorList and errorList.length %}
+    {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+  {% endif %}
+
+  <h1 class="govuk-heading-l">Owner and purpose</h1>
+
+  <p class="govuk-body">
+    Tell us who owns this guidance and what it is meant to achieve.
+  </p>
+
+  <form method="post" action="/v4/upload-guide/metadata/purpose" novalidate>
+
+    {{ govukInput({
+      id: "owner",
+      name: "owner",
+      type: "email",
+      value: details.owner,
+      spellcheck: false,
+      autocomplete: "email",
+      label: { text: "Owner email", classes: "govuk-label--s" },
+      hint: { text: "The email address of who approves and publishes this guide" },
+      errorMessage: errors.owner
+    }) }}
+
+    {{ govukCharacterCount({
+      id: "goal",
+      name: "goal",
+      value: details.goal,
+      maxlength: 200,
+      rows: 3,
+      label: { text: "What does this guidance aim to achieve?", classes: "govuk-label--s" },
+      errorMessage: errors.goal
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+
+  </form>
+
+</div>
+
+{% endblock %}

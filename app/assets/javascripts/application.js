@@ -84,6 +84,7 @@ function renderMarkdown (markdown, options) {
 
   const html = []
   let listItems = []
+  let tableRows = []
 
   function flushList () {
     if (!listItems.length) return
@@ -91,8 +92,58 @@ function renderMarkdown (markdown, options) {
     listItems = []
   }
 
+  // A GitHub-style pipe table: a header row, a separator row of dashes, then
+  // body rows, each written | cell | cell |. The separator row is dropped and
+  // its position marks where the header ends. Converted Word documents can
+  // carry tables, so the viewer renders them rather than showing the pipes.
+  function splitCells (row) {
+    return row.replace(/^\||\|$/g, '').split('|').map(function (cell) {
+      return cell.trim()
+    })
+  }
+
+  function flushTable () {
+    if (!tableRows.length) return
+    const rows = tableRows
+    tableRows = []
+
+    const isSeparator = rows.length > 1 && rows[1].every(function (cell) {
+      return /^:?-{3,}:?$/.test(cell)
+    })
+    const head = isSeparator ? rows[0] : null
+    const body = isSeparator ? rows.slice(2) : rows
+
+    const out = ['<div class="app-markdown-preview__table-wrap">',
+      '<table class="govuk-table">']
+    if (head) {
+      out.push('<thead class="govuk-table__head"><tr class="govuk-table__row">')
+      head.forEach(function (cell) {
+        out.push('<th scope="col" class="govuk-table__header">' + inline(cell) + '</th>')
+      })
+      out.push('</tr></thead>')
+    }
+    out.push('<tbody class="govuk-table__body">')
+    body.forEach(function (cells) {
+      out.push('<tr class="govuk-table__row">')
+      cells.forEach(function (cell) {
+        out.push('<td class="govuk-table__cell">' + inline(cell) + '</td>')
+      })
+      out.push('</tr>')
+    })
+    out.push('</tbody></table></div>')
+    html.push(out.join(''))
+  }
+
   markdown.split('\n').forEach(function (line) {
     const trimmed = line.trim()
+
+    // Buffer consecutive table rows; anything else ends the table.
+    if (/^\|.*\|$/.test(trimmed)) {
+      flushList()
+      tableRows.push(splitCells(trimmed))
+      return
+    }
+    flushTable()
 
     if (!trimmed) {
       flushList()
@@ -121,6 +172,7 @@ function renderMarkdown (markdown, options) {
   })
 
   flushList()
+  flushTable()
   return html.join('')
 }
 

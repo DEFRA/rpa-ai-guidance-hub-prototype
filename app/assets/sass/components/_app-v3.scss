@@ -712,6 +712,17 @@
   border: 1px solid $govuk-mid-grey;
 }
 
+// Tables in the converted guidance. Wrapped so a wide table scrolls inside
+// its own box rather than stretching the page.
+.app-markdown-preview__table-wrap {
+  overflow-x: auto;
+  margin-bottom: govuk-spacing(4);
+
+  .govuk-table {
+    margin-bottom: 0;
+  }
+}
+
 // A search match highlighted in the document.
 .app-guide-view__match {
   background-color: $govuk-yellow;

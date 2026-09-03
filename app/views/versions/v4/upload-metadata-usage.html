@@ -1,0 +1,79 @@
+{#
+  The guide's details, step 3 of 3 — who the guidance is for, what users need
+  to perform or understand, and which systems they need access to. All three
+  are required. The last step before the check page. Values live in the
+  session (app/routes.js).
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Who it is for and system access" %}
+{% if errorList and errorList.length %}{% set pageName = "Error: " + pageName %}{% endif %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  {% if errorList and errorList.length %}
+    {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+  {% endif %}
+
+  <h1 class="govuk-heading-l">Who it is for and system access</h1>
+
+  <p class="govuk-body">
+    Tell us who uses this guidance, what they need to do, and which systems
+    they need access to.
+  </p>
+
+  <form method="post" action="/v4/upload-guide/metadata/usage" novalidate>
+
+    {{ govukCheckboxes({
+      idPrefix: "audience",
+      name: "audience",
+      values: details.audience,
+      fieldset: {
+        legend: { text: "Who is this guidance for?", classes: "govuk-fieldset__legend--s" }
+      },
+      hint: { text: "Select all that apply." },
+      errorMessage: errors.audience,
+      items: [
+        { value: "processor", text: "Processor" },
+        { value: "team-leader", text: "Team leader" }
+      ]
+    }) }}
+
+    {{ govukTextarea({
+      id: "requirements",
+      name: "requirements",
+      value: details.requirements,
+      rows: 3,
+      label: { text: "What do users need to perform or understand?", classes: "govuk-label--s" },
+      errorMessage: errors.requirements
+    }) }}
+
+    {{ govukCheckboxes({
+      idPrefix: "systems",
+      name: "systems",
+      values: details.systems,
+      fieldset: {
+        legend: { text: "What systems does this guidance use?", classes: "govuk-fieldset__legend--s" }
+      },
+      hint: { text: "Tick the systems this guidance uses." },
+      errorMessage: errors.systems,
+      items: [
+        { value: "agri", text: "Siti Agri" },
+        { value: "crm", text: "CRM" }
+      ]
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+
+  </form>
+
+</div>
+
+{% endblock %}
