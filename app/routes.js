@@ -1629,16 +1629,38 @@ router.get('/v4/upload-guide/processing', (req, res) => {
 })
 
 // The metadata options, with the labels their values read back as on the
-// check page. Scheme is one-of (a select); audience and systems are many-of
-// (checkboxes).
+// check page. Scheme, audience and systems are all many-of (checkboxes) -
+// guidance can relate to more than one scheme, so scheme moved from a single
+// radio choice to checkboxes alongside them. Labels include the acronym
+// commonly used for that scheme, where there is one.
 const V4_SCHEMES = {
-  sfi: 'Sustainable Farming Incentive',
-  'countryside-stewardship': 'Countryside Stewardship',
+  sfi: 'Sustainable Farming Incentive (SFI)',
+  'countryside-stewardship': 'Countryside Stewardship (CS)',
   'cross-compliance': 'Cross Compliance',
-  'basic-payment-scheme': 'Basic Payment Scheme'
+  'basic-payment-scheme': 'Basic Payment Scheme (BPS)'
 }
-const V4_AUDIENCE = { processor: 'Processor', 'team-leader': 'Team leader' }
-const V4_SYSTEMS = { agri: 'Siti Agri', crm: 'CRM' }
+// 'none' is the explicit "Not scheme-specific" checkbox - a real answer,
+// exclusive of every named scheme - so it is allowed alongside V4_SCHEMES
+// wherever submitted scheme values are validated.
+const V4_SCHEME_VALUES = Object.assign({ none: true }, V4_SCHEMES)
+const V4_AUDIENCE = {
+  processor: 'Processor',
+  'team-leader': 'Team leader',
+  'technical-specialist': 'Technical specialist',
+  manager: 'Manager',
+  other: 'Other'
+}
+const V4_SYSTEMS = {
+  crm: 'CRM',
+  agri: 'SITI Agri',
+  d365: 'D365',
+  genesis: 'Genesis',
+  lms: 'Land Management Services',
+  rpa: 'RPA Application Portal',
+  rps: 'Rural Payments Service',
+  inspections: 'Inspections Workbench',
+  imis: 'IMIS'
+}
 
 // The sample upload is the mock claim-processing guide (see
 // app/data/v4-sample-document.js). Its title prefills the details step, and
@@ -1655,7 +1677,7 @@ function v4Selected (value, allowed) {
   return values.filter((candidate) => allowed[candidate])
 }
 
-// The details are captured across three steps. Each step merges its own
+// The details are captured across two steps. Each step merges its own
 // fields into the one session object, so a Change link back to any step
 // leaves the others untouched. The object seeds with the facts read from the
 // document (title, version, date), the fixed type, and everything else empty.
@@ -1664,7 +1686,7 @@ function v4Details (req) {
     name: V4_UPLOAD_DEFAULT_TITLE,
     version: V4_UPLOAD_VERSION,
     lastModified: V4_UPLOAD_LAST_MODIFIED,
-    scheme: '',
+    scheme: [],
     owner: '',
     type: 'Process guide',
     audience: [],
@@ -1674,34 +1696,51 @@ function v4Details (req) {
   }
 }
 
-// Every question across the three steps is required. Each POST validates,
+// Every question across the two steps is required. Each POST validates,
 // re-rendering its own page with an error summary and inline messages when
 // something is missing, and only saves and moves on when the step is valid.
 const V4_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Step 1 of 3 — the facts read from the document (title editable; version and
-// date read-only) plus the scheme this guidance relates to.
+// Step 1 of 2 — the facts read from the document (title editable; version and
+// date read-only) plus the scheme(s) this guidance relates to.
+//
+// Either step can also be reached via a Change link from the check page
+// (?from=check). When that's how a step was opened, the flag is carried
+// through the form as a hidden field so Continue — and the back link —
+// return straight to the check page instead of carrying on through the rest
+// of the journey, rather than forcing the user to re-run the steps they
+// weren't trying to change. The session already preserves every field
+// regardless of route, since each step merges its own fields into the one
+// object (see v4Details below) — only the *destination* after Continue
+// changes.
 router.get('/v4/upload-guide/metadata', (req, res) => {
-  res.locals.backHref = '/v4/upload-guide'
-  res.render('versions/v4/upload-metadata', { details: v4Details(req), errors: {}, errorList: [] })
+  const from = req.query.from === 'check' ? 'check' : ''
+  res.locals.backHref = from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide'
+  res.render('versions/v4/upload-metadata', { details: v4Details(req), errors: {}, errorList: [], from })
 })
 
 router.post('/v4/upload-guide/metadata', (req, res) => {
   const title = (req.body.guideTitle || '').trim()
-  // 'none' is the explicit "Not scheme-specific" radio — a real answer; only
-  // a missing selection is an error. Anything unknown falls back to ''.
-  const scheme = (V4_SCHEMES[req.body.scheme] || req.body.scheme === 'none') ? req.body.scheme : ''
+  const scheme = v4Selected(req.body.scheme, V4_SCHEME_VALUES)
+  const from = req.body.from === 'check' ? 'check' : ''
 
   const errors = {}
   if (!title) errors.guideTitle = { text: 'Enter a guidance title', href: '#guide-title' }
-  if (!req.body.scheme) errors.scheme = { text: 'Select the scheme this guidance relates to', href: '#scheme' }
+  if (!scheme.length) {
+    errors.scheme = { text: "Select the scheme or schemes this guidance relates to, or select 'Not scheme-specific'", href: '#scheme' }
+  } else if (scheme.includes('none') && scheme.length > 1) {
+    // No-JS fallback: the exclusive behaviour on 'none' is client-side only,
+    // so a form submitted without it can still carry both.
+    errors.scheme = { text: "Select the schemes this guidance relates to, or select 'Not scheme-specific'", href: '#scheme' }
+  }
 
   if (Object.keys(errors).length) {
-    res.locals.backHref = '/v4/upload-guide'
+    res.locals.backHref = from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide'
     return res.render('versions/v4/upload-metadata', {
-      details: Object.assign({}, v4Details(req), { name: title, scheme: req.body.scheme || '' }),
+      details: Object.assign({}, v4Details(req), { name: title, scheme }),
       errors,
-      errorList: Object.values(errors)
+      errorList: Object.values(errors),
+      from
     })
   }
 
@@ -1713,71 +1752,57 @@ router.post('/v4/upload-guide/metadata', (req, res) => {
   details.type = 'Process guide'
   details.scheme = scheme
   req.session.data.v4UploadedGuide = details
-  res.redirect('/v4/upload-guide/metadata/purpose')
+  res.redirect(from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide/metadata/purpose')
 })
 
-// Step 2 of 3 — who owns the guidance and what it aims to achieve.
+// Step 2 of 2 — who owns the guidance, what it aims to achieve, required
+// knowledge and training, what systems it uses, and who it is for. The
+// "who it is for" question originally had its own step (a third,
+// audience-only page), but was folded in here since it's metadata like the
+// rest of this step's fields rather than a distinct stage of the journey —
+// see git history for the removed upload-metadata-usage.html.
 router.get('/v4/upload-guide/metadata/purpose', (req, res) => {
   if (!req.session.data.v4UploadedGuide) return res.redirect('/v4/upload-guide/metadata')
-  res.locals.backHref = '/v4/upload-guide/metadata'
-  res.render('versions/v4/upload-metadata-purpose', { details: req.session.data.v4UploadedGuide, errors: {}, errorList: [] })
+  const from = req.query.from === 'check' ? 'check' : ''
+  res.locals.backHref = from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide/metadata'
+  res.render('versions/v4/upload-metadata-purpose', { details: req.session.data.v4UploadedGuide, errors: {}, errorList: [], from })
 })
 
 router.post('/v4/upload-guide/metadata/purpose', (req, res) => {
   const owner = (req.body.owner || '').trim()
   const goal = (req.body.goal || '').trim()
+  const requirements = (req.body.requirements || '').trim()
+  const systems = v4Selected(req.body.systems, V4_SYSTEMS)
+  const audience = v4Selected(req.body.audience, V4_AUDIENCE)
+  const from = req.body.from === 'check' ? 'check' : ''
 
   const errors = {}
-  if (!owner) errors.owner = { text: 'Enter the owner’s email address', href: '#owner' }
+  if (!owner) errors.owner = { text: 'Enter the owner email address', href: '#owner' }
   else if (!V4_EMAIL_RE.test(owner)) errors.owner = { text: 'Enter an email address in the correct format, like name@example.com', href: '#owner' }
-  if (!goal) errors.goal = { text: 'Enter what this guidance aims to achieve', href: '#goal' }
+  if (!goal) errors.goal = { text: 'Enter the purpose of this guidance', href: '#goal' }
+  if (!requirements) errors.requirements = { text: 'Enter the required knowledge and training', href: '#requirements' }
+  if (!systems.length) errors.systems = { text: 'Select the systems this guidance will use', href: '#systems' }
+  if (!audience.length) errors.audience = { text: 'Select who this guidance is for', href: '#audience' }
 
   if (Object.keys(errors).length) {
-    res.locals.backHref = '/v4/upload-guide/metadata'
+    res.locals.backHref = from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide/metadata'
     return res.render('versions/v4/upload-metadata-purpose', {
-      details: Object.assign({}, v4Details(req), { owner, goal }),
+      details: Object.assign({}, v4Details(req), { owner, goal, requirements, systems, audience }),
       errors,
-      errorList: Object.values(errors)
+      errorList: Object.values(errors),
+      from
     })
   }
 
+  // This is already the last step, so Continue always lands on the check
+  // page regardless of `from` — but the flag still governs the back link
+  // above, for consistency with step 1.
   const details = v4Details(req)
   details.owner = owner
   details.goal = goal
-  req.session.data.v4UploadedGuide = details
-  res.redirect('/v4/upload-guide/metadata/usage')
-})
-
-// Step 3 of 3 — who it is for, what users need to do, and system access.
-router.get('/v4/upload-guide/metadata/usage', (req, res) => {
-  if (!req.session.data.v4UploadedGuide) return res.redirect('/v4/upload-guide/metadata')
-  res.locals.backHref = '/v4/upload-guide/metadata/purpose'
-  res.render('versions/v4/upload-metadata-usage', { details: req.session.data.v4UploadedGuide, errors: {}, errorList: [] })
-})
-
-router.post('/v4/upload-guide/metadata/usage', (req, res) => {
-  const audience = v4Selected(req.body.audience, V4_AUDIENCE)
-  const requirements = (req.body.requirements || '').trim()
-  const systems = v4Selected(req.body.systems, V4_SYSTEMS)
-
-  const errors = {}
-  if (!audience.length) errors.audience = { text: 'Select who this guidance is for', href: '#audience' }
-  if (!requirements) errors.requirements = { text: 'Enter what users need to perform or understand', href: '#requirements' }
-  if (!systems.length) errors.systems = { text: 'Select the systems this guidance uses', href: '#systems' }
-
-  if (Object.keys(errors).length) {
-    res.locals.backHref = '/v4/upload-guide/metadata/purpose'
-    return res.render('versions/v4/upload-metadata-usage', {
-      details: Object.assign({}, v4Details(req), { audience, requirements, systems }),
-      errors,
-      errorList: Object.values(errors)
-    })
-  }
-
-  const details = v4Details(req)
-  details.audience = audience
   details.requirements = requirements
   details.systems = systems
+  details.audience = audience
   req.session.data.v4UploadedGuide = details
   res.redirect('/v4/upload-guide/check')
 })
@@ -1793,11 +1818,13 @@ router.get('/v4/upload-guide/check', (req, res) => {
     return named.length ? named.join(', ') : fallback
   }
 
-  res.locals.backHref = '/v4/upload-guide/metadata/usage'
+  res.locals.backHref = '/v4/upload-guide/metadata/purpose'
   res.render('versions/v4/upload-check', {
     details,
     typeLabel: details.type,
-    schemeLabel: V4_SCHEMES[details.scheme] || 'Not scheme-specific',
+    // 'none' isn't in V4_SCHEMES, so listOr drops it and falls back to
+    // 'Not scheme-specific' whenever that's the only value selected.
+    schemeLabel: listOr(details.scheme, V4_SCHEMES, 'Not scheme-specific'),
     audienceLabel: listOr(details.audience, V4_AUDIENCE, 'Not provided'),
     systemsLabel: listOr(details.systems, V4_SYSTEMS, 'None')
   })

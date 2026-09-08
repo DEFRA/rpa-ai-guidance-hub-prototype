@@ -1,9 +1,14 @@
 {#
   The check page before converting. The details are grouped into summary cards,
   one per journey step, so the page scans more easily than one long list. Each
-  card carries a single "Change" in its header that lands on the step that owns
-  those fields; the read-only facts read from the document (version, date, type)
-  sit inside the relevant card without their own action. Converting leads to the
+  card carries a single "Change" in its header that opens the step that owns
+  those fields, with ?from=check so that step's Continue returns straight back
+  here rather than carrying on through the rest of the journey (see routes.js);
+  the read-only facts read from the document (version, date, type) sit inside
+  the relevant card without their own action. Audience ("Who is this guidance
+  for?") used to have its own card, backed by a third journey step, but was
+  folded into "Owner and purpose" when that step was removed — it's metadata
+  like the rest of that card, not a distinct stage. Converting leads to the
   success page; no quality checks run for now.
 #}
 {% extends "layouts/v3.html" %}
@@ -13,9 +18,11 @@
 
 {% set pageName = "Check the details before converting" %}
 
-{% set detailsChange = "/v4/upload-guide/metadata" %}
-{% set purposeChange = "/v4/upload-guide/metadata/purpose" %}
-{% set usageChange = "/v4/upload-guide/metadata/usage" %}
+{# ?from=check tells the step it was opened from here, so it hands the flag
+   back to routes.js on submit and Continue returns straight to this page
+   instead of carrying on through the rest of the journey. #}
+{% set detailsChange = "/v4/upload-guide/metadata?from=check" %}
+{% set purposeChange = "/v4/upload-guide/metadata/purpose?from=check" %}
 
 {% block content %}
 
@@ -49,19 +56,10 @@
     },
     rows: [
       { key: { text: "Owner email" }, value: { text: details.owner or "Not provided" } },
-      { key: { text: "What it aims to achieve" }, value: { text: details.goal or "Not provided" } }
-    ]
-  }) }}
-
-  {{ govukSummaryList({
-    card: {
-      title: { text: "Who it is for and system access" },
-      actions: { items: [{ href: usageChange, text: "Change", visuallyHiddenText: "who it is for and system access" }] }
-    },
-    rows: [
-      { key: { text: "Who it is for" }, value: { text: audienceLabel } },
-      { key: { text: "What users need to do" }, value: { text: details.requirements or "Not provided" } },
-      { key: { text: "Systems used" }, value: { text: systemsLabel } }
+      { key: { text: "Purpose of guidance" }, value: { text: details.goal or "Not provided" } },
+      { key: { text: "Required knowledge and training" }, value: { text: details.requirements or "Not provided" } },
+      { key: { text: "Systems" }, value: { text: systemsLabel } },
+      { key: { text: "Who is this guidance for?" }, value: { text: audienceLabel } }
     ]
   }) }}
 

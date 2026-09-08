@@ -1,17 +1,20 @@
 {#
-  The guide's details, step 1 of 3 — the facts read from the document plus
-  the scheme it relates to. Title is editable and required; the scheme is
-  required. Version and last modified are read-only (shown as a summary list,
-  since GDS has no read-only input). Owner and purpose follow on step 2; who
-  it is for and system access on step 3. Values live in the session
-  (app/routes.js), so returning via a Change link on the check page shows what
-  was entered.
+  The guide's details, step 1 of 3 - the facts read from the document plus
+  the scheme(s) it relates to. Title is editable and required; at least one
+  scheme answer (a named scheme, or "Not scheme-specific") is required.
+  Guidance can relate to more than one scheme, so scheme is checkboxes rather
+  than radios, with "Not scheme-specific" as an exclusive option - see the
+  Design System's checkboxes guidance on adding a "none" option. Version and
+  last modified are read-only (shown as a summary list, since GDS has no
+  read-only input). Owner and purpose follow on step 2; who it is for
+  comes on step 3. Values live in the session (app/routes.js), so returning
+  via a Change link on the check page shows what was entered.
 #}
 {% extends "layouts/v3.html" %}
 
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
-{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
@@ -30,10 +33,14 @@
 
   <p class="govuk-body">
     We have read the title, version and date from the document. Check the
-    title and choose the scheme this guidance relates to.
+    title and choose the schemes this guidance relates to.
   </p>
 
   <form method="post" action="/v4/upload-guide/metadata" novalidate>
+
+    {# Set when this step was opened via a Change link from the check page —
+       carried through so Continue returns there instead of the next step. #}
+    {% if from %}<input type="hidden" name="from" value="{{ from }}">{% endif %}
 
     {{ govukInput({
       id: "guide-title",
@@ -46,7 +53,7 @@
 
     {# Version and last modified are read from the document and cannot be
        changed, so they are shown as read-only information (a summary list)
-       rather than form fields — GDS has no read-only input. #}
+       rather than form fields - GDS has no read-only input. #}
     {{ govukSummaryList({
       rows: [
         { key: { text: "Version number" }, value: { text: details.version } },
@@ -54,23 +61,32 @@
       ]
     }) }}
 
-    {# Radios rather than a select: GDS advises against the select component
-       and to prefer radios for a short list of options. #}
-    {{ govukRadios({
+    {# Checkboxes rather than radios: guidance can relate to more than one
+       scheme, so this is a select-many question. "Not scheme-specific" is
+       set to "exclusive" behaviour, per GDS guidance for a "none" option -
+       selecting it unchecks any scheme already ticked (JS), and the server
+       rejects the combination if JS is unavailable. #}
+    {{ govukCheckboxes({
       idPrefix: "scheme",
       name: "scheme",
-      value: details.scheme,
+      values: details.scheme,
       fieldset: {
-        legend: { text: "Which scheme does this guidance relate to?", classes: "govuk-fieldset__legend--s" }
+        legend: { text: "Which schemes does this guidance relate to?", classes: "govuk-fieldset__legend--s" }
       },
+      hint: { text: "Select every scheme this guidance relates to." },
       errorMessage: errors.scheme,
       items: [
-        { value: "sfi", text: "Sustainable Farming Incentive" },
-        { value: "countryside-stewardship", text: "Countryside Stewardship" },
+        { value: "sfi", text: "Sustainable Farming Incentive (SFI)" },
+        { value: "countryside-stewardship", text: "Countryside Stewardship (CS)" },
         { value: "cross-compliance", text: "Cross Compliance" },
-        { value: "basic-payment-scheme", text: "Basic Payment Scheme" },
+        { value: "basic-payment-scheme", text: "Basic Payment Scheme (BPS)" },
         { divider: "or" },
-        { value: "none", text: "Not scheme-specific" }
+        {
+          value: "none",
+          text: "Not scheme-specific",
+          hint: { text: "Only select this if the guidance genuinely applies across schemes, rather than to one or more schemes in particular" },
+          behaviour: "exclusive"
+        }
       ]
     }) }}
 

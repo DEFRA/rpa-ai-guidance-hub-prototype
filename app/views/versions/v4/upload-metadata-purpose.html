@@ -1,12 +1,17 @@
 {#
-  The guide's details, step 2 of 3 — who owns it and what it aims to achieve.
-  Both are required. Follows the facts captured on step 1; who it is for and
-  system access come on step 3. Values live in the session (app/routes.js).
+  The guide's details, step 2 of 2 - who owns it, what it aims to achieve,
+  the knowledge and training required to follow it, the systems it uses, and
+  who it is for. All are required. Follows the facts and schemes captured on
+  step 1. "Who it is for" originally had its own step after this one, but was
+  folded in here as it's metadata like the rest of this page rather than a
+  distinct stage of the journey. Values live in the session (app/routes.js).
 #}
 {% extends "layouts/v3.html" %}
 
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
@@ -24,10 +29,14 @@
   <h1 class="govuk-heading-l">Owner and purpose</h1>
 
   <p class="govuk-body">
-    Tell us who owns this guidance and what it is meant to achieve.
+    Tell us who owns this guidance, what it covers, the knowledge required to follow it, which systems it uses, and who it is for.
   </p>
 
   <form method="post" action="/v4/upload-guide/metadata/purpose" novalidate>
+
+    {# Set when this step was opened via a Change link from the check page —
+       carried through so Continue returns there instead of the next step. #}
+    {% if from %}<input type="hidden" name="from" value="{{ from }}">{% endif %}
 
     {{ govukInput({
       id: "owner",
@@ -47,8 +56,59 @@
       value: details.goal,
       maxlength: 200,
       rows: 3,
-      label: { text: "What does this guidance aim to achieve?", classes: "govuk-label--s" },
+      label: { text: "What is the purpose of this guidance?", classes: "govuk-label--s" },
+      hint: { text: "Provide a brief overview of what this guidance covers and when it should be used." },
       errorMessage: errors.goal
+    }) }}
+
+    {{ govukTextarea({
+      id: "requirements",
+      name: "requirements",
+      value: details.requirements,
+      rows: 3,
+      label: { text: "Required knowledge and training", classes: "govuk-label--s" },
+      hint: { text: "List any prior knowledge, training or permissions users should have before following this guidance." },
+      errorMessage: errors.requirements
+    }) }}
+
+    {{ govukCheckboxes({
+      idPrefix: "systems",
+      name: "systems",
+      values: details.systems,
+      fieldset: {
+        legend: { text: "What systems will you use?", classes: "govuk-fieldset__legend--s" }
+      },
+      hint: { text: "Select all systems this guidance uses." },
+      errorMessage: errors.systems,
+      items: [
+        { value: "crm", text: "CRM" },
+        { value: "agri", text: "SITI Agri" },
+        { value: "d365", text: "D365" },
+        { value: "genesis", text: "Genesis" },
+        { value: "lms", text: "Land Management Services" },
+        { value: "rpa", text: "RPA Application Portal" },
+        { value: "rps", text: "Rural Payments Service" },
+        { value: "inspections", text: "Inspections Workbench" },
+        { value: "imis", text: "IMIS" }
+      ]
+    }) }}
+
+    {{ govukCheckboxes({
+      idPrefix: "audience",
+      name: "audience",
+      values: details.audience,
+      fieldset: {
+        legend: { text: "Who is this guidance for?", classes: "govuk-fieldset__legend--s" }
+      },
+      hint: { text: "Select all that apply." },
+      errorMessage: errors.audience,
+      items: [
+        { value: "processor", text: "Processor" },
+        { value: "team-leader", text: "Team leader" },
+        { value: "technical-specialist", text: "Technical specialist" },
+        { value: "manager", text: "Manager" },
+        { value: "other", text: "Other" }
+      ]
     }) }}
 
     {{ govukButton({ text: "Continue" }) }}
