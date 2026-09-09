@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" role="img" aria-label="Example land parcel map with boundaries">
+  <rect width="720" height="300" fill="#eef7ee"/>
+  <g stroke="#4c8c4a" stroke-width="2" fill="#d7ebd5">
+    <polygon points="60,50 300,40 320,150 90,180"/>
+    <polygon points="320,150 300,40 520,60 560,170"/>
+    <polygon points="90,180 320,150 300,260 120,270" fill="#c3e0c0"/>
+    <polygon points="320,150 560,170 540,270 300,260" fill="#c3e0c0"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#0b0c0c">
+    <text x="180" y="115">SX1234</text>
+    <text x="420" y="120">SX1235</text>
+    <text x="205" y="215">SX1236</text>
+    <text x="415" y="220">SX1237</text>
+  </g>
+  <g stroke="#d4351c" stroke-width="3" stroke-dasharray="8 5" fill="none">
+    <polygon points="320,150 560,170 540,270 300,260"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#d4351c">
+    <text x="580" y="215">Changed</text>
+    <text x="580" y="233">boundary</text>
+  </g>
+</svg>

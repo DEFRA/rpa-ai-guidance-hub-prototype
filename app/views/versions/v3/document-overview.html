@@ -1,0 +1,88 @@
+{#
+  Version 3's copy of document-overview.html — the stop between a result (or
+  a saved guide row) on search.html and the document itself — on the v3
+  full-width layout, with its back link pointing into v3 rather than the v2
+  results page. Data comes through /v3/document-overview/:id in app/routes.js
+  from the same files as the live page.
+
+  "Open" leads to the live read-only document view at
+  /find-guidance/document/:id — the edge of what v3 redesigns, so from there
+  the participant is in the shared document pages. "Save for later" points
+  back at the saved guides area on search.html; nothing in this static
+  prototype persists that kind of state. "Edit guide" opens the guide in
+  v3's TipTap editor (guide-edit.html, whose Back and Cancel
+  return here) — so a guide found by searching can be verified on this page,
+  then edited. Saving there lands back here with the success banner below.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageName = documentName %}
+
+{% set statusTags = {
+  "Up to date": { text: "Up to date", classes: "govuk-tag--green" },
+  "Partially updated": { text: "Partially updated", classes: "govuk-tag--orange" },
+  "Out of date": { text: "Out of date", classes: "govuk-tag--red" }
+} %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  {% if saved %}
+    {{ govukNotificationBanner({
+      type: "success",
+      text: "Guide saved"
+    }) }}
+  {% endif %}
+
+  <span class="govuk-caption-l">{{ type }}</span>
+  <h1 class="govuk-heading-l">{{ documentName }}</h1>
+
+  <p class="govuk-body">{{ description }}</p>
+
+  {{ govukSummaryList({
+    rows: [
+      {
+        key: { text: "Scheme or topic" },
+        value: { text: scheme }
+      },
+      {
+        key: { text: "Document type" },
+        value: { text: type }
+      },
+      {
+        key: { text: "Status" },
+        value: { html: govukTag(statusTags[status]) }
+      },
+      {
+        key: { text: "Last updated" },
+        value: { text: lastUpdated }
+      }
+    ]
+  }) }}
+
+  <div class="govuk-button-group">
+    {{ govukButton({
+      text: "Open",
+      href: "/find-guidance/document/" + id
+    }) }}
+    {{ govukButton({
+      text: "Edit guide",
+      href: "/v3/guide/" + id + "/edit",
+      classes: "govuk-button--secondary"
+    }) }}
+    {{ govukButton({
+      text: "Save for later",
+      href: "/v3/search#saved-guides",
+      classes: "govuk-button--secondary"
+    }) }}
+  </div>
+
+</div>
+
+{% endblock %}

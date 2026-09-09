@@ -25,21 +25,18 @@
         </a>
       </div>
       {#
-        v1 (isV1, set in app/routes.js for every /v1/... path) keeps the
-        original, still-unwired "Sign in" placeholder — v1 has no sign-in
-        page of its own. /v5/sign-in itself (isV5SignIn) reads the same way
-        — a visitor there has not signed in yet, so "Sign out" would be
-        inconsistent. Every other v5 page (isV5, reached only after
-        clicking "Sign in with your Defra account" on that page) reads
-        "Sign out" and links to /v5/sign-in. v2/everything else keeps
-        "Sign out" → /v2/sign-in exactly as before.
+        Version-specific sign-in/out link. v3 and v4 set none of these flags
+        and show no header link here — they sign out through the service
+        navigation below (main removed the old shared placeholder). v1 (isV1,
+        set for every /v1/... path) keeps the original, still-unwired "Sign
+        in" placeholder. /v5/sign-in itself (isV5SignIn) reads the same way —
+        a visitor there has not signed in yet. Every other v5 page (isV5)
+        reads "Sign out" and links to /v5/sign-in.
       #}
       {% if isV1 or isV5SignIn %}
         <a href="#" class="defra-header__sign-in">Sign in</a>
       {% elif isV5 %}
         <a href="/v5/sign-in" class="defra-header__sign-in">Sign out</a>
-      {% else %}
-        <a href="/v2/sign-in" class="defra-header__sign-in">Sign out</a>
       {% endif %}
     </div>
   </div>
@@ -49,7 +46,8 @@
     <div class="govuk-width-container">
       <ul class="defra-service-navigation__list">
         {% for item in navigation %}
-          <li class="defra-service-navigation__item">
+          {# item.right pushes the item (Sign out, in v3) to the bar's far end #}
+          <li class="defra-service-navigation__item{% if item.right %} defra-service-navigation__item--right{% endif %}">
             <a class="defra-service-navigation__link" href="{{ item.href }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.text }}</a>
           </li>
         {% endfor %}

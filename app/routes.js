@@ -18,6 +18,7 @@ const { guidanceDocuments } = require('./data/guidance-documents')
 // with no "steps" of its own. See the comment at the top of that file.
 const { documents: genericGuidanceContent } = require('./data/generic-guidance-content')
 const sampleDocument = require('./data/sample-document')
+const v4SampleDocument = require('./data/v4-sample-document')
 // Shared with the browser — see the scripts block in app/views/layouts/main.html.
 const qualityChecks = require('./assets/javascripts/quality-checks')
 
@@ -1306,6 +1307,579 @@ router.get('/v1/designer/documents/review-complete', (req, res) => {
   res.render('versions/v1/designer/documents/review-complete')
 })
 
+// ===========================================================================
+// Version 3 — a redesign of the whole entry, trying a different shape from
+// v2's find/manage split: an unauthenticated page explaining the service at
+// /v3/, then one full-width signed-in landing page at /v3/search that folds
+// searching, filters and saved guides into a single screen. Views live in
+// app/views/versions/v3/ on layouts/v3.html (full width). See
+// app/views/index.html, the versions list this belongs to.
+// ===========================================================================
+
+// The top nav v3's signed-in pages share, rendered by
+// partials/defra-header.njk the same way the global `navigation` const would
+// be: Home is the landing page at /v3/search, where all guidance is
+// searched from. The unauthenticated front door at /v3/ is left out — with
+// res.locals.navigation still empty there, the header shows the plain brand
+// border instead, since none of these destinations makes sense before
+// signing in.
+// Sign out is as fake as sign in — it just returns to the unauthenticated
+// front door. `right: true` pushes it to the far end of the bar (see
+// partials/defra-header.njk).
+const V3_NAVIGATION = [
+  { text: 'Home', href: '/v3/search' },
+  { text: 'My drafts', href: '/v3/drafts' },
+  { text: 'My approvals', href: '/v3/approvals' },
+  { text: 'Sign out', href: '/v3/', right: true }
+]
+
+// Mounted at /v3, so req.path here has the /v3 prefix already stripped —
+// '/' is the front door, '/search' the landing page, and so on.
+router.use('/v3', (req, res, next) => {
+  if (req.path !== '/') {
+    res.locals.navigation = V3_NAVIGATION.map((item) => ({
+      ...item,
+      current: item.href === '/v3' + req.path
+    }))
+  }
+  next()
+})
+
+// What the service is, for someone not signed in yet. Signing in is as fake
+// as the rest of the prototype — the button in the hero goes straight to the
+// signed-in landing page below.
+router.get('/v3/', (req, res) => {
+  res.render('versions/v3/start')
+})
+
+// The facets on /v3/search, with the labels their values read back as when
+// shown as removable "Selected filters" tags — the filter pattern copied
+// from DEFRA/rpa-guidance-prototype (src/server/routes/guidance/library.njk
+// and its guide-library module). The filters still change nothing about the
+// fixed results; only what is shown as selected.
+const V3_FILTER_GROUPS = {
+  scheme: {
+    sfi: 'Sustainable Farming Incentive',
+    'countryside-stewardship': 'Countryside Stewardship',
+    'cross-compliance': 'Cross Compliance'
+  },
+  documentType: {
+    'guidance-document': 'Guidance document',
+    form: 'Form',
+    policy: 'Policy'
+  },
+  dateUpdated: {
+    'last-week': 'Last week',
+    'last-month': 'Last month',
+    'last-year': 'Last year'
+  },
+  status: {
+    'up-to-date': 'Up to date',
+    'partially-updated': 'Partially updated',
+    'out-of-date': 'Out of date'
+  }
+}
+
+// A query value can arrive as a string, an array, or the kit's "_unchecked"
+// sentinel — keep only real values the group knows about.
+function toV3Selections (value, allowed) {
+  const values = Array.isArray(value) ? value : value ? [value] : []
+  return values.filter((candidate) => allowed[candidate])
+}
+
+// The signed-in landing page: search bar, collapsible filters and recent
+// work on one screen. Nothing is listed until a search is explicitly made —
+// the Search button and Apply filters both submit the same GET form, so
+// ?search appears in the URL either way, and its presence (not its content)
+// is what switches the results on: the search itself is as unwired as v2's,
+// so any query shows the same fixed list from app/data/search-results.js.
+router.get('/v3/search', (req, res) => {
+  const searched = req.query.search !== undefined
+
+  // What each facet currently has ticked, from the URL — so the checkboxes
+  // survive the round trip, and each selection can be shown as a removable
+  // tag whose href is this same URL minus that one value.
+  const selections = {}
+  Object.keys(V3_FILTER_GROUPS).forEach((group) => {
+    selections[group] = toV3Selections(req.query[group], V3_FILTER_GROUPS[group])
+  })
+
+  const buildHref = (without) => {
+    const params = new URLSearchParams()
+    if (searched) params.set('search', req.query.search)
+    Object.entries(selections).forEach(([group, values]) => {
+      values.forEach((value) => {
+        if (without && without.group === group && without.value === value) return
+        params.append(group, value)
+      })
+    })
+    const queryString = params.toString()
+    return '/v3/search' + (queryString ? '?' + queryString : '')
+  }
+
+  const selectedFilters = []
+  Object.entries(selections).forEach(([group, values]) => {
+    values.forEach((value) => {
+      selectedFilters.push({
+        label: V3_FILTER_GROUPS[group][value],
+        href: buildHref({ group, value })
+      })
+    })
+  })
+
+  // My saved guides: documents saved from a search, from
+  // app/data/saved-documents.js — the same ids the document overviews and
+  // the editor resolve.
+  const removed = req.session.data.v3RemovedSavedGuides || []
+  const savedGuides = savedDocuments
+    .filter((document) => !removed.includes(document.id))
+    .map((document) => ({
+      id: document.id,
+      name: document.name,
+      saved: document.date
+    }))
+
+  res.render('versions/v3/search', {
+    searched,
+    query: req.query.search || '',
+    results: searched ? searchResults : [],
+    savedGuides,
+    selections,
+    selectedFilters,
+    // Clearing the filters keeps the search itself.
+    clearHref: searched
+      ? '/v3/search?search=' + encodeURIComponent(req.query.search)
+      : '/v3/search'
+  })
+})
+
+// "Add new" beside Home's search bar. v3's copy of the chooser (see
+// app/views/versions/v3/create-guidance.html). "Update existing guide" now
+// has a v3 flow of its own below; the other two options continue into the
+// same designer flows v2 uses.
+router.get('/v3/create-guidance', (req, res) => {
+  res.locals.backHref = '/v3/search'
+  res.render('versions/v3/create-guidance')
+})
+
+router.post('/v3/create-guidance', (req, res) => {
+  if (req.body.createGuidance === 'create-new') {
+    return res.redirect('/v3/new-guide')
+  }
+
+  res.redirect('/v3/upload-guide')
+})
+
+// -- Create a new guide ------------------------------------------------------
+//
+// v3's version of the create-new flow, matching the shape of the upload
+// journey below: the guide's details, a check page, a success page, then
+// the v3 editor — starting from a skeleton document rather than a
+// converted one.
+
+// The skeleton a new guide starts from: the shape the authoring
+// requirements ask for, with prompts where the writing goes.
+function v3StarterMarkdown (title) {
+  return [
+    '# ' + title,
+    '',
+    'As a [who this guide is for]',
+    'You need to [what they need to do]',
+    'So that [why it matters]',
+    '',
+    '## Before you start',
+    '',
+    '[What the reader needs access to, or to have to hand.]',
+    '',
+    '## Steps',
+    '',
+    '1. [Open each step with an action verb.]',
+    '',
+    '## Notes',
+    ''
+  ].join('\n')
+}
+
+router.get('/v3/new-guide', (req, res) => {
+  const created = req.session.data.v3NewGuide || {}
+
+  res.locals.backHref = '/v3/create-guidance'
+  res.render('versions/v3/new-guide', {
+    guideTitle: created.name || '',
+    owner: created.owner || 'Priya Devi',
+    guidanceType: created.type || 'process-guide'
+  })
+})
+
+// Creating writes the skeleton into the session as the guide's markdown and
+// goes straight into the editor — no check or success page between the
+// details and the writing.
+router.post('/v3/new-guide', (req, res) => {
+  const created = {
+    name: (req.body.guideTitle || '').trim() || 'Untitled guide',
+    owner: (req.body.owner || '').trim() || 'Priya Devi',
+    type: V3_GUIDANCE_TYPES[req.body.guidanceType]
+      ? req.body.guidanceType
+      : 'process-guide'
+  }
+
+  req.session.data.v3NewGuide = created
+  req.session.data.v3GuideEdits = req.session.data.v3GuideEdits || {}
+  req.session.data.v3GuideEdits.new = v3StarterMarkdown(created.name)
+  res.redirect('/v3/guide/new/edit')
+})
+
+// -- Upload guidance ---------------------------------------------------------
+//
+// v3's version of the migrate journey: pick the Word document, watch it
+// upload and scan, confirm the guide's details (title, owner, type — read
+// out of the document for the designer to correct), check everything before
+// converting, then land in the v3 editor — quality checks already in the
+// side pane — rather than the old editor and issues pages the designer flow
+// ends in.
+
+const V3_GUIDANCE_TYPES = {
+  'process-guide': 'Process guide',
+  'policy-guidance': 'Policy guidance',
+  'reference-document': 'Reference document'
+}
+
+// The title as if read out of the uploaded document — the converted markdown
+// is the shared sample document, whose H1 this is.
+const V3_UPLOAD_DEFAULT_TITLE =
+  'Check an application for the Sustainable Farming Incentive'
+
+// Only findings a designer can act on in the v3 editor make its pane (and
+// the count on the converted success page): the advisory low/info ones are
+// noise at this stage, and GI-002 quotes an image path that never appears
+// in the rendered text, so its anchor has nowhere to land.
+function v3EditorFindings (markdown) {
+  return qualityChecks.findIssues(markdown).filter(
+    (finding) =>
+      ['critical', 'high', 'medium'].includes(finding.severity) &&
+      finding.ruleId !== 'GI-002'
+  )
+}
+
+router.get('/v3/upload-guide', (req, res) => {
+  res.locals.backHref = '/v3/create-guidance'
+  res.render('versions/v3/upload-guide')
+})
+
+router.post('/v3/upload-guide', (req, res) => {
+  // The file itself goes nowhere in a static prototype — straight on to the
+  // upload-and-scan wait.
+  res.redirect('/v3/upload-guide/processing')
+})
+
+router.get('/v3/upload-guide/processing', (req, res) => {
+  res.render('versions/v3/upload-processing')
+})
+
+// Add or confirm the guide's details. Title and type arrive prefilled as if
+// extracted from the document; the owner is who approves and publishes it.
+router.get('/v3/upload-guide/metadata', (req, res) => {
+  const uploaded = req.session.data.v3UploadedGuide || {}
+
+  res.locals.backHref = '/v3/upload-guide'
+  res.render('versions/v3/upload-metadata', {
+    guideTitle: uploaded.name || V3_UPLOAD_DEFAULT_TITLE,
+    owner: uploaded.owner || 'Priya Devi',
+    guidanceType: uploaded.type || 'process-guide'
+  })
+})
+
+router.post('/v3/upload-guide/metadata', (req, res) => {
+  req.session.data.v3UploadedGuide = {
+    name: (req.body.guideTitle || '').trim() || V3_UPLOAD_DEFAULT_TITLE,
+    owner: (req.body.owner || '').trim() || 'Priya Devi',
+    type: V3_GUIDANCE_TYPES[req.body.guidanceType]
+      ? req.body.guidanceType
+      : 'process-guide'
+  }
+  res.redirect('/v3/upload-guide/check')
+})
+
+// The check page before converting — everything on one summary list, with
+// Change links back into the journey.
+router.get('/v3/upload-guide/check', (req, res) => {
+  const uploaded = req.session.data.v3UploadedGuide
+  if (!uploaded) return res.redirect('/v3/upload-guide')
+
+  res.locals.backHref = '/v3/upload-guide/metadata'
+  res.render('versions/v3/upload-check', {
+    uploaded,
+    typeLabel: V3_GUIDANCE_TYPES[uploaded.type] || 'Process guide'
+  })
+})
+
+router.post('/v3/upload-guide/check', (req, res) => {
+  res.redirect('/v3/upload-guide/converted')
+})
+
+// The success page after converting — the confirmation-panel pattern the
+// old flow's "Document migrated" page used, rather than a banner on the
+// editor. Sets what happens next, then hands over to editing.
+router.get('/v3/upload-guide/converted', (req, res) => {
+  const uploaded = req.session.data.v3UploadedGuide
+  if (!uploaded) return res.redirect('/v3/upload-guide')
+
+  const edits = req.session.data.v3GuideEdits || {}
+  res.render('versions/v3/upload-converted', {
+    guideName: uploaded.name,
+    findingsCount: v3EditorFindings(edits.uploaded || sampleDocument).length
+  })
+})
+
+// -- Update an existing guide ----------------------------------------------
+//
+// Updating an existing guide starts from searching, not from Add new:
+// result → document overview (verifying it is the right guide) → Edit
+// guide, into the TipTap-enhanced editor at /v3/guide/:id/edit.
+
+// The version history shown beside the editor — the same fixed example
+// versions for every guide, but restoring one really changes the content:
+// "18 August" is the document as migrated (app/data/sample-document.js
+// unchanged), and "28 July" is an earlier draft, cut off before the Land
+// parcel checks section was added.
+const V3_GUIDE_VERSIONS = [
+  { id: 'current', current: true },
+  { id: 'v2', date: '18 August 2026', author: 'Priya Devi' },
+  { id: 'v1', date: '28 July 2026', author: 'Tom Youngson' }
+]
+
+function v3VersionMarkdown (versionId) {
+  if (versionId === 'v1') {
+    return sampleDocument.split('## Land parcel checks')[0].trimEnd() + '\n'
+  }
+  return sampleDocument
+}
+
+// The editor. Every guide edits the same placeholder markdown
+// (app/data/sample-document.js) under its own name, like the editors
+// elsewhere in this prototype — except an edit saved in this session sticks,
+// so saving and reopening shows your changes rather than quietly reverting.
+//
+// ?restored carries the date of a just-restored version, for the banner.
+router.get('/v3/guide/:id/edit', (req, res) => {
+  // The guide's name can come from three places: the search results (the
+  // update-existing flow), My drafts (:id is the same name slug
+  // all-guidance-docs.html builds), or the session (a guide uploaded this
+  // session lives at the fixed id "uploaded").
+  const guide = searchResults.find((candidate) => candidate.id === req.params.id)
+  const draft = library.documents.find(
+    (document) => slugify(document.name) === req.params.id
+  )
+  const uploaded =
+    req.params.id === 'uploaded' ? req.session.data.v3UploadedGuide : null
+  const created =
+    req.params.id === 'new' ? req.session.data.v3NewGuide : null
+
+  const edits = req.session.data.v3GuideEdits || {}
+  // A guide from the search results belongs to its document overview (the
+  // page that verified it); everything else — drafts, uploads, new guides —
+  // belongs to My drafts.
+  const cancelHref = guide
+    ? `/v3/document-overview/${req.params.id}`
+    : '/v3/drafts'
+  const markdown = edits[req.params.id] || sampleDocument
+
+  res.locals.backHref = cancelHref
+  res.render('versions/v3/guide-edit', {
+    id: req.params.id,
+    guideName:
+      (guide && guide.name) ||
+      (draft && draft.name) ||
+      (uploaded && uploaded.name) ||
+      (created && created.name) ||
+      'Guide not found',
+    caption: uploaded || created ? 'New guide' : 'Update guide',
+    markdown,
+    cancelHref,
+    restored: req.query.restored,
+    // The Quality checks pane beside the editor — run on the markdown being
+    // served, so a restored or edited version is checked as it stands.
+    findings: v3EditorFindings(markdown),
+    comments: V3_GUIDE_COMMENTS,
+    versions: V3_GUIDE_VERSIONS
+  })
+})
+
+// Comments an approver or reviewer has left on the guide, shown beside the
+// editor. Fixed examples; each quotes the passage it is about, so clicking
+// a comment jumps there the same way a quality finding does.
+const V3_GUIDE_COMMENTS = [
+  {
+    author: 'Priya Devi',
+    role: 'Approver',
+    date: '18 August 2026',
+    text: 'Can we spell out what happens when the parcels do not match? The referral to the mapping team needs a timescale.',
+    quote: 'Compare the land parcel numbers against the mapping service'
+  },
+  {
+    author: 'Tom Youngson',
+    role: 'Reviewer',
+    date: '16 August 2026',
+    text: 'The evidence checklist should link to the SFI evidence requirements page rather than describing it.',
+    quote: 'The customer must supply evidence for each option they have applied for'
+  },
+  {
+    author: 'Priya Devi',
+    role: 'Approver',
+    date: '15 August 2026',
+    text: 'Good to see the warning kept. Suggest moving it above the steps so it is read before anyone starts.',
+    quote: 'Warning: Do not approve a claim where evidence is missing.'
+  }
+]
+
+
+// Restoring a version puts that version's markdown into the session — the
+// same place an edit lands — and returns to the editor with a banner, so
+// what happens next (keep it, tweak it, save it) is the designer's call.
+router.post('/v3/guide/:id/restore', (req, res) => {
+  const version = V3_GUIDE_VERSIONS.find(
+    (candidate) => candidate.id === req.body.version && !candidate.current
+  )
+  if (!version) {
+    return res.redirect(`/v3/guide/${req.params.id}/edit`)
+  }
+
+  req.session.data.v3GuideEdits = req.session.data.v3GuideEdits || {}
+  req.session.data.v3GuideEdits[req.params.id] = v3VersionMarkdown(version.id)
+
+  const params = new URLSearchParams({ restored: version.date })
+  res.redirect(`/v3/guide/${req.params.id}/edit?` + params.toString())
+})
+
+// Saving keeps the markdown in the session (nothing in this prototype
+// persists for real) and lands on the guide's overview with a success
+// banner — or, for a guide with no overview (a draft, or one uploaded this
+// session), on My drafts.
+router.post('/v3/guide/:id/edit', (req, res) => {
+  req.session.data.v3GuideEdits = req.session.data.v3GuideEdits || {}
+  req.session.data.v3GuideEdits[req.params.id] = req.body.markdown || ''
+
+  const guide = searchResults.find((candidate) => candidate.id === req.params.id)
+  res.redirect(
+    guide
+      ? `/v3/document-overview/${req.params.id}?saved=1`
+      : '/v3/drafts?saved=1'
+  )
+})
+
+// "My drafts" on the v3 top nav — the designer's guides at every stage of
+// the workflow (Draft, Pending, Approved, Published, Removed). Fixed
+// example rows built on names from app/data/documents.js, so each row's
+// name slug opens v3's editor at /v3/guide/:id/edit; status, scheme and
+// comment counts are this page's own. See app/views/versions/v3/drafts.html.
+const V3_DRAFT_ROWS = [
+  { name: 'Applying for the Sustainable Farming Incentive', status: 'Draft', scheme: 'Sustainable Farming Incentive', issues: 31, comments: 2, lastEdited: '24 August 2026' },
+  { name: 'How inspections work', status: 'Pending', scheme: 'Cross Compliance', issues: 12, comments: 3, lastEdited: '21 August 2026' },
+  { name: 'Cross compliance rules', status: 'Approved', scheme: 'Cross Compliance', issues: 22, comments: 1, lastEdited: '18 August 2026' },
+  { name: 'Woodland creation: eligibility', status: 'Published', scheme: 'Countryside Stewardship', issues: 14, comments: 0, lastEdited: '11 August 2026' },
+  { name: 'Payment deadlines and what to expect', status: 'Removed', scheme: 'Basic Payment Scheme', issues: 8, comments: 4, lastEdited: '2 August 2026' }
+]
+
+router.get('/v3/drafts', (req, res) => {
+  const drafts = V3_DRAFT_ROWS.map((row) => ({
+    ...row,
+    id: slugify(row.name)
+  }))
+
+  // Guides made this session join the top of the list — a converted or
+  // newly created document becomes a draft. Their issue counts are computed
+  // from their actual markdown, so the list agrees with the editor's pane;
+  // the uploaded guide's comment count is the same fixed set the editor's
+  // Comments panel shows.
+  const edits = req.session.data.v3GuideEdits || {}
+  const created = req.session.data.v3NewGuide
+  if (created) {
+    drafts.unshift({
+      id: 'new',
+      name: created.name,
+      status: 'Draft',
+      scheme: '-',
+      issues: v3EditorFindings(edits.new || sampleDocument).length,
+      comments: 0,
+      lastEdited: 'Today'
+    })
+  }
+
+  const uploaded = req.session.data.v3UploadedGuide
+  if (uploaded) {
+    drafts.unshift({
+      id: 'uploaded',
+      name: uploaded.name,
+      status: 'Draft',
+      scheme: 'Sustainable Farming Incentive',
+      issues: v3EditorFindings(edits.uploaded || sampleDocument).length,
+      comments: V3_GUIDE_COMMENTS.length,
+      lastEdited: 'Today'
+    })
+  }
+
+  res.render('versions/v3/drafts', {
+    drafts,
+    // Set after saving in the v3 editor, for the success banner.
+    saved: req.query.saved === '1'
+  })
+})
+
+// "My approvals" — documents sent to this owner to approve and publish,
+// also from app/data/documents.js, dressed with who sent each one and when.
+// Review opens the live guidance document overview, whose :id is the same
+// name slug all-guidance-docs.html builds (see slugify above). See
+// app/views/versions/v3/approvals.html.
+const V3_APPROVAL_DETAILS = [
+  { sentBy: 'Priya Devi', sent: '22 August 2026' },
+  { sentBy: 'Tom Youngson', sent: '19 August 2026' }
+]
+
+router.get('/v3/approvals', (req, res) => {
+  const approvals = library.documents
+    .filter((document) => document.status === 'Awaiting approval')
+    .map((document, index) => ({
+      ...document,
+      ...(V3_APPROVAL_DETAILS[index] || V3_APPROVAL_DETAILS[0]),
+      href: '/guidance-document/' + slugify(document.name)
+    }))
+
+  res.render('versions/v3/approvals', { approvals })
+})
+
+// "Remove" on a My saved guides row. Nothing real to delete in a static
+// prototype, but the removal sticks for the session so the table responds.
+router.get('/v3/saved-guides/remove/:id', (req, res) => {
+  req.session.data.v3RemovedSavedGuides =
+    req.session.data.v3RemovedSavedGuides || []
+  if (!req.session.data.v3RemovedSavedGuides.includes(req.params.id)) {
+    req.session.data.v3RemovedSavedGuides.push(req.params.id)
+  }
+  res.redirect('/v3/search#saved-guides')
+})
+
+// v3's copy of the document overview — same lookup as the live
+// /document-overview/:id above, rendered full width with its back link
+// pointing into v3. See app/views/versions/v3/document-overview.html.
+router.get('/v3/document-overview/:id', (req, res) => {
+  const result = searchResults.find((candidate) => candidate.id === req.params.id)
+  const overview = documentOverviews[req.params.id] || {}
+
+  res.locals.backHref = '/v3/search'
+  res.render('versions/v3/document-overview', {
+    id: req.params.id,
+    documentName: result ? result.name : 'Document not found',
+    description: result ? result.description : '',
+    status: result ? result.status : 'Up to date',
+    scheme: overview.scheme || '',
+    type: overview.type || '',
+    lastUpdated: overview.lastUpdated || '',
+    // Set after saving in the editor at /v3/guide/:id/edit, for the success
+    // banner.
+    saved: req.query.saved === '1'
+  })
+})
+
 // Add your routes here
 
 // Standalone design experiment — not linked from anywhere else yet, and not
@@ -1905,5 +2479,270 @@ router.get('/v5/editor-experiment', (req, res) => {
   res.render('versions/v5/editor-experiment', {
     documentTitle: guidanceDocument.title,
     editorSections: buildEditorSections(guidanceDocument)
+  })
+})
+
+// ===========================================================================
+// Version 4 — a simple guidance upload journey, based on v3's, with the
+// richer metadata captured in v2's upload journey (who it is for, what it
+// aims to achieve, what users need to do, whether they need system access)
+// added at the details step — after the upload scan and before the
+// conversion, the position v3 established.
+//
+// No quality checks run after converting for now, so the success page
+// confirms the conversion and offers to view the converted guidance rather
+// than sending the designer into an editor to fix findings. Views live in
+// app/views/versions/v4/. Guidance types and the default title are reused
+// from the v3 constants above.
+// ===========================================================================
+
+router.get('/v4/upload-guide', (req, res) => {
+  res.render('versions/v4/upload-guide')
+})
+
+router.post('/v4/upload-guide', (req, res) => {
+  // A new upload is a new guide, so clear any details left in the session
+  // from a previous run — the details step then starts fresh (title from
+  // the document, owner blank for the author to enter). The file itself goes
+  // nowhere in a static prototype.
+  delete req.session.data.v4UploadedGuide
+  res.redirect('/v4/upload-guide/processing')
+})
+
+router.get('/v4/upload-guide/processing', (req, res) => {
+  res.render('versions/v4/upload-processing')
+})
+
+// The metadata options, with the labels their values read back as on the
+// check page. Scheme, audience and systems are all many-of (checkboxes) -
+// guidance can relate to more than one scheme, so scheme moved from a single
+// radio choice to checkboxes alongside them. Labels include the acronym
+// commonly used for that scheme, where there is one.
+const V4_SCHEMES = {
+  sfi: 'Sustainable Farming Incentive (SFI)',
+  'countryside-stewardship': 'Countryside Stewardship (CS)',
+  'cross-compliance': 'Cross Compliance',
+  'basic-payment-scheme': 'Basic Payment Scheme (BPS)'
+}
+// 'none' is the explicit "Not scheme-specific" checkbox - a real answer,
+// exclusive of every named scheme - so it is allowed alongside V4_SCHEMES
+// wherever submitted scheme values are validated.
+const V4_SCHEME_VALUES = Object.assign({ none: true }, V4_SCHEMES)
+const V4_AUDIENCE = {
+  processor: 'Processor',
+  'team-leader': 'Team leader',
+  'technical-specialist': 'Technical specialist',
+  manager: 'Manager',
+  other: 'Other'
+}
+const V4_SYSTEMS = {
+  crm: 'CRM',
+  agri: 'SITI Agri',
+  d365: 'D365',
+  genesis: 'Genesis',
+  lms: 'Land Management Services',
+  rpa: 'RPA Application Portal',
+  rps: 'Rural Payments Service',
+  inspections: 'Inspections Workbench',
+  imis: 'IMIS'
+}
+
+// The sample upload is the mock claim-processing guide (see
+// app/data/v4-sample-document.js). Its title prefills the details step, and
+// its version and last modified date are read from the document, so they are
+// the same every time and cannot be changed.
+const V4_UPLOAD_DEFAULT_TITLE = 'Processing farmer claims using RPA processors and legacy systems'
+const V4_UPLOAD_VERSION = '1.0'
+const V4_UPLOAD_LAST_MODIFIED = '29 June 2026'
+
+// Keep only the checkbox values the field knows about — a value can arrive
+// as a string, an array, or the kit's "_unchecked" sentinel.
+function v4Selected (value, allowed) {
+  const values = Array.isArray(value) ? value : value ? [value] : []
+  return values.filter((candidate) => allowed[candidate])
+}
+
+// The details are captured across two steps. Each step merges its own
+// fields into the one session object, so a Change link back to any step
+// leaves the others untouched. The object seeds with the facts read from the
+// document (title, version, date), the fixed type, and everything else empty.
+function v4Details (req) {
+  return req.session.data.v4UploadedGuide || {
+    name: V4_UPLOAD_DEFAULT_TITLE,
+    version: V4_UPLOAD_VERSION,
+    lastModified: V4_UPLOAD_LAST_MODIFIED,
+    scheme: [],
+    owner: '',
+    type: 'Process guide',
+    audience: [],
+    goal: '',
+    requirements: '',
+    systems: []
+  }
+}
+
+// Every question across the two steps is required. Each POST validates,
+// re-rendering its own page with an error summary and inline messages when
+// something is missing, and only saves and moves on when the step is valid.
+const V4_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Step 1 of 2 — the facts read from the document (title editable; version and
+// date read-only) plus the scheme(s) this guidance relates to.
+//
+// Either step can also be reached via a Change link from the check page
+// (?from=check). When that's how a step was opened, the flag is carried
+// through the form as a hidden field so Continue — and the back link —
+// return straight to the check page instead of carrying on through the rest
+// of the journey, rather than forcing the user to re-run the steps they
+// weren't trying to change. The session already preserves every field
+// regardless of route, since each step merges its own fields into the one
+// object (see v4Details below) — only the *destination* after Continue
+// changes.
+router.get('/v4/upload-guide/metadata', (req, res) => {
+  const from = req.query.from === 'check' ? 'check' : ''
+  res.locals.backHref = from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide'
+  res.render('versions/v4/upload-metadata', { details: v4Details(req), errors: {}, errorList: [], from })
+})
+
+router.post('/v4/upload-guide/metadata', (req, res) => {
+  const title = (req.body.guideTitle || '').trim()
+  const scheme = v4Selected(req.body.scheme, V4_SCHEME_VALUES)
+  const from = req.body.from === 'check' ? 'check' : ''
+
+  const errors = {}
+  if (!title) errors.guideTitle = { text: 'Enter a guidance title', href: '#guide-title' }
+  if (!scheme.length) {
+    errors.scheme = { text: "Select the scheme or schemes this guidance relates to, or select 'Not scheme-specific'", href: '#scheme' }
+  } else if (scheme.includes('none') && scheme.length > 1) {
+    // No-JS fallback: the exclusive behaviour on 'none' is client-side only,
+    // so a form submitted without it can still carry both.
+    errors.scheme = { text: "Select the schemes this guidance relates to, or select 'Not scheme-specific'", href: '#scheme' }
+  }
+
+  if (Object.keys(errors).length) {
+    res.locals.backHref = from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide'
+    return res.render('versions/v4/upload-metadata', {
+      details: Object.assign({}, v4Details(req), { name: title, scheme }),
+      errors,
+      errorList: Object.values(errors),
+      from
+    })
+  }
+
+  const details = v4Details(req)
+  details.name = title
+  // Read from the document; not taken from the form.
+  details.version = V4_UPLOAD_VERSION
+  details.lastModified = V4_UPLOAD_LAST_MODIFIED
+  details.type = 'Process guide'
+  details.scheme = scheme
+  req.session.data.v4UploadedGuide = details
+  res.redirect(from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide/metadata/purpose')
+})
+
+// Step 2 of 2 — who owns the guidance, what it aims to achieve, required
+// knowledge and training, what systems it uses, and who it is for. The
+// "who it is for" question originally had its own step (a third,
+// audience-only page), but was folded in here since it's metadata like the
+// rest of this step's fields rather than a distinct stage of the journey —
+// see git history for the removed upload-metadata-usage.html.
+router.get('/v4/upload-guide/metadata/purpose', (req, res) => {
+  if (!req.session.data.v4UploadedGuide) return res.redirect('/v4/upload-guide/metadata')
+  const from = req.query.from === 'check' ? 'check' : ''
+  res.locals.backHref = from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide/metadata'
+  res.render('versions/v4/upload-metadata-purpose', { details: req.session.data.v4UploadedGuide, errors: {}, errorList: [], from })
+})
+
+router.post('/v4/upload-guide/metadata/purpose', (req, res) => {
+  const owner = (req.body.owner || '').trim()
+  const goal = (req.body.goal || '').trim()
+  const requirements = (req.body.requirements || '').trim()
+  const systems = v4Selected(req.body.systems, V4_SYSTEMS)
+  const audience = v4Selected(req.body.audience, V4_AUDIENCE)
+  const from = req.body.from === 'check' ? 'check' : ''
+
+  const errors = {}
+  if (!owner) errors.owner = { text: 'Enter the owner email address', href: '#owner' }
+  else if (!V4_EMAIL_RE.test(owner)) errors.owner = { text: 'Enter an email address in the correct format, like name@example.com', href: '#owner' }
+  if (!goal) errors.goal = { text: 'Enter the purpose of this guidance', href: '#goal' }
+  if (!requirements) errors.requirements = { text: 'Enter the required knowledge and training', href: '#requirements' }
+  if (!systems.length) errors.systems = { text: 'Select the systems this guidance will use', href: '#systems' }
+  if (!audience.length) errors.audience = { text: 'Select who this guidance is for', href: '#audience' }
+
+  if (Object.keys(errors).length) {
+    res.locals.backHref = from === 'check' ? '/v4/upload-guide/check' : '/v4/upload-guide/metadata'
+    return res.render('versions/v4/upload-metadata-purpose', {
+      details: Object.assign({}, v4Details(req), { owner, goal, requirements, systems, audience }),
+      errors,
+      errorList: Object.values(errors),
+      from
+    })
+  }
+
+  // This is already the last step, so Continue always lands on the check
+  // page regardless of `from` — but the flag still governs the back link
+  // above, for consistency with step 1.
+  const details = v4Details(req)
+  details.owner = owner
+  details.goal = goal
+  details.requirements = requirements
+  details.systems = systems
+  details.audience = audience
+  req.session.data.v4UploadedGuide = details
+  res.redirect('/v4/upload-guide/check')
+})
+
+// The check page before converting — everything on one summary list, with
+// Change links back to the details step (except the auto-filled fields).
+router.get('/v4/upload-guide/check', (req, res) => {
+  const details = req.session.data.v4UploadedGuide
+  if (!details) return res.redirect('/v4/upload-guide')
+
+  const listOr = (values, labels, fallback) => {
+    const named = (values || []).map((value) => labels[value]).filter(Boolean)
+    return named.length ? named.join(', ') : fallback
+  }
+
+  res.locals.backHref = '/v4/upload-guide/metadata/purpose'
+  res.render('versions/v4/upload-check', {
+    details,
+    typeLabel: details.type,
+    // 'none' isn't in V4_SCHEMES, so listOr drops it and falls back to
+    // 'Not scheme-specific' whenever that's the only value selected.
+    schemeLabel: listOr(details.scheme, V4_SCHEMES, 'Not scheme-specific'),
+    audienceLabel: listOr(details.audience, V4_AUDIENCE, 'Not provided'),
+    systemsLabel: listOr(details.systems, V4_SYSTEMS, 'None')
+  })
+})
+
+router.post('/v4/upload-guide/check', (req, res) => {
+  res.redirect('/v4/upload-guide/converted')
+})
+
+// The success page — no quality checks, so it offers to view the converted
+// guidance rather than fix findings.
+router.get('/v4/upload-guide/converted', (req, res) => {
+  const details = req.session.data.v4UploadedGuide
+  if (!details) return res.redirect('/v4/upload-guide')
+
+  res.render('versions/v4/upload-converted', { guideName: details.name })
+})
+
+// A read-only view of the converted guidance on one page, with a contents
+// list down the left — the two-column reading layout v2 used, but without
+// its page-by-page stepping. The shared sample document is rendered client-
+// side by the app-guide-view module, which also builds the contents from
+// the rendered section headings. No editing, no quality checks.
+//
+// The document's own leading title is stripped, since the page heading
+// already shows it — so it does not appear twice.
+router.get('/v4/upload-guide/view', (req, res) => {
+  const details = req.session.data.v4UploadedGuide
+  if (!details) return res.redirect('/v4/upload-guide')
+
+  res.locals.backHref = '/v4/upload-guide/converted'
+  res.render('versions/v4/guide-view', {
+    guideName: details.name,
+    markdown: v4SampleDocument.replace(/^#[^\n]*\n+/, '')
   })
 })

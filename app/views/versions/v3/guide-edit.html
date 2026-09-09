@@ -1,0 +1,190 @@
+{#
+  The guide editor, reached from a document overview's "Edit guide" (after
+  searching), from a My drafts row, or at the end of the upload and
+  create-new journeys. Back and Cancel return to the document overview for
+  a guide from the search results, and to My drafts for everything else.
+
+  Progressive enhancement, in both directions:
+
+  - The page ships a plain markdown <textarea> that works with nothing else —
+    the basic accessible version, keyboard- and screen-reader-plain.
+  - With JavaScript and network access, TipTap (loaded from esm.sh at
+    runtime by the app-tiptap-editor module in
+    app/assets/javascripts/application.js — nothing is bundled into the kit)
+    replaces it with a rich text surface and a formatting toolbar. The
+    tiptap-markdown extension keeps the hidden textarea's markdown in sync
+    on every edit, so the form posts exactly what the basic version would
+    and the server cannot tell which editor was used.
+  - If the import fails (offline, CDN blocked), the textarea simply stays.
+
+  Saving posts to /v3/guide/:id/edit in app/routes.js, which keeps the
+  markdown in the session and returns to the guide's overview with a
+  success banner.
+
+  The sticky bar above the editor carries the formatting toolbar (enhanced
+  only) and, at its right end, three link-styled toggles — Show/Hide
+  version history, comments and quality checks. At most one panel is open
+  at a time: opening one closes the others, and each link's text flips
+  between Show and Hide to match. With every panel closed the side pane
+  disappears and the editor takes the full width. The toggles are
+  JavaScript-only (see the app-editor-panes module in application.js);
+  without it all three panels simply render stacked.
+
+  The panels:
+
+  - Version history: each older version can be restored — its own small
+    form (the aside sits outside the editor's form, so they never nest)
+    posting to /v3/guide/:id/restore, which loads that version's markdown
+    into the editor with a banner.
+  - Comments: what an approver or reviewer has left on the guide (fixed
+    examples from app/routes.js). Each quotes the passage it is about, so
+    clicking a comment jumps there the same way a finding does.
+  - Quality checks: what app/assets/javascripts/quality-checks.js finds in
+    the markdown being served — filtered in app/routes.js to the findings a
+    designer can act on here — one row per finding, a severity dot and the
+    title. Clicking a row scrolls the editor straight to the passage the
+    finding is about and flashes it (or selects the line in the fallback
+    textarea).
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageName = "Update guide - " + guideName %}
+
+{% block content %}
+
+<span class="govuk-caption-l">{{ caption }}</span>
+<h1 class="govuk-heading-l">{{ guideName }}</h1>
+
+<div class="app-guide-edit-layout">
+
+<div class="app-guide-edit-layout__editor">
+
+{% if restored %}
+  {{ govukNotificationBanner({
+    text: "Version from " + restored + " restored. Save the guide to keep it."
+  }) }}
+{% endif %}
+
+<form method="post" action="/v3/guide/{{ id }}/edit">
+
+  <div class="app-tiptap" data-module="app-tiptap-editor">
+
+    <div class="app-editor-topbar">
+
+      <div class="app-tiptap__toolbar" data-tiptap-toolbar role="toolbar" aria-label="Formatting" hidden>
+        <button type="button" class="app-tiptap__button" data-tiptap-command="bold" aria-pressed="false"><strong>B</strong><span class="govuk-visually-hidden"> Bold</span></button>
+        <button type="button" class="app-tiptap__button" data-tiptap-command="italic" aria-pressed="false"><em>I</em><span class="govuk-visually-hidden"> Italic</span></button>
+        <button type="button" class="app-tiptap__button" data-tiptap-command="heading2" aria-pressed="false">H2<span class="govuk-visually-hidden"> Heading level 2</span></button>
+        <button type="button" class="app-tiptap__button" data-tiptap-command="heading3" aria-pressed="false">H3<span class="govuk-visually-hidden"> Heading level 3</span></button>
+        <button type="button" class="app-tiptap__button" data-tiptap-command="bulletList" aria-pressed="false">&bull; List<span class="govuk-visually-hidden"> Bulleted list</span></button>
+        <button type="button" class="app-tiptap__button" data-tiptap-command="orderedList" aria-pressed="false">1. List<span class="govuk-visually-hidden"> Numbered list</span></button>
+        <button type="button" class="app-tiptap__button" data-tiptap-command="undo">Undo</button>
+        <button type="button" class="app-tiptap__button" data-tiptap-command="redo">Redo</button>
+      </div>
+
+      <div class="app-editor-topbar__panes" data-pane-links hidden>
+        <button type="button" class="app-toggle" data-pane-toggle="versions" aria-expanded="false">Show version history</button>
+        <button type="button" class="app-toggle" data-pane-toggle="comments" aria-expanded="false">Show comments</button>
+        <button type="button" class="app-toggle" data-pane-toggle="checks" aria-expanded="true">Hide quality checks</button>
+      </div>
+
+    </div>
+
+    <div class="app-tiptap__surface" data-tiptap-surface hidden></div>
+
+    <div data-tiptap-fallback>
+      {{ govukTextarea({
+        id: "markdown",
+        name: "markdown",
+        rows: 24,
+        value: markdown,
+        label: { text: "Guide content", classes: "govuk-label--s" },
+        hint: { text: "Written in markdown. With JavaScript on, a formatting toolbar replaces this box." }
+      }) }}
+    </div>
+
+  </div>
+
+  <div class="govuk-button-group app-guide-edit-layout__actions">
+    {{ govukButton({ text: "Save guide", classes: "govuk-!-margin-bottom-0" }) }}
+    <a class="govuk-link" href="{{ cancelHref }}">Cancel</a>
+  </div>
+
+</form>
+
+</div>
+
+<aside class="app-editor-side" data-module="app-editor-panes" aria-label="Version history, comments and quality checks">
+
+  <section class="app-side-section" data-editor-pane="versions" aria-label="Version history">
+    <h2 class="govuk-heading-m">Version history</h2>
+
+    <ol class="app-version-history__list">
+      {% for version in versions %}
+        <li class="app-version-history__item">
+          {% if version.current %}
+            <p class="govuk-body-s govuk-!-margin-bottom-1"><strong>Current version</strong></p>
+            <p class="govuk-body-s govuk-!-margin-bottom-0">Today &middot; You</p>
+          {% else %}
+            <p class="govuk-body-s govuk-!-margin-bottom-1"><strong>{{ version.date }}</strong></p>
+            <p class="govuk-body-s govuk-!-margin-bottom-1">Edited by {{ version.author }}</p>
+            <form method="post" action="/v3/guide/{{ id }}/restore">
+              <input type="hidden" name="version" value="{{ version.id }}">
+              <button type="submit" class="app-toggle">
+                Restore<span class="govuk-visually-hidden"> the version from {{ version.date }}</span>
+              </button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="app-side-section" data-editor-pane="comments" aria-label="Comments">
+    <h2 class="govuk-heading-m">Comments ({{ comments.length }})</h2>
+
+    {#
+      Each comment quotes the passage it is about, so the card is an anchor
+      like a finding row — clicking it jumps to that passage.
+    #}
+    <ul class="app-quality-pane__list">
+      {% for comment in comments %}
+        <li class="app-quality-pane__item">
+          <button type="button" class="app-comment" data-finding-anchor data-finding-quote="{{ comment.quote }}">
+            <span class="app-comment__meta"><strong>{{ comment.author }}</strong> &middot; {{ comment.role }} &middot; {{ comment.date }}</span>
+            <span class="app-comment__text">{{ comment.text }}<span class="govuk-visually-hidden">, go to the passage this comment is about</span></span>
+          </button>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="app-side-section" data-editor-pane="checks" aria-label="Quality checks">
+    <h2 class="govuk-heading-m">Quality checks ({{ findings.length }})</h2>
+
+    {#
+      One row per finding: a severity dot (named for assistive tech) and the
+      title. The whole row is the anchor — clicking it goes straight to the
+      passage in the document.
+    #}
+    <ul class="app-quality-pane__list">
+      {% for finding in findings %}
+        <li class="app-quality-pane__item">
+          <button type="button" class="app-quality-finding" data-finding-anchor data-finding-line="{{ finding.line }}" data-finding-quote="{{ finding.quote }}">
+            <span class="app-quality-finding__dot app-quality-finding__dot--{{ finding.severity }}"></span>
+            <span class="app-quality-finding__title">{{ finding.title }}<span class="govuk-visually-hidden">, {{ finding.severity }} severity, go to this in the document</span></span>
+          </button>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+</aside>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,77 @@
+{#
+  The check page before converting. The details are grouped into summary cards,
+  one per journey step, so the page scans more easily than one long list. Each
+  card carries a single "Change" in its header that opens the step that owns
+  those fields, with ?from=check so that step's Continue returns straight back
+  here rather than carrying on through the rest of the journey (see routes.js);
+  the read-only facts read from the document (version, date, type) sit inside
+  the relevant card without their own action. Audience ("Who is this guidance
+  for?") used to have its own card, backed by a third journey step, but was
+  folded into "Owner and purpose" when that step was removed — it's metadata
+  like the rest of that card, not a distinct stage. Converting leads to the
+  success page; no quality checks run for now.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Check the details before converting" %}
+
+{# ?from=check tells the step it was opened from here, so it hands the flag
+   back to routes.js on submit and Continue returns straight to this page
+   instead of carrying on through the rest of the journey. #}
+{% set detailsChange = "/v4/upload-guide/metadata?from=check" %}
+{% set purposeChange = "/v4/upload-guide/metadata/purpose?from=check" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">Check the details before you convert</h1>
+
+  {{ govukSummaryList({
+    card: {
+      title: { text: "The guide's details" },
+      actions: { items: [{ href: detailsChange, text: "Change", visuallyHiddenText: "the guide's details" }] }
+    },
+    rows: [
+      {
+        key: { text: "File" },
+        value: { text: details.name + ".docx" },
+        actions: { items: [{ href: "/v4/upload-guide", text: "Change", visuallyHiddenText: "the uploaded file" }] }
+      },
+      { key: { text: "Guidance title" }, value: { text: details.name } },
+      { key: { text: "Version number" }, value: { text: details.version } },
+      { key: { text: "Last modified date" }, value: { text: details.lastModified } },
+      { key: { text: "Type of guidance" }, value: { text: typeLabel } },
+      { key: { text: "Scheme" }, value: { text: schemeLabel } }
+    ]
+  }) }}
+
+  {{ govukSummaryList({
+    card: {
+      title: { text: "Owner and purpose" },
+      actions: { items: [{ href: purposeChange, text: "Change", visuallyHiddenText: "the owner and purpose" }] }
+    },
+    rows: [
+      { key: { text: "Owner email" }, value: { text: details.owner or "Not provided" } },
+      { key: { text: "Purpose of guidance" }, value: { text: details.goal or "Not provided" } },
+      { key: { text: "Required knowledge and training" }, value: { text: details.requirements or "Not provided" } },
+      { key: { text: "Systems" }, value: { text: systemsLabel } },
+      { key: { text: "Who is this guidance for?" }, value: { text: audienceLabel } }
+    ]
+  }) }}
+
+  <p class="govuk-body">
+    When you convert this document, it is saved as a draft that only you can
+    see until it is reviewed and published.
+  </p>
+
+  <form method="post" action="/v4/upload-guide/check">
+    {{ govukButton({ text: "Convert document" }) }}
+  </form>
+
+</div>
+
+{% endblock %}

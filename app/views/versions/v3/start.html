@@ -1,0 +1,94 @@
+{#
+  Version 3's front door: an unauthenticated page explaining what the service
+  is, prompting the reader to sign in. Replaces v2's split between "Find and
+  locate guidance" and "Manage all guidance documents" — in v3 there is one
+  way in, and the signed-in landing page (search.html) does the rest.
+
+  The full-bleed green hero and its white start button follow the Defra AI
+  toolkit's (digital.defra.gov.uk/ai-toolkit) — see .app-v3-hero in
+  app/assets/sass/components/_app-v3.scss, which notes which of its classes
+  each piece came from. The bordered "What you can do" panel is that hero's
+  "what's new" box, repurposed.
+
+  Signing in is as fake as everywhere else in this prototype — the button
+  goes straight to the signed-in landing page at /v3/search. This page keeps
+  the plain brand border under the header rather than the v3 top nav, which
+  belongs to the signed-in pages — see the /v3 navigation middleware in
+  app/routes.js.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+
+{% set pageName = "Sign in" %}
+
+{#
+  The phase banner normally renders in beforeContent, above everything — but
+  a band of banner between the header and the hero broke the full-bleed
+  green, so this page suppresses it there and re-renders it under the hero
+  instead.
+#}
+{% block beforeContent %}{% endblock %}
+
+{% block content %}
+
+<div class="app-v3-hero">
+  <div class="app-v3-hero__inner">
+
+    <div class="app-v3-hero__content">
+      {# The caption carries "Rural Payments Agency", so the title drops the
+         RPA prefix from serviceName rather than repeating it. #}
+      <p class="app-v3-hero__caption">Rural Payments Agency</p>
+      <h1 class="govuk-heading-xl app-v3-hero__title">AI Guidance Hub</h1>
+      <p class="govuk-body-l app-v3-hero__description">
+        Find, review and manage RPA guidance documents, all in one place.
+      </p>
+
+      {{ govukButton({
+        text: "Sign in",
+        href: "/v3/search",
+        isStartButton: true,
+        classes: "app-v3-hero__start-button"
+      }) }}
+
+      <p class="govuk-body app-v3-hero__note">
+        This is an internal service. You need a Defra account to sign in.
+      </p>
+    </div>
+
+    <div class="app-v3-hero__panel">
+      <h2 class="govuk-heading-m">What you can do in the hub</h2>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>search all RPA guidance by document name, scheme or topic</li>
+        <li>check whether a document is up to date</li>
+        <li>pick up drafts you are working on</li>
+        <li>review and approve documents sent to you</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+{{ govukPhaseBanner({
+  tag: { text: "Prototype" },
+  text: "This is a prototype for user research. Nothing you enter is saved."
+}) }}
+
+<div class="app-v3-prose govuk-!-margin-top-6">
+
+  {{ govukInsetText({
+    text: "This prototype does not sign you in. Selecting the button takes you to the guidance hub."
+  }) }}
+
+  <h2 class="govuk-heading-m">If you cannot sign in</h2>
+
+  <p class="govuk-body">
+    Email the AI Capability and Enablement team at
+    <a class="govuk-link" href="mailto:AICapabilityAndEnablement@defra.gov.uk">AICapabilityAndEnablement@defra.gov.uk</a>.
+  </p>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,46 @@
+{#
+  "Upload guidance" from the chooser (create-guidance.html in this folder) —
+  the start of v3's version of the migrate journey: pick the file here, wait
+  through the upload and scan (upload-processing.html), add or confirm the
+  guide's details (upload-metadata.html), check everything before converting
+  (upload-check.html), then land in the v3 editor with the quality checks in
+  its side pane.
+
+  Nothing is really uploaded in a static prototype: the details captured at
+  the metadata step live in the session (app/routes.js), and the converted
+  markdown is the shared sample document.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Upload guidance" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">Upload guidance</h1>
+
+  <p class="govuk-body">
+    Upload a Word document and the hub will convert it into a guide. The
+    file is scanned for viruses before it is accepted.
+  </p>
+
+  <form method="post" action="/v3/upload-guide">
+
+    {{ govukFileUpload({
+      id: "guide-file",
+      name: "guideFile",
+      label: { text: "Word document", classes: "govuk-label--s" },
+      hint: { text: "Must be a .docx file" }
+    }) }}
+
+    {{ govukButton({ text: "Upload" }) }}
+
+  </form>
+
+</div>
+
+{% endblock %}
