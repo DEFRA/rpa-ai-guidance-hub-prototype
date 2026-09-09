@@ -2,13 +2,13 @@
   Confirms removing a row from either tab on find-guidance.html. documentTitle
   and listName come from app/routes.js, looked up from
   app/data/guidance-documents.js by ?id= and mapped from ?tab= on the
-  /find-guidance/remove-confirm URL — a direct visit with no id/tab, or one
+  /v5/find-guidance/remove-confirm URL — a direct visit with no id/tab, or one
   that matches neither, leaves both undefined, so the generic fallback below
   is shown instead of erroring. documentId/tabParam are that same ?id=/?tab=
   carried through as hidden form fields, rather than read back off the query
   string a second time.
 
-  "Yes, remove" is a real POST to /find-guidance/remove (app/routes.js),
+  "Yes, remove" is a real POST to /v5/find-guidance/remove (app/routes.js),
   which takes this entry out of req.session.data.recentlyOpened or
   .savedGuidance (chosen by tabParam) before redirecting to
   find-guidance.html at the correct tab's own #anchor — so it stays removed
@@ -35,7 +35,7 @@
       <p class="govuk-body govuk-!-font-weight-bold">You are about to remove this guidance.</p>
     {% endif %}
 
-    <form method="post" action="/find-guidance/remove">
+    <form method="post" action="/v5/find-guidance/remove">
       <input type="hidden" name="id" value="{{ documentId }}">
       <input type="hidden" name="tab" value="{{ tabParam }}">
       <div class="govuk-button-group">
@@ -45,7 +45,7 @@
         }) }}
         {{ govukButton({
           text: "Cancel",
-          href: "/find-guidance",
+          href: "/v5/find-guidance",
           classes: "govuk-button--secondary"
         }) }}
       </div>

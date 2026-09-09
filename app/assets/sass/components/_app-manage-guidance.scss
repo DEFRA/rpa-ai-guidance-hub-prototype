@@ -1,0 +1,12 @@
+// "Manage guidance" (v5 only) — currently just the "Publishing checks" row
+// on document-overview.html, where "Checks not run" and the "Start Checks"
+// button now sit inline together (see app/views/versions/v5/
+// manage-guidance/document-overview.html), rather than that button being
+// down with "Continue editing" at the bottom of the page.
+
+.app-manage-guidance-checks-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(3);
+}

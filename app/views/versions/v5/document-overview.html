@@ -34,7 +34,7 @@
   regardless of which version is selected.
 
   Alongside that instant client-side feedback, the same click also fires a
-  fire-and-forget fetch to POST /find-guidance/save-to-search with
+  fire-and-forget fetch to POST /v5/find-guidance/save-to-search with
   document.id (see data-document-id on the button below), which actually
   adds/updates this document in req.session.data.savedGuidance server-side
   (app/routes.js) — so it appears on find-guidance.html's "Saved guidance"
@@ -52,7 +52,7 @@
   "Open" carries the same ?from= forward too (app/routes.js reads it back on
   the way in there, and uses it to send this page's own Back link — normally
   rendered by layouts/main.html from res.locals.backHref — to this exact
-  document-overview.html rather than to /find-guidance), so the trail a
+  document-overview.html rather than to /v5/find-guidance), so the trail a
   designer arrived on stays intact one page further than this one.
 #}
 {% extends "layouts/main.html" %}
@@ -88,11 +88,11 @@
 {% set publishedCell %}<span data-version-field="published">{{ currentVersion.published }}</span>{% endset %}
 
 {% set breadcrumbItems = [
-  { text: "Guidance hub", href: "/v2/start" },
-  { text: "Find guidance", href: "/find-guidance" }
+  { text: "Guidance hub", href: "/v5/start" },
+  { text: "Find guidance", href: "/v5/find-guidance" }
 ] %}
 {% if from != "find-guidance" %}
-  {% set breadcrumbItems = (breadcrumbItems.push({ text: "Search for guidance", href: "/find-guidance/organic-search" }), breadcrumbItems) %}
+  {% set breadcrumbItems = (breadcrumbItems.push({ text: "Search for guidance", href: "/v5/find-guidance/organic-search" }), breadcrumbItems) %}
 {% endif %}
 {% set breadcrumbItems = (breadcrumbItems.push({ text: document.title }), breadcrumbItems) %}
 
@@ -144,7 +144,7 @@
     <div class="govuk-button-group">
       {{ govukButton({
         text: "Open",
-        href: "/find-guidance/document/" + document.id + ("?from=" + from if from else "")
+        href: "/v5/find-guidance/document/" + document.id + ("?from=" + from if from else "")
       }) }}
       {{ govukButton({
         text: "Save to search",
@@ -199,14 +199,14 @@
         saveButton.classList.add('govuk-button--disabled')
 
         // Persists this into req.session.data.savedGuidance server-side —
-        // see POST /find-guidance/save-to-search in app/routes.js — so it
+        // see POST /v5/find-guidance/save-to-search in app/routes.js — so it
         // actually appears on find-guidance.html's "Saved guidance" tab
         // afterwards. Fire-and-forget: the button's own instant "Saved"
         // state above already doesn't wait on this, and there is nothing
         // useful to do here if it fails.
         var documentId = saveButton.getAttribute('data-document-id')
         if (documentId && window.fetch) {
-          fetch('/find-guidance/save-to-search', {
+          fetch('/v5/find-guidance/save-to-search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: documentId })

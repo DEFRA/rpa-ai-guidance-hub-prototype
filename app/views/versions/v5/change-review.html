@@ -1,0 +1,221 @@
+{#
+  Change review: the document on the left with the flagged text highlighted,
+  the finding and its verdict on the right — plus a second tab that drops into
+  the same markdown editor used elsewhere, for a designer who would rather
+  edit directly than work finding by finding.
+
+  The "Guided" tab is modelled on the same "quote the document, explain why,
+  ask for a verdict" shape as designer/documents/finding.html, but two columns
+  rather than stacked, so the flagged text stays visible while a decision is
+  made. "Edit as markdown" includes partials/markdown-editor-content.html —
+  the only place that markup and its fixed placeholder content live.
+
+  Everything here is fixed placeholder content — the document text, the
+  finding, and the previous/next issue count in app/routes.js. None of the
+  three verdict buttons are wired up to a route yet, and neither is the
+  highlight scrolling into view; both are next steps once real issue data
+  exists.
+
+  Previous/next moves between issues regardless of which tab is open, so it
+  sits inside app-review-panel above the tabs themselves rather than inside
+  either panel — still visible and working whichever tab is selected.
+
+  The Guided tab's two columns are a 40/60 split (Guidance, then the issue
+  detail panel) built with app-review__guidance-column and
+  app-review__detail-column in _app-review.scss, rather than GOV.UK's own
+  grid-column classes — those only come in named fractions (halves, thirds,
+  quarters), none of which land on 40/60, and an empty spacer column to fake
+  the ratio leaves dead space rather than the two columns filling the row.
+
+  The tabs are built by hand rather than with govukTabs(params): that macro
+  runs every panel's html through Nunjucks' indent() filter to pretty-print
+  it, which is harmless for ordinary markup but corrupts the real <textarea>
+  in the markdown tab — added leading whitespace lands inside the value a
+  designer would edit, not just around it. tabs.mjs enhances markup by class
+  and id/href alone (see setAttributes() in
+  node_modules/govuk-frontend/dist/govuk/components/tabs/tabs.mjs), so
+  hand-written markup in this shape behaves identically once JS runs.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+
+{% set pageName = "Too many repetitive words" %}
+
+{% set guidedPanel %}
+<div class="govuk-grid-row">
+
+  <div class="app-review__guidance-column">
+
+    <h2 class="govuk-heading-m">Guidance</h2>
+
+    <div class="app-review__document" tabindex="0">
+
+      <p class="govuk-body">
+        The Sustainable Farming Incentive (SFI) 2023 offer pays you for
+        actions that support food production alongside environmental
+        outcomes. This guidance explains who can apply, what you need to do
+        before you apply, and how the actions and payment rates work.
+      </p>
+
+      <p class="govuk-body">
+        You can apply if you are a farmer with management control of the
+        land, and the land has been registered on the Rural Payments service.
+        Land does not need to be actively farmed at the point you apply, but
+        it must be in your control for the duration of any action you select.
+      </p>
+
+      <p class="govuk-body">
+        Actions are grouped by land type: arable and horticultural land,
+        improved grassland, and moorland and rough grazing. Each action has
+        its own management requirements, evidence you need to keep, and a
+        payment rate per hectare or per unit specified in the scheme
+        handbook.
+      </p>
+
+      <p class="govuk-body">
+        You must
+        <span class="app-review__highlight">ensure</span>
+        that all land parcels are mapped correctly before you apply. You must
+        also
+        <span class="app-review__highlight">ensure</span>
+        that any existing agreements on the same land are up to date, and you
+        should
+        <span class="app-review__highlight">ensure</span>
+        that supporting evidence is ready to upload alongside your
+        application.
+      </p>
+
+      <p class="govuk-body">
+        Standards and requirements set out the minimum you must do for each
+        action, and are checked as part of any inspection. Falling short of a
+        standard on one action does not affect payments for other actions on
+        the same agreement, but repeated failures may lead to a review of the
+        whole agreement.
+      </p>
+
+      <p class="govuk-body">
+        Payment rates are reviewed annually and published in the scheme
+        handbook. Where an action's rate changes part-way through an
+        agreement year, the new rate applies from the date it is published,
+        not from the date the agreement started.
+      </p>
+
+      <p class="govuk-body">
+        Applications are made online through the Rural Payments service. You
+        will need to provide supporting evidence for some actions at the
+        point of application, and for others only if selected for an
+        inspection.
+      </p>
+
+    </div>
+
+  </div>
+
+  <div class="app-review__detail-column">
+
+    {{ govukTag({ text: "Medium", classes: "govuk-tag--orange" }) }}
+
+    <h2 class="govuk-heading-m govuk-!-margin-top-2">Too many repetitive words</h2>
+
+    <p class="govuk-body">
+      "Ensure" appears three times in the same paragraph, in the section
+      covering what you must do before you apply.
+    </p>
+
+    <h3 class="govuk-heading-s">Why it matters</h3>
+    <p class="govuk-body">
+      Repeating the same word makes guidance harder to scan, and can make an
+      instruction feel padded rather than precise.
+    </p>
+
+    <h3 class="govuk-heading-s">Suggestions</h3>
+    <p class="govuk-body">
+      Keep "ensure" for one instance and rephrase the others — for example
+      "check that" or "confirm that".
+    </p>
+
+    {{ govukButton({
+      text: "Fix it",
+      type: "button",
+      classes: "govuk-!-margin-bottom-2"
+    }) }}
+
+    <p class="app-review__or govuk-body-s">Or</p>
+
+    {{ govukCharacterCount({
+      name: "comment",
+      id: "comment",
+      maxlength: 500,
+      rows: 3,
+      label: { text: "Comment (optional)", classes: "govuk-label--s" },
+      hint: { text: "Explain why this will not be fixed, or why the finding is wrong." }
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({
+        text: "Won't fix",
+        type: "button",
+        classes: "govuk-button--secondary"
+      }) }}
+      {{ govukButton({
+        text: "False positive",
+        type: "button",
+        classes: "govuk-button--secondary"
+      }) }}
+    </div>
+
+  </div>
+
+</div>
+{% endset %}
+
+{% set editPanel %}
+  {% include "partials/markdown-editor-content.html" %}
+{% endset %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    <h1 class="govuk-visually-hidden">Review change: {{ pageName }}</h1>
+
+    <div class="app-review-panel">
+
+      <nav class="app-review-nav" aria-label="Flagged issues">
+        {% if previousIssueHref %}
+          <a class="govuk-link" href="{{ previousIssueHref }}">&larr; Previous</a>
+        {% endif %}
+        <span class="govuk-body-s govuk-!-margin-0">Issue {{ issueNumber }} of {{ totalIssues }}</span>
+        {% if nextIssueHref %}
+          <a class="govuk-link app-review-nav__next" href="{{ nextIssueHref }}">Next &rarr;</a>
+        {% endif %}
+      </nav>
+
+      <div class="govuk-tabs" data-module="govuk-tabs">
+        <h2 class="govuk-tabs__title">Contents</h2>
+        <ul class="govuk-tabs__list">
+          <li class="govuk-tabs__list-item govuk-tabs__list-item--selected">
+            <a class="govuk-tabs__tab" href="#guided">Guided</a>
+          </li>
+          <li class="govuk-tabs__list-item">
+            <a class="govuk-tabs__tab" href="#edit-as-markdown">Edit as markdown</a>
+          </li>
+        </ul>
+        <div class="govuk-tabs__panel" id="guided">
+          {{ guidedPanel | safe }}
+        </div>
+        <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="edit-as-markdown">
+          {{ editPanel | safe }}
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

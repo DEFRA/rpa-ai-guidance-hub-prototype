@@ -44,11 +44,19 @@
   list-style: none;
 }
 
-// Plain and minimal — a simple list of links rather than a boxed nav panel,
-// so spacing between items comes from generous margin alone rather than a
-// rule between them.
+// A faint rule between items — fainter than .app-filter-group's own on
+// organic-search.html, which uses the standard $govuk-mid-grey a divider
+// meant to separate distinct filter controls needs; this one is only
+// marking out list items, so the lighter $govuk-light-grey tone (also used
+// as a background elsewhere on this page) is enough on its own. The link
+// inside carries the actual top/bottom spacing (see .app-document-content__
+// nav-link below), so this item only adds the rule itself.
 .app-document-content__nav-item {
-  margin-bottom: govuk-spacing(4);
+  border-bottom: 1px solid $govuk-light-grey;
+
+  &:last-child {
+    border-bottom: 0;
+  }
 }
 
 // The section link and its disclosure toggle side by side — an <a> cannot
@@ -67,7 +75,7 @@
 .app-document-content__nav-link {
   display: block;
   width: 100%;
-  padding: govuk-spacing(1) 0;
+  padding: govuk-spacing(3) 0;
   border: 0;
   background: none;
   color: $govuk-link-colour;
@@ -136,10 +144,10 @@
 }
 
 .app-document-content__subnav-item {
-  margin-bottom: govuk-spacing(2);
+  border-bottom: 1px solid $govuk-light-grey;
 
   &:last-child {
-    margin-bottom: 0;
+    border-bottom: 0;
   }
 }
 
@@ -148,7 +156,7 @@
 .app-document-content__subnav-link {
   display: block;
   width: 100%;
-  padding: govuk-spacing(1) 0;
+  padding: govuk-spacing(3) 0;
   border: 0;
   background: none;
   color: $govuk-link-colour;
@@ -168,6 +176,22 @@
   }
 }
 
+// The step currently showing — set/unset by showStep() in pageScripts,
+// whether that was reached via this link, Back/Next, or a search result.
+// Same bold-black-no-underline treatment as the custom-steps sidebar's own
+// "current" state below, as a modifier on the link itself here rather than
+// swapping in a non-interactive element, since a generic step's sidebar
+// entry needs to stay clickable even while it is the current one (jumping
+// back to it from a search result, for instance). Declared after both base
+// link rules above, so it wins the cascade on their shared properties at
+// equal (single-class) specificity.
+.app-document-content__nav-link--current,
+.app-document-content__subnav-link--current {
+  color: $govuk-text-colour;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 // Fixed regardless of which step is showing, so Back/Next and everything
 // below them stay in the same place on the page rather than shifting up for
 // a short step — comfortably taller than the longest step's own caption,
@@ -184,10 +208,99 @@
   margin-bottom: govuk-spacing(6);
 }
 
-// Below Back/Next rather than beside them — its own row, with the inset
-// text explaining it sitting directly underneath.
+// The "Jump to step" dropdown sits inline within the caption itself, in
+// place of the static section/phase name that used to follow the colon —
+// govuk-caption-l is display: block by default, overridden here (as a
+// second class alongside it, so only this specific caption is affected, not
+// every govuk-caption-l elsewhere) so its own "Step X of Y:" text and the
+// select flow together as one line. gap provides the space word-spacing
+// would otherwise give a plain text caption; align-items: baseline lines
+// the select up with the caption text's baseline rather than its (taller)
+// box centre.
+// margin-bottom overrides govuk-caption-l's own (0 from tablet upwards by
+// default) — same value as .app-document-search below, so the search box →
+// caption gap and this caption → heading gap read as one consistent rhythm
+// rather than one looking bigger than the other.
+.govuk-caption-l.app-document-step-caption {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: govuk-spacing(1);
+  margin-bottom: govuk-spacing(6);
+}
+
+// The select's own form-group would otherwise add its default margin-bottom
+// underneath it, pushing the step heading below further away than every
+// other step's own spacing.
+.app-document-step-caption .govuk-form-group {
+  margin-bottom: 0;
+}
+
+// Narrower than govuk-select's own generous default width, now that it
+// reads as a continuation of the caption line rather than a full-width
+// block control.
+.app-document-step-caption__select {
+  width: auto;
+  min-width: 0;
+  max-width: 220px;
+}
+
+// Sits beside Back/Next in the fixed footer bar (see
+// .app-document-footer-bar below) rather than in its own row now, so no
+// margin-bottom of its own — the bar's flex layout and padding handle the
+// spacing instead.
 .app-document-step-actions__save {
-  margin-bottom: govuk-spacing(3);
+  margin-bottom: 0;
+}
+
+// A fixed bar pinned to the bottom of the viewport holding Back/Next and
+// Save progress, so the primary step actions stay reachable without
+// scrolling down a long step. govuk-width-container (reused, not
+// reinvented) gives the inner row the same max-width and responsive side
+// padding as the rest of the page's content, so Back/Next line up under
+// the column above them rather than sitting flush against the screen
+// edges.
+.app-document-footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10;
+  background-color: $govuk-white;
+  border-top: 1px solid $govuk-mid-grey;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-document-footer-bar__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(3);
+  padding-top: govuk-spacing(4);
+  padding-bottom: govuk-spacing(4);
+}
+
+// Both children came from the normal content flow, where each carried its
+// own bottom margin to space it from whatever followed — not needed now
+// they're side by side in a flex row with their own gap between them.
+.app-document-footer-bar .govuk-button-group {
+  margin-bottom: 0;
+}
+
+.app-document-footer-bar .app-document-step-actions__save {
+  margin-bottom: 0;
+}
+
+// Keeps the last of a step's own content, and the "Saving your progress…"
+// inset text below it, clear of the fixed bar now covering the bottom of
+// the viewport. Generous rather than an exact match to the bar's rendered
+// height, since GDS's .govuk-button-group stacks Back/Next into two full
+// rows on narrow screens (button-group's own responsive
+// flex-direction: column), making the bar taller on mobile than the
+// desktop two-button row this value is roughly sized against.
+[data-document-text-column] {
+  padding-bottom: govuk-spacing(9);
 }
 
 // Looks like a link, not a button — same treatment as
@@ -249,9 +362,10 @@
 // customSteps in app/routes.js) — a flat list of exactly as many items as
 // that document has steps, in place of the generic nested section/subnav
 // list above. Same collapsed-vs-open visual language as organic-search.html's
-// filter group headers (blue link with a chevron vs bold black with none),
-// reimplemented here with its own classes since the two pages do not share
-// a stylesheet.
+// filter group headers (blue link vs bold black), reimplemented here with
+// its own classes since the two pages do not share a stylesheet — minus
+// that pattern's own chevron: every item here links straight to a step, so
+// a chevron implying it expands to reveal more would be misleading.
 .app-document-content__custom-nav {
   margin: 0 0 govuk-spacing(6);
   padding: 0;
@@ -259,13 +373,16 @@
 }
 
 .app-document-content__custom-nav-item {
-  margin-bottom: govuk-spacing(2);
+  border-bottom: 1px solid $govuk-light-grey;
+
+  &:last-child {
+    border-bottom: 0;
+  }
 }
 
 .app-document-content__custom-nav-link {
-  display: flex;
-  align-items: center;
-  padding: govuk-spacing(1) 0;
+  display: block;
+  padding: govuk-spacing(3) 0;
   color: $govuk-link-colour;
   font-family: $govuk-font-family;
   font-size: 19px;
@@ -281,23 +398,9 @@
   }
 }
 
-// Points toward the step it links to, rather than indicating expand/collapse
-// like .app-document-content__chevron above — this list has no disclosure
-// behaviour, so there is only ever the one (right-pointing) state.
-.app-document-content__custom-nav-chevron {
-  display: inline-block;
-  flex: 0 0 auto;
-  width: 7px;
-  height: 7px;
-  margin-right: govuk-spacing(2);
-  border-right: 2px solid $govuk-black;
-  border-bottom: 2px solid $govuk-black;
-  transform: rotate(-45deg);
-}
-
 .app-document-content__custom-nav-current {
   display: block;
-  padding: govuk-spacing(1) 0;
+  padding: govuk-spacing(3) 0;
   color: $govuk-text-colour;
   font-family: $govuk-font-family;
   font-size: 19px;
@@ -318,5 +421,94 @@
 }
 
 .app-case-note__caption {
+  color: $govuk-secondary-text-colour;
+}
+
+// "Search this guidance" — sits at the top of the main content column, so
+// its dropdown needs a positioning context of its own (relative) for the
+// results list to anchor against. margin-bottom matches
+// .app-document-step-caption's below, so the gap above the step's own
+// caption and the gap above its heading read as one consistent rhythm
+// rather than one looking bigger than the other.
+.app-document-search {
+  position: relative;
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-document-search__row {
+  display: flex;
+  align-items: stretch;
+  gap: govuk-spacing(2);
+}
+
+.app-document-search__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// No "small" button variant in GOV.UK Frontend — reduced padding/min-height
+// here instead, so it reads as a smaller companion to the input rather than
+// a full-size button crowding this narrow sidebar column.
+.app-document-search__button {
+  flex: 0 0 auto;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  min-height: 0;
+}
+
+// Positioned to start exactly where the label+input+button block ends,
+// spanning its full width — an autocomplete-style panel, not part of the
+// sidebar's own scrollable nav list.
+.app-document-search__results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  max-height: 60vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  background-color: $govuk-white;
+  border: 1px solid $govuk-mid-grey;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.app-document-search__result {
+  padding: govuk-spacing(2);
+  border-bottom: 1px solid $govuk-mid-grey;
+  cursor: pointer;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background-color: $govuk-light-grey;
+  }
+}
+
+.app-document-search__result--active {
+  background-color: $govuk-light-grey;
+}
+
+.app-document-search__result--empty {
+  color: $govuk-secondary-text-colour;
+  cursor: default;
+
+  &:hover {
+    background-color: transparent;
+  }
+}
+
+.app-document-search__result-label {
+  display: block;
+  margin-bottom: govuk-spacing(1);
+  font-weight: 700;
+}
+
+.app-document-search__result-snippet {
+  display: block;
   color: $govuk-secondary-text-colour;
 }

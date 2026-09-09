@@ -13,16 +13,16 @@
   (app/data/guided-searches.js / app/data/favourited-guidance.js), which are
   still set for other pages that read them, but no longer drive this page's
   tables: neither of those older files has the version field these rows now
-  show. Opening a document (GET /find-guidance/document/:id) adds to/bumps
+  show. Opening a document (GET /v5/find-guidance/document/:id) adds to/bumps
   recentlyOpened; "Save to search" on document-overview.html (POST
-  /find-guidance/save-to-search) does the same for savedGuidance — both in
+  /v5/find-guidance/save-to-search) does the same for savedGuidance — both in
   app/routes.js. "Open" goes via document-overview.html this time
-  (/document-overview/:id), the same stop-page a result on organic-search.html
+  (/v5/document-overview/:id), the same stop-page a result on organic-search.html
   goes through, rather than straight to saved-document-view.html as it did
   when these rows came from guided-searches.js/favourited-guidance.js.
 
   Each row's "Remove" link carries its guidance-documents.js id and which tab
-  it came from as ?id=/?tab= to /find-guidance/remove-confirm — see
+  it came from as ?id=/?tab= to /v5/find-guidance/remove-confirm — see
   delete-search-confirm.html — so that page can say which document, from
   which list, rather than falling back to a generic message, and so its own
   "Yes, remove" (a real POST) knows which of the two session arrays above to
@@ -56,6 +56,7 @@
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/tabs/macro.njk" import govukTabs %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
@@ -81,10 +82,10 @@
 {% macro documentsTable(documents, removeWord, tabName) %}
   {% set rows = [] %}
   {% for doc in documents %}
-    {% set titleCell %}<a class="govuk-link" href="/document-overview/{{ doc.id }}?from=find-guidance">{{ doc.title }}</a>{% endset %}
+    {% set titleCell %}<a class="govuk-link" href="/v5/document-overview/{{ doc.id }}?from=find-guidance">{{ doc.title }}</a>{% endset %}
     {% set versionCell %}{{ govukTag(versionTags[doc.version]) }}{% endset %}
     {% set actionCell %}
-      <a class="govuk-link" href="/find-guidance/remove-confirm?id={{ doc.id }}&amp;tab={{ tabName }}">
+      <a class="govuk-link" href="/v5/find-guidance/remove-confirm?id={{ doc.id }}&amp;tab={{ tabName }}">
         {{ removeWord }}<span class="govuk-visually-hidden"> {{ doc.title }}</span>
       </a>
     {% endset %}
@@ -124,7 +125,7 @@
     {{ govukBreadcrumbs({
       classes: "govuk-!-margin-bottom-6",
       items: [
-        { text: "Guidance hub", href: "/v2/start" },
+        { text: "Guidance hub", href: "/v5/start" },
         { text: "Find guidance" }
       ]
     }) }}
@@ -140,7 +141,37 @@
       Continue your search or start a new one.
     </p>
 
-    {{ govukButton({ text: "Start a new search", href: "/find-guidance/organic-search" }) }}
+    {#
+      A plain GET <form>, not the live client-side filtering
+      organic-search.html's own search bar has (see [data-search-input]/
+      [data-search-button] there) — this box only ever needs to hand a term
+      off to that page, not filter anything itself, so a real form
+      submission is enough: Enter in the input or clicking "Search" both
+      just submit it natively, no JS required. q is read on the other end
+      by GET /v5/find-guidance/organic-search (app/routes.js) to
+      pre-populate and immediately apply that page's own search.
+
+      Reuses .app-search-bar/.app-search-bar__input as-is (already shared,
+      from _app-organic-search.scss) for the same GOV.UK-homepage-style
+      input+button layout organic-search.html's own search bar already
+      has, rather than introducing a second copy of that look.
+    #}
+    <form method="get" action="/v5/find-guidance/organic-search">
+      <div class="app-search-bar">
+        <div class="app-search-bar__input">
+          {{ govukInput({
+            id: "find-guidance-search",
+            name: "q",
+            label: { text: "Search guidance", classes: "govuk-visually-hidden" },
+            formGroup: { classes: "govuk-!-margin-bottom-0" }
+          }) }}
+        </div>
+        {{ govukButton({
+          text: "Search",
+          classes: "govuk-!-margin-bottom-0"
+        }) }}
+      </div>
+    </form>
 
   </div>
 </div>

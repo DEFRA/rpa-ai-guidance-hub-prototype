@@ -11,7 +11,7 @@
   a status, not the version/date fields this page's cards need, and had no
   entries at all for the CS MA results. Using the same guidance-documents.js
   file here as document-overview.html and saved-document-view.html also read
-  from (by id, via /document-overview/:id and /find-guidance/document/:id)
+  from (by id, via /v5/document-overview/:id and /v5/find-guidance/document/:id)
   means whichever result is clicked shows the same title/description/version
   all the way through, rather than each page defaulting to its own hardcoded
   document.
@@ -88,15 +88,15 @@
     {{ govukBreadcrumbs({
       classes: "govuk-!-margin-bottom-6",
       items: [
-        { text: "Guidance hub", href: "/v2/start" },
-        { text: "Find guidance", href: "/find-guidance" },
+        { text: "Guidance hub", href: "/v5/start" },
+        { text: "Find guidance", href: "/v5/find-guidance" },
         { text: pageName }
       ]
     }) }}
   </div>
 </div>
 
-<form method="get" action="/find-guidance/organic-search">
+<form method="get" action="/v5/find-guidance/organic-search">
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
@@ -117,6 +117,7 @@
           {{ govukInput({
             id: "search",
             name: "search",
+            value: initialSearchQuery,
             label: { text: "Search guidance", classes: "govuk-visually-hidden" },
             formGroup: { classes: "govuk-!-margin-bottom-0" },
             attributes: { "data-search-input": true }
@@ -279,7 +280,7 @@
             <div class="govuk-!-margin-bottom-2">{{ govukTag(versionTags[result.version]) }}</div>
 
             <h3 class="govuk-heading-s app-search-results__name">
-              <a class="govuk-link" href="/document-overview/{{ result.id }}?from=search">{{ result.title }}</a>
+              <a class="govuk-link" href="/v5/document-overview/{{ result.id }}?from=search">{{ result.title }}</a>
             </h3>
 
             <p class="govuk-body app-search-results__description">{{ result.description }}</p>
@@ -428,7 +429,7 @@
         item.innerHTML =
           '<div class="govuk-!-margin-bottom-2">' + versionTagHtml(doc.version) + '</div>' +
           '<h3 class="govuk-heading-s app-search-results__name">' +
-          '<a class="govuk-link" href="/document-overview/' + encodeURIComponent(doc.id) + '?from=search">' + escapeHtml(doc.title) + '</a>' +
+          '<a class="govuk-link" href="/v5/document-overview/' + encodeURIComponent(doc.id) + '?from=search">' + escapeHtml(doc.title) + '</a>' +
           '</h3>' +
           '<p class="govuk-body app-search-results__description">' + escapeHtml(doc.description) + '</p>' +
           '<p class="govuk-body-s app-search-results__dates">Last updated: ' + escapeHtml(doc.lastUpdated) + ' &middot; Published: ' + escapeHtml(doc.published) + '</p>'
@@ -512,6 +513,21 @@
 
           render()
         })
+      }
+
+      // Arriving with ?q= (from the search box on find-guidance.html — see
+      // GET /v5/find-guidance/organic-search in app/routes.js, which reads
+      // it into initialSearchQuery and pre-fills this same input server-side
+      // above) applies it immediately, the same as typing it and pressing
+      // Search would, so the results are already filtered on the very first
+      // render rather than the visitor having to retype/resubmit what they
+      // just searched for. A direct visit with no q leaves searchState at
+      // its default, so the unfiltered list already rendered server-side
+      // just stays as it is — this only runs render() again when there is
+      // actually an initial value to apply.
+      if (searchInput.value) {
+        searchState.searchText = searchInput.value.trim().toLowerCase()
+        render()
       }
     })()
   </script>
