@@ -81,6 +81,30 @@
   padding-bottom: govuk-spacing(4);
 }
 
+// Stays in view as the (usually much longer) results column scrolls past it
+// — sticky rather than fixed, so it only holds its position while its own
+// column is still on screen, scrolling away normally once the column (and
+// the page) runs out underneath it, rather than floating over the footer.
+// max-height + overflow-y is the fallback for a viewport shorter than the
+// filters themselves (every group expanded, say) — without it, the bottom
+// of the sidebar would simply run off-screen with no way to reach it.
+//
+// top: 0 (not a few px, as this and .app-search-results__header alongside
+// it both used to have) — nothing else on this page is itself sticky/fixed
+// above it (the Defra header and phase banner both scroll away normally),
+// so 0 is the correct offset, not a fallback. A non-zero top here would
+// leave a gap between the viewport edge and this column's own stuck
+// position; this column has no background of its own, so that gap would
+// not show scrolled content through directly, but it would misalign this
+// against .app-search-results__header's stuck top — the two are meant to
+// line up at the same height as both stick, per the comment on that rule.
+.app-organic-search__filters {
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
 .app-search-bar {
   display: flex;
   align-items: stretch;
@@ -106,6 +130,34 @@
   .govuk-input {
     height: 100%;
   }
+}
+
+// Keeps the result count and Sort by control in view as result cards
+// themselves scroll past underneath — same sticky approach as
+// .app-organic-search__filters alongside it, independently, at the same
+// offset (top: 0 — see the comment on that rule; nothing else on this page
+// is sticky/fixed above it). A solid background stops card text showing
+// through as it scrolls beneath this once stuck, and the border marks
+// where the stuck header ends and the scrolling list begins; z-index just
+// makes sure this renders above the cards it is covering, rather than
+// relying on paint order alone.
+//
+// top must be 0, not a few px, because this element (unlike the filters
+// column above) has its own opaque background: at any top offset greater
+// than 0, that background only covers this box's own stuck position, not
+// the strip of viewport between the true top edge and wherever it starts —
+// scrolled result cards show through that strip as a visible gap/flash
+// above the bar, which is the bug this fixes. Breathing room above the
+// count/sort text is padding-top on this element itself, not a top offset
+// or an outer margin, precisely so the background covers that space too
+// rather than leaving it transparent.
+.app-search-results__header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-top: govuk-spacing(2);
+  background-color: $govuk-white;
+  border-bottom: 1px solid $govuk-mid-grey;
 }
 
 .app-search-results__count {

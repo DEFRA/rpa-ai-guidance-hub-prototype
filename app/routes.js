@@ -13,6 +13,10 @@ const { favouritedGuidance } = require('./data/favourited-guidance')
 const { savedDocuments } = require('./data/saved-documents')
 const { searchResults } = require('./data/search-results')
 const { guidanceDocuments } = require('./data/guidance-documents')
+// v5 only — the generic 3-phase placeholder content saved-document-view.html
+// and editor-experiment.html both fall back to for a guidanceDocuments entry
+// with no "steps" of its own. See the comment at the top of that file.
+const { documents: genericGuidanceContent } = require('./data/generic-guidance-content')
 const sampleDocument = require('./data/sample-document')
 // Shared with the browser — see the scripts block in app/views/layouts/main.html.
 const qualityChecks = require('./assets/javascripts/quality-checks')
@@ -41,6 +45,71 @@ router.use((req, res, next) => {
     ...item,
     current: item.href === req.path
   }))
+  next()
+})
+
+// The header partial (app/views/partials/defra-header.njk) reads
+// serviceName as a template global from app/config.json, which is "RPA
+// Guidance Hub" for the current (v2) product. The v1 snapshot is a frozen
+// record of what that header used to say, so it overrides back to the
+// original name here rather than picking up config.json's value like every
+// other page does. isV1/isV5/isV5SignIn similarly let that same partial
+// pick the right Sign in/out link for whichever version — and page — is
+// being viewed: v1 keeps its own unwired "Sign in" → "#" placeholder (it
+// has no sign-in page of its own); /v5/sign-in itself also reads "Sign in"
+// → "#" for the same reason v1's does — a visitor there has not signed in
+// yet, so a header that already says "Sign out" would be inconsistent;
+// every other v5 page (i.e. isV5 but not isV5SignIn — reached only after
+// clicking "Sign in with your Defra account" on that page) gets "Sign out"
+// → /v5/sign-in; v2/everything else keeps "Sign out" → /v2/sign-in exactly
+// as before. The only differences between these headers are these
+// res.locals, not separate copies of the partial.
+//
+// v5 also gets its own "Find guidance"/"Manage guidance" service navigation
+// bar — the green strip in defra-header.njk, already built and already
+// wired up to read res.locals.navigation (see the "Items for the Defra
+// service navigation bar" router.use() above, which sets it to [] and
+// falls back to a plain brand border), just never populated for any
+// version until now. Overriding res.locals.navigation again here — this
+// middleware runs after that one — replaces the (empty) site-wide default
+// with these two items for /v5/... requests only, leaving v1 and v2
+// exactly as they already were (still the plain border, still driven by
+// the untouched top-level `navigation` array). "Current" is worked out by
+// path prefix, not exact match like the site-wide version above, since a
+// tab should stay highlighted across its whole page cluster — Find
+// guidance for every /v5/find-guidance/... and /v5/document-overview/...
+// page (organic search, document overview, the document itself, all
+// reached from find-guidance.html), Manage guidance for every
+// /v5/all-guidance-docs, /v5/guidance-document/... and /v5/manage-guidance/...
+// page (its own search results and document overview). Neither tab
+// highlights on start/editor-experiment, same as a real top nav showing no
+// active tab on pages outside both sections — and the bar does not render
+// at all on /v5/sign-in (isV5SignIn skips the override below, leaving
+// res.locals.navigation at the site-wide empty default from above, so the
+// header falls back to the plain brand border there, same as v1/v2): it
+// sits before the hub's own navigation begins, not one of its sections.
+const V5_NAVIGATION = [
+  { text: 'Find guidance', href: '/v5/find-guidance', prefixes: ['/v5/find-guidance', '/v5/document-overview'] },
+  { text: 'Manage guidance', href: '/v5/all-guidance-docs', prefixes: ['/v5/all-guidance-docs', '/v5/guidance-document', '/v5/manage-guidance'] }
+]
+
+router.use((req, res, next) => {
+  if (req.path.startsWith('/v1/')) {
+    res.locals.serviceName = 'RPA AI Guidance Hub'
+    res.locals.isV1 = true
+  } else if (req.path.startsWith('/v5/')) {
+    res.locals.isV5 = true
+
+    if (req.path === '/v5/sign-in') {
+      res.locals.isV5SignIn = true
+    } else {
+      res.locals.navigation = V5_NAVIGATION.map((item) => ({
+        text: item.text,
+        href: item.href,
+        current: item.prefixes.some((prefix) => req.path.startsWith(prefix))
+      }))
+    }
+  }
   next()
 })
 
@@ -156,6 +225,15 @@ router.get('/', (req, res) => {
   res.render('index')
 })
 
+// The entry point for the whole /v2/ prototype, before /v2/start — the
+// versions list's own "Version 2 (current)" link now points here instead of
+// straight to /v2/start (see app/views/index.html). /v2/start itself is
+// still a real route below and stays reachable directly; this is just the
+// intended front door now, not a lock on the old one.
+router.get('/v2/sign-in', (req, res) => {
+  res.render('sign-in')
+})
+
 // The homepage: what the designer wants to do, as a list of direct links
 // rather than a question with a Continue button. See app/views/start.html.
 //
@@ -168,46 +246,114 @@ router.get('/v2/start', (req, res) => {
   res.render('start')
 })
 
+// Session-backed "Recently opened" and "Saved guidance" lists for
+// find-guidance.html — req.session.data.recentlyOpened/savedGuidance, each
+// an array of { id, lastModified } (id being a guidance-documents.js id),
+// most-recently-touched entry first. Seeded with the original fixed example
+// rows the first time either is read in a given session, so every existing
+// research script still starts from the same 4/3 rows; everything from
+// there on is real session state — opening a document (recentlyOpened, see
+// GET /find-guidance/document/:id below) or clicking "Save to search" on
+// document-overview.html (savedGuidance, see POST
+// /find-guidance/save-to-search below) adds to or bumps an entry, and
+// "Yes, remove" on delete-search-confirm.html (see POST
+// /find-guidance/remove below) removes one, from whichever of the two lists
+// it came from. This is scoped entirely to /find-guidance and the routes
+// that feed it — nothing else in the prototype (all-guidance-docs.html's
+// own tabs included) reads either array.
+const RECENTLY_OPENED_LIMIT = 5
+
+function getRecentlyOpened (req) {
+  if (!req.session.data.recentlyOpened) {
+    req.session.data.recentlyOpened = [
+      { id: 'cs-ma-revenue-options-claim-rule-signoff-2026', lastModified: '20 July 2026' },
+      { id: 'cs-ma-land-user-or-land-cover-not-compatible-signoff-2026', lastModified: '15 August 2026' },
+      { id: 'cs-ma-agreement-level-options-not-verified-2026', lastModified: '8 August 2026' },
+      { id: 'cs-ma-claim-refresh-signoff-check-2026', lastModified: '1 August 2026' }
+    ]
+  }
+  return req.session.data.recentlyOpened
+}
+
+function getSavedGuidance (req) {
+  if (!req.session.data.savedGuidance) {
+    req.session.data.savedGuidance = [
+      { id: 'countryside-stewardship-capital-grants', lastModified: '20 July 2025' },
+      { id: 'basic-payment-scheme-closing-rules', lastModified: '12 June 2025' },
+      { id: 'sfi-soil-health-actions', lastModified: '3 May 2025' }
+    ]
+  }
+  return req.session.data.savedGuidance
+}
+
+// A tab param, as already carried by find-guidance.html's own Remove links
+// (?tab=recently-opened/saved-guidance) and REMOVE_CONFIRM_TABS below, to
+// whichever session array that tab is backed by — used by the remove route
+// to know which list to take an id out of.
+function getListForTab (req, tabParam) {
+  if (tabParam === 'recently-opened') return getRecentlyOpened(req)
+  if (tabParam === 'saved-guidance') return getSavedGuidance(req)
+  return null
+}
+
+// e.g. "4 September 2026" — the same day/full-month/year shape every
+// lastModified value already uses, throughout guidance-documents.js and
+// find-guidance.html's two lists alike.
+function formatToday () {
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())
+}
+
+// Adds id to the front of list with today's date — or, if it is already
+// there, removes the old entry first, so it moves to the front with an
+// updated date rather than appearing twice.
+function touchEntry (list, id) {
+  const existingIndex = list.findIndex((entry) => entry.id === id)
+  if (existingIndex !== -1) list.splice(existingIndex, 1)
+  list.unshift({ id, lastModified: formatToday() })
+}
+
+function addRecentlyOpened (req, id) {
+  const list = getRecentlyOpened(req)
+  touchEntry(list, id)
+  if (list.length > RECENTLY_OPENED_LIMIT) list.length = RECENTLY_OPENED_LIMIT
+}
+
+function addSavedGuidance (req, id) {
+  touchEntry(getSavedGuidance(req), id)
+}
+
+// Builds find-guidance.html's table rows from a session list (id +
+// lastModified) by looking up each id's title/version in guidanceDocuments
+// — an id with no match is skipped rather than breaking the page (would
+// only happen if guidance-documents.js ever lost an entry a session still
+// references).
+function buildFindGuidanceRows (list) {
+  return list.reduce((rows, entry) => {
+    const document = guidanceDocuments.find((candidate) => candidate.id === entry.id)
+    if (!document) return rows
+    rows.push({
+      id: document.id,
+      title: document.title,
+      version: document.version,
+      lastModified: entry.lastModified
+    })
+    return rows
+  }, [])
+}
+
 // Not designed yet — a placeholder so "Find and locate guidance" leads
 // somewhere rather than a 404. See app/views/find-guidance.html.
 //
-// Both tabs' rows are built here from app/data/guidance-documents.js, looked
-// up by title against a fixed list of (title, lastOpened) pairs, rather than
-// from res.locals.guidedSearches/favouritedGuidance (still set above, for
-// other pages) — those two files predate guidance-documents.js and do not
-// have the version field this page's rows now need. A title with no match is
-// skipped with a console warning rather than breaking the page.
+// Both tabs' rows are built from the session-backed lists above — see
+// buildFindGuidanceRows — rather than from res.locals.guidedSearches/
+// favouritedGuidance (still set above, for other pages) — those two files
+// predate guidance-documents.js and do not have the version field this
+// page's rows now need.
 router.get('/find-guidance', (req, res) => {
   // No backHref — find-guidance.html shows breadcrumbs instead of a Back
   // link now (see the template).
-  const findGuidanceDocumentRows = (entries) =>
-    entries.reduce((rows, entry) => {
-      const document = guidanceDocuments.find((candidate) => candidate.title === entry.title)
-      if (!document) {
-        console.warn(`find-guidance: no guidance-documents entry found for title "${entry.title}"`)
-        return rows
-      }
-      rows.push({
-        id: document.id,
-        title: document.title,
-        version: document.version,
-        lastOpened: entry.lastOpened
-      })
-      return rows
-    }, [])
-
-  const recentlyOpenedDocuments = findGuidanceDocumentRows([
-    { title: 'CS MA Claim - Revenue Options Claim Rule at Signoff 2026', lastOpened: '17 August 2026' },
-    { title: 'CS MA Claim - Land User or Land Cover not compatible with Option at Signoff 2026', lastOpened: '15 August 2026' },
-    { title: 'CS MA Claim - Agreement Level Options not Verified 2026', lastOpened: '10 August 2026' },
-    { title: 'CS MA Claim - Claim Refresh Signoff Check 2026', lastOpened: '2 August 2026' }
-  ])
-
-  const savedGuidanceDocuments = findGuidanceDocumentRows([
-    { title: 'Countryside Stewardship: capital grants', lastOpened: '28 July 2026' },
-    { title: 'Basic Payment Scheme: closing rules', lastOpened: '19 July 2026' },
-    { title: 'Sustainable Farming Incentive: soil health actions', lastOpened: '5 July 2026' }
-  ])
+  const recentlyOpenedDocuments = buildFindGuidanceRows(getRecentlyOpened(req))
+  const savedGuidanceDocuments = buildFindGuidanceRows(getSavedGuidance(req))
 
   res.render('find-guidance', { recentlyOpenedDocuments, savedGuidanceDocuments })
 })
@@ -228,14 +374,16 @@ router.post('/find-guidance/new', (req, res) => {
 // Confirms removing a row from either tab on find-guidance.html — reached
 // from that page's own "Remove" links, which carry ?id= (a
 // guidance-documents.js id) and ?tab= (recently-opened or saved-guidance) so
-// this page can say which document, from which list. A static prototype has
-// nothing real to remove, so "Yes, remove" just returns to find-guidance.html
-// at the correct tab's own #anchor — see app/views/delete-search-confirm.html.
-// tab's anchor is "favourited-guidance" for saved-guidance specifically,
-// matching that tab's own id in the govukTabs call on find-guidance.html
-// (its label reads "Saved guidance", but the id/anchor was never renamed to
-// match). A direct visit with no id/tab, or one that matches neither, falls
-// back to a generic message rather than erroring.
+// this page can say which document, from which list — see
+// app/views/delete-search-confirm.html. tab's anchor is "favourited-guidance"
+// for saved-guidance specifically, matching that tab's own id in the
+// govukTabs call on find-guidance.html (its label reads "Saved guidance",
+// but the id/anchor was never renamed to match). A direct visit with no
+// id/tab, or one that matches neither, falls back to a generic message
+// rather than erroring. "Yes, remove" itself is a real POST — see
+// /find-guidance/remove below — id/tab are carried into it as hidden form
+// fields (documentId/tabParam here) rather than read back off this GET's
+// own query string a second time.
 const REMOVE_CONFIRM_TABS = {
   'recently-opened': { listName: 'Recently opened', anchor: 'recently-opened' },
   'saved-guidance': { listName: 'Saved guidance', anchor: 'favourited-guidance' }
@@ -247,10 +395,33 @@ router.get('/find-guidance/remove-confirm', (req, res) => {
 
   res.locals.backHref = '/find-guidance'
   res.render('delete-search-confirm', {
+    documentId: req.query.id,
+    tabParam: req.query.tab,
     documentTitle: document ? document.title : null,
     listName: tab ? tab.listName : null,
     returnHref: tab ? '/find-guidance#' + tab.anchor : '/find-guidance'
   })
+})
+
+// "Yes, remove" on delete-search-confirm.html — a real POST now, rather
+// than a link straight to returnHref: this actually takes the entry out of
+// req.session.data.recentlyOpened or .savedGuidance (chosen by ?tab=,
+// carried through remove-confirm above as a hidden field of the same
+// name), so it stays gone on the next visit to find-guidance.html rather
+// than only looking removed until the session's underlying array is read
+// again. Falls back to just redirecting straight back if id/tab don't
+// resolve to a real list (a direct/bookmarked visit with bad params) —
+// same as remove-confirm above already does for its own display.
+router.post('/find-guidance/remove', (req, res) => {
+  const tab = REMOVE_CONFIRM_TABS[req.body.tab]
+  const list = getListForTab(req, req.body.tab)
+
+  if (list && req.body.id) {
+    const index = list.findIndex((entry) => entry.id === req.body.id)
+    if (index !== -1) list.splice(index, 1)
+  }
+
+  res.redirect(tab ? '/find-guidance#' + tab.anchor : '/find-guidance')
 })
 
 // A document's read-only view — opened from the "Saved documents" tab on
@@ -267,20 +438,46 @@ router.get('/find-guidance/remove-confirm', (req, res) => {
 // the same placeholder content as countryside-stewardship-capital-grants,
 // which is expected: only the heading and Version tag need to be correct.
 //
-// A guidanceDocuments entry can carry its own "steps" array (currently only
-// cs-ma-revenue-options-claim-rule-signoff-2026 does) — when it does, that
+// A guidanceDocuments entry can carry its own "steps" array (currently
+// cs-ma-revenue-options-claim-rule-signoff-2026,
+// cs-ma-land-user-or-land-cover-not-compatible-signoff-2026 and
+// cs-revenue-claims-processing-final-payment-guide do) — when it does, that
 // replaces the generic placeholder content entirely, and which step is
 // showing is server-side state driven by ?step=, not client-side JS like the
 // generic flow's Back/Next. req.query.step is clamped to a valid step
 // number, defaulting to 1, so an out-of-range or missing/non-numeric step
 // never breaks the page.
+//
+// "steps" comes in two shapes. The original, still used by the two
+// cs-ma-*-2026 documents, is flat: one step per array entry, each with its
+// own body — customSteps/currentStep below are that array and its current
+// entry, unchanged from how this route has always worked. The newer nested
+// shape (cs-revenue-claims-processing-final-payment-guide) groups smaller
+// sub-steps under each top-level section as a "parts" array — detected by
+// the first step having its own "parts" array rather than a "body". That
+// gets flattened here into customParts (every part in section order, each
+// carrying its own section's number/name alongside its own partName/
+// heading/body) plus customSections (just the 4 section names, with each
+// one's firstPartNumber, for the sidebar — see saved-document-view.html).
+// currentStep/stepNumber/totalSteps then refer to a *part* rather than a
+// whole section, so Back/Next (which only ever move stepNumber by 1) walk
+// through every part in every section in one continuous sequence, crossing
+// from one section's last part into the next section's first part exactly
+// the same way they already move between sections in the flat shape.
+//
+// Back now returns to this document's own document-overview.html (rather
+// than /find-guidance) — the same page "Open" there was clicked from, with
+// whichever ?from= it arrived with (search/find-guidance/none) carried
+// straight through, so that page's own breadcrumb trail is exactly as it
+// was. document-overview.html/:id is a valid destination for every id this
+// route ever sees, so this never needs a further fallback of its own.
 router.get('/find-guidance/document/:id', (req, res) => {
   const guidanceDocument = guidanceDocuments.find((candidate) => candidate.id === req.params.id)
   const legacyDocument =
     savedDocuments.find((candidate) => candidate.id === req.params.id) ||
     searchResults.find((candidate) => candidate.id === req.params.id)
 
-  res.locals.backHref = '/find-guidance'
+  res.locals.backHref = '/document-overview/' + req.params.id + (req.query.from ? '?from=' + req.query.from : '')
 
   const documentName = guidanceDocument
     ? guidanceDocument.title
@@ -291,7 +488,59 @@ router.get('/find-guidance/document/:id', (req, res) => {
   // guidanceDocuments[0].version for a genuinely unmatched id.
   const version = guidanceDocument ? guidanceDocument.version : guidanceDocuments[0].version
 
+  // Tracks this as a "recently opened" document — but only on the actual
+  // entry into it (the "Open" button on document-overview.html links here
+  // with no ?step=), not on every subsequent Back/Next/sidebar/dropdown/
+  // search navigation between its own steps, which all stay on this same
+  // route with a ?step= of their own. A legacy savedDocuments/searchResults
+  // id with no guidanceDocuments match is never tracked, since
+  // buildFindGuidanceRows (see the /find-guidance route above) would just
+  // skip it anyway.
+  if (guidanceDocument && !req.query.step) {
+    addRecentlyOpened(req, guidanceDocument.id)
+  }
+
   if (guidanceDocument && guidanceDocument.steps) {
+    const isNestedSteps = Array.isArray(guidanceDocument.steps[0].parts)
+
+    if (isNestedSteps) {
+      const customParts = []
+      const customSections = guidanceDocument.steps.map((section) => {
+        const firstPartNumber = customParts.length + 1
+        section.parts.forEach((part) => {
+          customParts.push({
+            partNumber: customParts.length + 1,
+            sectionNumber: section.sectionNumber,
+            sectionName: section.sectionName,
+            partName: part.partName,
+            heading: part.heading,
+            body: part.body
+          })
+        })
+        return {
+          sectionNumber: section.sectionNumber,
+          sectionName: section.sectionName,
+          firstPartNumber
+        }
+      })
+
+      const totalSteps = customParts.length
+      const requestedStep = parseInt(req.query.step, 10)
+      const stepNumber = requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
+
+      res.render('saved-document-view', {
+        id: req.params.id,
+        documentName,
+        version,
+        customParts,
+        customSections,
+        currentStep: customParts[stepNumber - 1],
+        stepNumber,
+        totalSteps
+      })
+      return
+    }
+
     const totalSteps = guidanceDocument.steps.length
     const requestedStep = parseInt(req.query.step, 10)
     const stepNumber = requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
@@ -315,16 +564,36 @@ router.get('/find-guidance/document/:id', (req, res) => {
   })
 })
 
-// Search by document name, date or type. The search bar and filters are not
-// wired up to anything real — see app/views/organic-search.html — so this
-// always shows the same fixed set of example results: the guidanceDocuments
-// entries flagged showOnOrganicSearch, not every entry in that file — it
-// also holds a few documents (see find-guidance.html's "Saved guidance" tab)
-// that were never organic-search results to begin with.
+// Search by document name, date or type — now genuinely wired up, entirely
+// client-side (see the script in app/views/organic-search.html): this route
+// still renders the same fixed set of results server-side, unfiltered, so
+// the page has something to show with JS disabled, but resultsJson (a slim
+// id/title/description/version/dates/category/scheme/year copy, dropping
+// the fuller fields like steps/versions this page's own script never needs)
+// is what that script actually searches, filters and sorts against — the
+// guidanceDocuments entries flagged showOnOrganicSearch, not every entry in
+// that file — it also holds a few documents (see find-guidance.html's
+// "Saved guidance" tab) that were never organic-search results to begin
+// with.
 router.get('/find-guidance/organic-search', (req, res) => {
   // No backHref — organic-search.html shows breadcrumbs instead of a Back
   // link now (see the template).
-  res.render('organic-search', { results: guidanceDocuments.filter((document) => document.showOnOrganicSearch) })
+  const organicSearchResults = guidanceDocuments.filter((document) => document.showOnOrganicSearch)
+
+  res.render('organic-search', {
+    results: organicSearchResults,
+    resultsJson: JSON.stringify(organicSearchResults.map((document) => ({
+      id: document.id,
+      title: document.title,
+      description: document.description,
+      version: document.version,
+      lastUpdated: document.lastUpdated,
+      published: document.published,
+      category: document.category,
+      scheme: document.scheme,
+      year: document.year
+    })))
+  })
 })
 
 // A stop between a result on organic-search.html and the document itself
@@ -339,6 +608,10 @@ router.get('/find-guidance/organic-search', (req, res) => {
 // template filter, so the page's own inline script can read both versions'
 // lastUpdated/published/versionNotes and swap between them as the Version
 // dropdown changes — no server round trip needed for a prototype.
+// ?from= (set by whichever page's own link led here — organic-search.html
+// or find-guidance.html) tells the template which breadcrumb trail to show;
+// an unset or unrecognised value falls back to the original fixed one there,
+// so this never breaks for a direct visit.
 router.get('/document-overview/:id', (req, res) => {
   const document =
     guidanceDocuments.find((candidate) => candidate.id === req.params.id) ||
@@ -348,9 +621,28 @@ router.get('/document-overview/:id', (req, res) => {
   // Back link now (see the template).
   res.render('document-overview', {
     document,
+    from: req.query.from,
     defaultVersionKey: document.version === 'Version 1' ? 'version1' : 'version2',
     versionsJson: JSON.stringify(document.versions)
   })
+})
+
+// Server-side counterpart to document-overview.html's "Save to search"
+// button — see the fetch call in its pageScripts block. The button itself
+// still flips to "Saved" and reveals the success notification banner
+// entirely client-side and instantly, with no page reload/wait; this just
+// persists the document into req.session.data.savedGuidance in the
+// background, via addSavedGuidance (see the /find-guidance route far
+// above), so it actually shows up on find-guidance.html's "Saved guidance"
+// tab afterwards, rather than the button's own success state being the only
+// trace it happened. Responds with no body either way — the client-side
+// fetch call doesn't do anything with the response, and there is nothing
+// real to fail here for a prototype.
+router.post('/find-guidance/save-to-search', (req, res) => {
+  if (req.body && req.body.id) {
+    addSavedGuidance(req, req.body.id)
+  }
+  res.status(204).end()
 })
 
 // Search by explaining the problem, rather than by document. See
@@ -1021,4 +1313,597 @@ router.get('/v1/designer/documents/review-complete', (req, res) => {
 // in the view itself, so no session/form logic is needed here.
 router.get('/v2/editor-experiment', (req, res) => {
   res.render('v2/editor-experiment')
+})
+
+// ===========================================================================
+// Version 5 — a duplicate of the v2 (current) prototype's own main flow, at
+// app/views/versions/v5/. See app/views/index.html, the versions list this
+// belongs to. v2 is now frozen from this point on — the same treatment v1
+// already had — so v5 exists as where any further work on this flow
+// continues; v2's own routes and views above are untouched by this block and
+// should not be edited going forward.
+//
+// Every route below is the /v5-prefixed mirror of one specific named set of
+// live routes — sign-in, start, the whole find-guidance/organic-search/
+// document-overview/saved-document-view cluster, and all-guidance-docs/
+// guidance-document(+edit)(+review), plus editor-experiment — not literally
+// everything reachable from "/". "Create or upload guidance" on
+// all-guidance-docs.html, and everything behind it (create-guidance.html,
+// the designer/migrate/* upload wizard, designer/update-existing-guide.html)
+// is intentionally left pointing at its existing shared, unprefixed route —
+// outside the scope of this duplication — so a v5 visitor who goes that far
+// ends up on the shared /all-guidance-docs, not /v5/all-guidance-docs, if
+// they then click Back. Same idea for the designer/documents/findings/*
+// review sub-journey, which neither guidance-document.html nor
+// change-review.html actually link to.
+//
+// Same logic as each live handler, rendering from versions/v5/... instead of
+// the live view and redirecting/linking to other /v5/... paths rather than
+// live ones — deliberately not sharing handler functions with the live
+// routes, same reasoning as v1: a frozen-going-forward v2 should not change
+// behaviour just because this new v5 handler is edited later. Path-free
+// values are reused as-is rather than redefined here, since they are data,
+// not logic that could drift: guidanceDocuments/library/guidedSearches (the
+// data files — explicitly shared per the task this was built from, since v2
+// no longer changes anyway), VERDICTS/TOTAL_REVIEW_ISSUES/
+// DEFAULT_AI_SEARCH_QUERY/DEFAULT_TOTAL_STEPS/DEFAULT_STEP/
+// RECENTLY_OPENED_LIMIT/REMOVE_CONFIRM_TABS (constants), and slugify (a pure
+// function with no paths in it).
+//
+// Not namespaced: session data (recentlyOpened, savedGuidance, verdicts, the
+// AI search query, activeJourney) is shared between v5 and the live pages —
+// both read and write the same session keys, via the same
+// getRecentlyOpened/getSavedGuidance/addRecentlyOpened/addSavedGuidance/
+// getListForTab/touchEntry/buildFindGuidanceRows helper functions above,
+// called directly rather than duplicated. Same simplification v1 already
+// documents above: the point of a snapshot/duplicate is a frozen (or, here,
+// forked-forward) set of pages and links, not isolated persisted state — so
+// opening a document in v5 also marks it recently opened if the live
+// find-guidance.html is opened in the same browser session, and vice versa.
+// ===========================================================================
+
+router.get('/v5/sign-in', (req, res) => {
+  res.render('versions/v5/sign-in')
+})
+
+router.get('/v5/start', (req, res) => {
+  // Starting fresh clears any variant left over from a previous run.
+  delete req.session.data.activeJourney
+  res.render('versions/v5/start')
+})
+
+router.get('/v5/find-guidance', (req, res) => {
+  // No backHref — find-guidance.html shows breadcrumbs instead of a Back
+  // link now (see the template).
+  const recentlyOpenedDocuments = buildFindGuidanceRows(getRecentlyOpened(req))
+  const savedGuidanceDocuments = buildFindGuidanceRows(getSavedGuidance(req))
+
+  res.render('versions/v5/find-guidance', { recentlyOpenedDocuments, savedGuidanceDocuments })
+})
+
+router.get('/v5/find-guidance/new', (req, res) => {
+  res.locals.backHref = '/v5/find-guidance'
+  res.render('versions/v5/find-guidance-new')
+})
+
+router.post('/v5/find-guidance/new', (req, res) => {
+  res.redirect(
+    req.body.searchMethod === 'ai' ? '/v5/find-guidance/ai-search' : '/v5/find-guidance/organic-search'
+  )
+})
+
+router.get('/v5/find-guidance/remove-confirm', (req, res) => {
+  const document = guidanceDocuments.find((candidate) => candidate.id === req.query.id)
+  const tab = REMOVE_CONFIRM_TABS[req.query.tab]
+
+  res.locals.backHref = '/v5/find-guidance'
+  res.render('versions/v5/delete-search-confirm', {
+    documentId: req.query.id,
+    tabParam: req.query.tab,
+    documentTitle: document ? document.title : null,
+    listName: tab ? tab.listName : null,
+    returnHref: tab ? '/v5/find-guidance#' + tab.anchor : '/v5/find-guidance'
+  })
+})
+
+router.post('/v5/find-guidance/remove', (req, res) => {
+  const tab = REMOVE_CONFIRM_TABS[req.body.tab]
+  const list = getListForTab(req, req.body.tab)
+
+  if (list && req.body.id) {
+    const index = list.findIndex((entry) => entry.id === req.body.id)
+    if (index !== -1) list.splice(index, 1)
+  }
+
+  res.redirect(tab ? '/v5/find-guidance#' + tab.anchor : '/v5/find-guidance')
+})
+
+router.get('/v5/find-guidance/document/:id', (req, res) => {
+  const guidanceDocument = guidanceDocuments.find((candidate) => candidate.id === req.params.id)
+  const legacyDocument =
+    savedDocuments.find((candidate) => candidate.id === req.params.id) ||
+    searchResults.find((candidate) => candidate.id === req.params.id)
+
+  res.locals.backHref = '/v5/document-overview/' + req.params.id + (req.query.from ? '?from=' + req.query.from : '')
+
+  const documentName = guidanceDocument
+    ? guidanceDocument.title
+    : legacyDocument ? legacyDocument.name : guidanceDocuments[0].title
+  const version = guidanceDocument ? guidanceDocument.version : guidanceDocuments[0].version
+
+  if (guidanceDocument && !req.query.step) {
+    addRecentlyOpened(req, guidanceDocument.id)
+  }
+
+  if (guidanceDocument && guidanceDocument.steps) {
+    const isNestedSteps = Array.isArray(guidanceDocument.steps[0].parts)
+
+    if (isNestedSteps) {
+      const customParts = []
+      const customSections = guidanceDocument.steps.map((section) => {
+        const firstPartNumber = customParts.length + 1
+        section.parts.forEach((part) => {
+          customParts.push({
+            partNumber: customParts.length + 1,
+            sectionNumber: section.sectionNumber,
+            sectionName: section.sectionName,
+            partName: part.partName,
+            heading: part.heading,
+            body: part.body
+          })
+        })
+        return {
+          sectionNumber: section.sectionNumber,
+          sectionName: section.sectionName,
+          firstPartNumber
+        }
+      })
+
+      const totalSteps = customParts.length
+      const requestedStep = parseInt(req.query.step, 10)
+      const stepNumber = requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
+
+      res.render('versions/v5/saved-document-view', {
+        id: req.params.id,
+        documentName,
+        version,
+        customParts,
+        customSections,
+        currentStep: customParts[stepNumber - 1],
+        stepNumber,
+        totalSteps,
+        documents: genericGuidanceContent
+      })
+      return
+    }
+
+    const totalSteps = guidanceDocument.steps.length
+    const requestedStep = parseInt(req.query.step, 10)
+    const stepNumber = requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
+
+    res.render('versions/v5/saved-document-view', {
+      id: req.params.id,
+      documentName,
+      version,
+      customSteps: guidanceDocument.steps,
+      currentStep: guidanceDocument.steps[stepNumber - 1],
+      stepNumber,
+      totalSteps,
+      documents: genericGuidanceContent
+    })
+    return
+  }
+
+  res.render('versions/v5/saved-document-view', {
+    id: req.params.id,
+    documentName,
+    version,
+    documents: genericGuidanceContent
+  })
+})
+
+router.get('/v5/find-guidance/organic-search', (req, res) => {
+  // No backHref — organic-search.html shows breadcrumbs instead of a Back
+  // link now (see the template).
+  const organicSearchResults = guidanceDocuments.filter((document) => document.showOnOrganicSearch)
+
+  res.render('versions/v5/organic-search', {
+    results: organicSearchResults,
+    // Pre-fills and immediately applies the search box on find-guidance.html
+    // (?q=, a plain GET <form> there — see that template) — the template's
+    // own script reads this same value back off the pre-filled input rather
+    // than this being passed to it directly, so a direct visit with no q
+    // behaves exactly as before (empty string, nothing pre-applied).
+    initialSearchQuery: (req.query.q || '').trim(),
+    resultsJson: JSON.stringify(organicSearchResults.map((document) => ({
+      id: document.id,
+      title: document.title,
+      description: document.description,
+      version: document.version,
+      lastUpdated: document.lastUpdated,
+      published: document.published,
+      category: document.category,
+      scheme: document.scheme,
+      year: document.year
+    })))
+  })
+})
+
+router.get('/v5/document-overview/:id', (req, res) => {
+  const document =
+    guidanceDocuments.find((candidate) => candidate.id === req.params.id) ||
+    guidanceDocuments[0]
+
+  // No backHref — document-overview.html shows breadcrumbs instead of a
+  // Back link now (see the template).
+  res.render('versions/v5/document-overview', {
+    document,
+    from: req.query.from,
+    defaultVersionKey: document.version === 'Version 1' ? 'version1' : 'version2',
+    versionsJson: JSON.stringify(document.versions)
+  })
+})
+
+router.post('/v5/find-guidance/save-to-search', (req, res) => {
+  if (req.body && req.body.id) {
+    addSavedGuidance(req, req.body.id)
+  }
+  res.status(204).end()
+})
+
+router.get('/v5/find-guidance/ai-search', (req, res) => {
+  res.locals.backHref = '/v5/find-guidance/new'
+  res.render('versions/v5/ai-search')
+})
+
+router.post('/v5/find-guidance/ai-search-loading', (req, res) => {
+  req.session.data.aiSearchQuery = (req.body.query || '').trim()
+  res.redirect('/v5/find-guidance/ai-search-loading')
+})
+
+router.get('/v5/find-guidance/ai-search-loading', (req, res) => {
+  res.render('versions/v5/ai-search-loading')
+})
+
+function renderV5AiSearchResults (req, res) {
+  const search = guidedSearches.find((candidate) => candidate.id === req.params.id)
+  const id = search ? search.id : 'new'
+  const totalSteps = search ? search.totalSteps : DEFAULT_TOTAL_STEPS
+  const startingStep = search ? search.resumeStep : DEFAULT_STEP
+
+  const step = Math.min(
+    Math.max(Number(req.params.step) || startingStep, 1),
+    totalSteps
+  )
+
+  res.render('versions/v5/ai-search-results', {
+    id,
+    step,
+    totalSteps,
+    query: req.session.data.aiSearchQuery || DEFAULT_AI_SEARCH_QUERY,
+    backHref:
+      step > 1
+        ? `/v5/find-guidance/ai-search-results/${id}/${step - 1}`
+        : (search ? '/v5/find-guidance' : '/v5/find-guidance/ai-search'),
+    backLinkHref: '/v5/find-guidance',
+    backLinkText: 'Back to your searches',
+    completeHref:
+      step < totalSteps ? `/v5/find-guidance/ai-search-results/${id}/${step + 1}` : '/v5/find-guidance'
+  })
+}
+
+router.get('/v5/find-guidance/ai-search-results', renderV5AiSearchResults)
+router.get('/v5/find-guidance/ai-search-results/:id', renderV5AiSearchResults)
+router.get('/v5/find-guidance/ai-search-results/:id/:step', renderV5AiSearchResults)
+
+// Manage guidance (v5 only) — the "Editing"/"Awaiting approval" rows shared
+// by GET /v5/all-guidance-docs below, its search results page (GET
+// /v5/manage-guidance-search) and its document overview page (GET
+// /v5/manage-guidance/document-overview). Each row is a real
+// guidance-documents.js document now — looked up here by title, for its id
+// (the Document name link's ?id=, and what /v5/guidance-document/:id/edit
+// is built from) and version (the Version column/tag) — rather than the
+// placeholder names this page originally had.
+//
+// publishingChecks/changesRequested/lastModified are all still placeholder
+// values, not real quality-check/edit-history data: each list below
+// carries the exact same publishingChecks/changesRequested this function
+// always returned, at the exact same position, just relabelled onto a real
+// title rather than reshuffled — row 1 of Editing was 19 issues/0 changes
+// requested before real titles replaced the placeholder names here, and
+// still is. Only all-guidance-docs.html/manage-guidance-search.html's own
+// shared table macro actually shows lastModified now (Document name |
+// Version | Last modified, replacing the Publishing checks/Changes
+// requested columns there) — publishingChecks/changesRequested are kept on
+// every row regardless, since /v5/manage-guidance/document-overview.html's
+// own summary list still shows both of those, unchanged by this.
+//
+// "Hedgerow management standards" (Awaiting approval, row 3) did not exist
+// in guidance-documents.js before an earlier change — see the entry added
+// there (right after sfi-soil-health-actions), added specifically so this
+// row has a real version to look up rather than an invented one, the same
+// as every other row here.
+function lookupGuidanceDocumentByTitle (title) {
+  const document = guidanceDocuments.find((candidate) => candidate.title === title)
+  if (!document) throw new Error(`buildManageGuidanceRows: no guidance-documents.js entry titled "${title}"`)
+  return document
+}
+
+// Ids removed from the Editing tab via "Remove" (there is no equivalent
+// action on Awaiting approval) — session-backed, the same
+// seed-on-first-read/persist-for-the-rest-of-the-session approach
+// find-guidance.html's own recentlyOpened/savedGuidance already use (see
+// getRecentlyOpened/getSavedGuidance above), just simpler: a list of
+// removed ids to filter *out* of the Editing list every time it is built,
+// rather than the list itself, since Editing's own rows are always
+// rebuilt fresh from guidanceDocuments/the fixed placeholder counts above
+// rather than kept in session as data.
+function getRemovedEditingIds (req) {
+  if (!req.session.data.manageGuidanceEditingRemovedIds) {
+    req.session.data.manageGuidanceEditingRemovedIds = []
+  }
+  return req.session.data.manageGuidanceEditingRemovedIds
+}
+
+function buildManageGuidanceRows (req) {
+  const editing = [
+    { title: 'CS MA Claim - Revenue Options Claim Rule at Signoff 2026', publishingChecks: 19, changesRequested: 0, lastModified: '6 September 2026' },
+    { title: 'CS MA Claim - Land User or Land Cover not compatible with Option at Signoff 2026', publishingChecks: 8, changesRequested: 0, lastModified: '5 September 2026' },
+    { title: 'CS MA Claim - Agreement Level Options not Verified 2026', publishingChecks: 34, changesRequested: 0, lastModified: '3 September 2026' },
+    { title: 'CS MA Claim - Claim Refresh Signoff Check 2026', publishingChecks: 1, changesRequested: 0, lastModified: '1 September 2026' },
+    { title: 'CS MA - Evidence Required', publishingChecks: 7, changesRequested: 0, lastModified: '30 August 2026' },
+    { title: 'CS MA - Parcel not Under Control of SBI at Signoff 2026', publishingChecks: 0, changesRequested: 0, lastModified: '28 August 2026' },
+    { title: 'CS MA Claim - AB12 or OP3 Maximum Eligible Weight 2026', publishingChecks: 3, changesRequested: 2, lastModified: '25 August 2026' },
+    { title: 'CS MA Claim - Existing 2026', publishingChecks: 0, changesRequested: 0, lastModified: '20 August 2026' },
+    { title: 'CS Revenue Claims Processing to Final Payment Guide', publishingChecks: 5, changesRequested: 1, lastModified: '7 September 2026' }
+  ]
+
+  const awaitingApproval = [
+    { title: 'Countryside Stewardship: capital grants', publishingChecks: 0, changesRequested: 0, lastModified: '18 August 2026' },
+    { title: 'Basic Payment Scheme: closing rules', publishingChecks: 2, changesRequested: 1, lastModified: '15 August 2026' },
+    { title: 'Hedgerow management standards', publishingChecks: 0, changesRequested: 0, lastModified: '10 August 2026' },
+    { title: 'Sustainable Farming Incentive: soil health actions', publishingChecks: 4, changesRequested: 1, lastModified: '5 August 2026' }
+  ]
+
+  const buildRows = (entries) => entries.map((entry) => {
+    const document = lookupGuidanceDocumentByTitle(entry.title)
+    return {
+      id: document.id,
+      name: document.title,
+      version: document.version,
+      publishingChecks: entry.publishingChecks,
+      changesRequested: entry.changesRequested,
+      lastModified: entry.lastModified
+    }
+  })
+
+  const removedEditingIds = getRemovedEditingIds(req)
+
+  return {
+    editingDocuments: buildRows(editing).filter((document) => removedEditingIds.indexOf(document.id) === -1),
+    awaitingApprovalDocuments: buildRows(awaitingApproval)
+  }
+}
+
+router.get('/v5/all-guidance-docs', (req, res) => {
+  // No backHref — all-guidance-docs.html shows breadcrumbs instead of a
+  // Back link now (see the template).
+  const { editingDocuments, awaitingApprovalDocuments } = buildManageGuidanceRows(req)
+
+  res.render('versions/v5/all-guidance-docs', { editingDocuments, awaitingApprovalDocuments })
+})
+
+// The search box on all-guidance-docs.html, directly below "Create or
+// upload guidance" — a plain GET <form>, same reasoning as the one on
+// find-guidance.html: it only ever needs to hand a term off to this page,
+// not filter anything itself, so Enter/Search both just submit it
+// natively. Matches on document name only (a case-insensitive substring
+// match), across both Editing and Awaiting approval — Published is not
+// searched either, since it is not shown on this page any more. An empty
+// q shows no results rather than matching everything.
+router.get('/v5/manage-guidance-search', (req, res) => {
+  const query = (req.query.q || '').trim()
+  const { editingDocuments, awaitingApprovalDocuments } = buildManageGuidanceRows(req)
+  const allDocuments = editingDocuments.concat(awaitingApprovalDocuments)
+
+  const results = query
+    ? allDocuments.filter((document) => document.name.toLowerCase().includes(query.toLowerCase()))
+    : []
+
+  res.locals.backHref = '/v5/all-guidance-docs'
+  res.render('versions/v5/manage-guidance-search', { query, results })
+})
+
+// The overview a Document name link on all-guidance-docs.html/
+// manage-guidance-search.html now leads to, instead of straight into Edit
+// or the old Action column's buttons — a stop in between that shows what
+// the document is (Publishing checks/Changes requested/Status) and links
+// on to both "Continue editing" and "Start Checks" from there, rather than
+// replacing either. ?id= is looked up against the exact same
+// buildManageGuidanceRows() rows the two tables render, in both lists (an
+// id can only be in one of them, but checking both rather than assuming
+// which saves the caller from having to say). status is worked out from
+// which list actually matched, not stored on the row itself. An id that
+// matches neither — a stale/mistyped link — redirects back to
+// /v5/all-guidance-docs rather than erroring or showing a broken page.
+router.get('/v5/manage-guidance/document-overview', (req, res) => {
+  const { editingDocuments, awaitingApprovalDocuments } = buildManageGuidanceRows(req)
+
+  const editingMatch = editingDocuments.find((candidate) => candidate.id === req.query.id)
+  const awaitingApprovalMatch = awaitingApprovalDocuments.find((candidate) => candidate.id === req.query.id)
+  const document = editingMatch || awaitingApprovalMatch
+
+  if (!document) {
+    res.redirect('/v5/all-guidance-docs')
+    return
+  }
+
+  // No backHref — the template shows a breadcrumb back to Manage guidance
+  // instead of a Back link.
+  res.render('versions/v5/manage-guidance/document-overview', {
+    document,
+    status: editingMatch ? 'Editing' : 'Awaiting approval'
+  })
+})
+
+// Confirms removing a row from the Editing tab on all-guidance-docs.html —
+// reached from that table's own "Remove" links (Awaiting approval has no
+// such link), which carry ?id=. Only looks the id up against
+// editingDocuments, not awaitingApprovalDocuments too — unlike
+// /v5/manage-guidance/document-overview above, an Awaiting approval id
+// reaching this page is exactly as unmatched as one that does not exist at
+// all, since there is nothing here for it to remove. A direct visit with
+// no id, or one that matches nothing, leaves documentTitle undefined, so
+// the generic fallback in the template is shown instead of erroring.
+router.get('/v5/manage-guidance/remove-confirm', (req, res) => {
+  const { editingDocuments } = buildManageGuidanceRows(req)
+  const document = editingDocuments.find((candidate) => candidate.id === req.query.id)
+
+  res.locals.backHref = '/v5/all-guidance-docs'
+  res.render('versions/v5/manage-guidance/remove-confirm', {
+    documentId: req.query.id,
+    documentTitle: document ? document.name : null
+  })
+})
+
+// "Yes, remove" on remove-confirm.html above — adds id to
+// req.session.data.manageGuidanceEditingRemovedIds (via
+// getRemovedEditingIds, used by buildManageGuidanceRows() every time it
+// builds the Editing list), so the document is filtered out of the count
+// and table on every subsequent visit this session — then back to
+// all-guidance-docs.html at the Editing tab's own #editing anchor
+// (govuk-frontend's tabs.js selects whichever tab's id matches
+// location.hash on load). A POST with no id is simply a no-op redirect,
+// same graceful handling as find-guidance.html's equivalent route.
+router.post('/v5/manage-guidance/remove', (req, res) => {
+  if (req.body.id) {
+    const removedIds = getRemovedEditingIds(req)
+    if (removedIds.indexOf(req.body.id) === -1) removedIds.push(req.body.id)
+  }
+
+  res.redirect('/v5/all-guidance-docs#editing')
+})
+
+router.get('/v5/guidance-document/:id', (req, res) => {
+  // No backHref — guidance-document.html shows breadcrumbs instead of a
+  // Back link now (see the template).
+  res.render('versions/v5/guidance-document')
+})
+
+router.get('/v5/guidance-document/:id/edit', (req, res) => {
+  const uploaded = library.batch.find((document) => slugify(document.name) === req.params.id)
+
+  res.locals.backHref = '/v5/all-guidance-docs'
+  res.render('versions/v5/guidance-document-edit', {
+    documentName: uploaded ? uploaded.name : library.current.name,
+    documentPages: uploaded ? uploaded.pages : library.current.pages
+  })
+})
+
+function renderV5ChangeReview (req, res) {
+  const id = req.params.id
+  const issueNumber = Math.min(
+    Math.max(Number(req.params.issueNumber) || 1, 1),
+    TOTAL_REVIEW_ISSUES
+  )
+
+  res.locals.backHref = `/v5/guidance-document/${id}`
+
+  res.render('versions/v5/change-review', {
+    issueNumber,
+    totalIssues: TOTAL_REVIEW_ISSUES,
+    previousIssueHref:
+      issueNumber > 1 ? `/v5/guidance-document/${id}/review/${issueNumber - 1}` : null,
+    nextIssueHref:
+      issueNumber < TOTAL_REVIEW_ISSUES ? `/v5/guidance-document/${id}/review/${issueNumber + 1}` : null
+  })
+}
+
+router.get('/v5/guidance-document/:id/review', renderV5ChangeReview)
+router.get('/v5/guidance-document/:id/review/:issueNumber', renderV5ChangeReview)
+
+// Flattens a guidanceDocuments entry's own content into one entry per
+// editor-experiment.html section, in one consistent shape regardless of
+// which of the three content formats this prototype has (see
+// app/views/versions/v5/saved-document-view.html for the same three
+// shapes handled the same way, just for that page's own step-by-step view
+// rather than one continuous scroll here): id (section-1, section-2, ...,
+// matching the sidebar's #section-N anchors and the Comments/Checks
+// panel's data-target-section values), name (the sidebar link text),
+// heading (the h2 inside the content itself — the same text as name for
+// every shape here, but kept as its own field for parity with the other
+// two shapes, where a future document could reasonably want them to
+// differ) and body (an array of paragraph strings/bullet-list arrays, the
+// same shape saved-document-view.html's own step/part bodies already are).
+// Returns null for a document with no content this route knows how to
+// render at all (guidanceDocument itself not found) — the route below
+// falls back to the fixed sample content for that, not this function.
+function buildEditorSections (guidanceDocument) {
+  if (guidanceDocument.steps && guidanceDocument.steps.length) {
+    const isNestedSteps = Array.isArray(guidanceDocument.steps[0].parts)
+
+    if (isNestedSteps) {
+      const sections = []
+      guidanceDocument.steps.forEach((section) => {
+        section.parts.forEach((part) => {
+          sections.push({
+            id: `section-${sections.length + 1}`,
+            name: part.partName,
+            heading: part.heading,
+            body: part.body
+          })
+        })
+      })
+      return sections
+    }
+
+    return guidanceDocument.steps.map((step, index) => ({
+      id: `section-${index + 1}`,
+      name: step.sectionName,
+      heading: step.heading,
+      body: step.body
+    }))
+  }
+
+  // The generic 3-phase placeholder flow — genericGuidanceContent falls
+  // back to countryside-stewardship-capital-grants for an id with no
+  // entry of its own, same as saved-document-view.html's own lookup.
+  const genericDocument = genericGuidanceContent[guidanceDocument.id] || genericGuidanceContent['countryside-stewardship-capital-grants']
+  const sections = []
+  genericDocument.sections.forEach((section) => {
+    section.subsections.forEach((subsection) => {
+      sections.push({
+        id: `section-${sections.length + 1}`,
+        name: subsection.heading,
+        heading: subsection.heading,
+        body: subsection.content
+      })
+    })
+  })
+  return sections
+}
+
+// Same standalone design experiment as /v2/editor-experiment above, but
+// driven by whichever document ?id= names (the destination of "Continue
+// editing" on /v5/manage-guidance/document-overview.html) rather than
+// always showing the same fixed "SFI 23 Guidance document" sample —
+// documentTitle/editorSections, built above, replace the page heading and
+// every section in the sidebar/editable content area; the sample Comments/
+// Checks in the Changes panel are unaffected; that data is not
+// document-specific either before or after this change. A direct visit
+// with no ?id=, or one that matches no guidance-documents.js entry, falls
+// back to rendering with neither variable set — see the template, which
+// then shows the exact same fixed sample content it always has.
+router.get('/v5/editor-experiment', (req, res) => {
+  const guidanceDocument = guidanceDocuments.find((candidate) => candidate.id === req.query.id)
+
+  if (!guidanceDocument) {
+    res.render('versions/v5/editor-experiment')
+    return
+  }
+
+  res.render('versions/v5/editor-experiment', {
+    documentTitle: guidanceDocument.title,
+    editorSections: buildEditorSections(guidanceDocument)
+  })
 })

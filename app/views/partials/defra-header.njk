@@ -25,10 +25,22 @@
         </a>
       </div>
       {#
-        Not wired up yet — no sign-in page exists, so this is a placeholder
-        href until one is built.
+        v1 (isV1, set in app/routes.js for every /v1/... path) keeps the
+        original, still-unwired "Sign in" placeholder — v1 has no sign-in
+        page of its own. /v5/sign-in itself (isV5SignIn) reads the same way
+        — a visitor there has not signed in yet, so "Sign out" would be
+        inconsistent. Every other v5 page (isV5, reached only after
+        clicking "Sign in with your Defra account" on that page) reads
+        "Sign out" and links to /v5/sign-in. v2/everything else keeps
+        "Sign out" → /v2/sign-in exactly as before.
       #}
-      <a href="#" class="defra-header__sign-in">Sign in</a>
+      {% if isV1 or isV5SignIn %}
+        <a href="#" class="defra-header__sign-in">Sign in</a>
+      {% elif isV5 %}
+        <a href="/v5/sign-in" class="defra-header__sign-in">Sign out</a>
+      {% else %}
+        <a href="/v2/sign-in" class="defra-header__sign-in">Sign out</a>
+      {% endif %}
     </div>
   </div>
 </header>
