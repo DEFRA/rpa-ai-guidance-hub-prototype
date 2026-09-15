@@ -1,32 +1,53 @@
 {#
   A guidance document's overview from the "Manage guidance" side of the hub
-  (v5 only) — what a Document name link on all-guidance-docs.html or
-  manage-guidance-search.html now leads to, rather than straight into Edit
-  or a row's old Action buttons. GET /v5/manage-guidance/document-overview
-  ?id=, see that route in app/routes.js: document (id/name/
-  publishingChecks/changesRequested) and status ("Editing"/"Awaiting
-  approval", worked out there from which list the id matched) are the only
-  two things this page needs.
+  (v5 only) — what a Document name link on all-guidance-docs.html,
+  manage-guidance-search.html or search-guidance.html now leads to, rather
+  than straight into Edit or a row's old Action buttons. GET
+  /v5/manage-guidance/document-overview?id=, see that route in
+  app/routes.js: document and status ("Editing"/"Awaiting approval"/
+  "Published", worked out there from which list — or, for a sample
+  Published document, MANAGE_GUIDANCE_PUBLISHED_SAMPLES — the id matched)
+  are the only two things this page needs, though which other fields
+  document actually carries differs by status; see the two branches below.
 
   Styled the same way as the find-guidance side's own document-overview.html
   — breadcrumb, h1, a govukSummaryList of label/value rows, a button at the
-  bottom — but no description paragraph: unlike a guidance-documents.js
-  entry, nothing in app/routes.js's buildManageGuidanceRows() has any real
-  description text to show, and inventing filler for it would read as more
-  content than there really is.
+  bottom — but no description paragraph even on the Published branch,
+  which otherwise mirrors that page's own Version/Version notes/Last
+  updated/Published rows: unlike a guidance-documents.js entry, nothing in
+  app/routes.js's buildManageGuidanceRows()/MANAGE_GUIDANCE_PUBLISHED_SAMPLES
+  has any real description text to show, and inventing filler for it would
+  read as more content than there really is.
 
-  This is a new stop in between, not a replacement for either destination
-  it links to: "Continue editing" goes to /v5/editor-experiment?id=
-  document.id — that route (app/routes.js) looks the id up in
-  guidance-documents.js and renders that document's own content into the
-  editor, rather than the fixed "SFI 23 Guidance document" sample it showed
-  before this page existed — and stays the sole button at the bottom of the
-  page. "View issues" (only shown once a simulated check run below
-  completes) goes to the same shared placeholder document
-  (guidance-document.html for sfi-23) every Start Checks/Open action on
-  this page's tables already pointed at before this change — the href is
-  real and functional, it just does not need to differ per document for
-  this prototype.
+  status == "Published" is its own branch, not just a variant of the
+  Editing/Awaiting approval one below — different rows (Version/Version
+  notes/Last updated/Published, not Publishing checks/Changes
+  requested/Status), a govukInsetText warning that starting to edit moves
+  it into Draft, and "Start editing" (a real POST to
+  /v5/manage-guidance/start-editing, not a plain link — it needs to change
+  session state before it goes anywhere) in place of "Continue editing".
+  "Start editing" adds this id to
+  req.session.data.manageGuidanceEditingAddedIds (see that route) and
+  redirects straight into the editor; a later visit to this same page for
+  the same id then hits the editingMatch branch in the route instead (its
+  buildManageGuidanceRows() now includes it), so it renders the ordinary
+  Editing layout below from then on, not this one — "Draft"/"Editing" here
+  are the same thing, just named differently in two different places
+  (search-guidance.html's State filter says "Draft", this page's own
+  Status row says "Editing", matching what it already said before a
+  document could ever arrive here by this route).
+
+  For an Editing/Awaiting approval document (the original, still-default
+  branch): "Continue editing" goes to /v5/editor-experiment?id=document.id
+  — that route (app/routes.js) looks the id up in guidance-documents.js and
+  renders that document's own content into the editor, rather than the
+  fixed "SFI 23 Guidance document" sample it showed before this page
+  existed — and stays the sole button at the bottom of the page. "View
+  issues" (only shown once a simulated check run below completes) goes to
+  the same shared placeholder document (guidance-document.html for sfi-23)
+  every Start Checks/Open action on this page's tables already pointed at
+  before this change — the href is real and functional, it just does not
+  need to differ per document for this prototype.
 
   The Publishing checks row (.app-manage-guidance-checks-row,
   _app-manage-guidance.scss) is three states inside one
@@ -68,8 +89,19 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
 
 {% set pageName = document.name %}
+
+{#
+  Bare number, same convention as all-guidance-docs.html/search-guidance.html
+  — a "Version" row/column header already gives it context.
+#}
+{% set versionTags = {
+  "Version 1": { text: "1", classes: "govuk-tag--green" },
+  "Version 2": { text: "2", classes: "govuk-tag--purple" }
+} %}
 
 {% set checksValue %}
   <div data-checks-cell data-issue-count="{{ document.publishingChecks }}">
@@ -115,7 +147,6 @@
     {{ govukBreadcrumbs({
       classes: "govuk-!-margin-bottom-6",
       items: [
-        { text: "Guidance hub", href: "/v5/start" },
         { text: "Manage guidance", href: "/v5/all-guidance-docs" },
         { text: document.name }
       ]
@@ -128,29 +159,68 @@
 
     <h1 class="govuk-heading-l">{{ document.name }}</h1>
 
-    {{ govukSummaryList({
-      rows: [
-        {
-          key: { text: "Publishing checks" },
-          value: { html: checksValue }
-        },
-        {
-          key: { text: "Changes requested" },
-          value: { text: changesValue }
-        },
-        {
-          key: { text: "Status" },
-          value: { html: statusValue }
-        }
-      ]
-    }) }}
+    {% if status == "Published" %}
 
-    <div class="govuk-button-group">
-      {{ govukButton({
-        text: "Continue editing",
-        href: "/v5/editor-experiment?id=" + document.id
+      {% set versionCell %}{{ govukTag(versionTags[document.version]) }}{% endset %}
+      {{ govukSummaryList({
+        rows: [
+          {
+            key: { text: "Version" },
+            value: { html: versionCell }
+          },
+          {
+            key: { text: "Version notes" },
+            value: { text: document.versionNotes }
+          },
+          {
+            key: { text: "Last updated" },
+            value: { text: document.lastUpdated }
+          },
+          {
+            key: { text: "Published" },
+            value: { text: document.published }
+          }
+        ]
       }) }}
-    </div>
+
+      {{ govukInsetText({
+        text: "Starting to edit this guidance will change its status from Published to Draft, and it will be added to your Editing list on the Manage guidance page."
+      }) }}
+
+      <form method="post" action="/v5/manage-guidance/start-editing">
+        <input type="hidden" name="id" value="{{ document.id }}">
+        <div class="govuk-button-group">
+          {{ govukButton({ text: "Start editing" }) }}
+        </div>
+      </form>
+
+    {% else %}
+
+      {{ govukSummaryList({
+        rows: [
+          {
+            key: { text: "Publishing checks" },
+            value: { html: checksValue }
+          },
+          {
+            key: { text: "Changes requested" },
+            value: { text: changesValue }
+          },
+          {
+            key: { text: "Status" },
+            value: { html: statusValue }
+          }
+        ]
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Continue editing",
+          href: "/v5/editor-experiment?id=" + document.id
+        }) }}
+      </div>
+
+    {% endif %}
 
   </div>
 </div>

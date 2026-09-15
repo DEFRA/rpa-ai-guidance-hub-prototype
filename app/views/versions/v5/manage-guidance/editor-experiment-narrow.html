@@ -1,77 +1,49 @@
 {#
-  Started as a fully standalone design experiment with no links in — now
-  also the destination of "Continue editing" on
-  /v5/manage-guidance/document-overview.html, at
-  /v5/editor-experiment?id=<a guidance-documents.js id>. documentTitle/
-  editorSections (app/routes.js) replace the page heading and every
-  section here with that document's own title/content when a real id
-  matches; a direct visit with neither set (no ?id=, or one matching
-  nothing) still renders the exact same fixed "SFI 23 Guidance document"
-  sample this page always has — see the {% if editorSections %} branch
-  further down. Comments/Checks in the Changes panel stay hardcoded sample
-  data regardless — not part of this change, per the task it was built
-  from — so this route does not touch session data either way, only
-  guidance-documents.js/generic-guidance-content.js when editorSections is
-  actually being built.
+  Narrow-container comparison duplicate of /v5/editor-experiment
+  (app/views/versions/v5/editor-experiment.html) — same content, same
+  three-column layout (Content nav / editor / Changes panel), identical
+  pageScripts, only the outer container differs: no .app-experiment-page
+  full-width breakout here, so the whole page sits inside the standard
+  govuk-width-container/govuk-main-wrapper the layout already provides —
+  the exact same container width, side margins and top padding as
+  /v5/document-overview.html, which uses that same default, unoverridden
+  container.
 
-  Layout: Content sidebar (left) and a single bordered box (right) split
-  into an editor pane and a Changes pane, divided by one vertical border
-  rather than two separate boxes — this was already true before the
-  "merge Comments/Checks into one container" update (.app-experiment-box
-  has always been the one shared border; .app-experiment-changes'
-  border-left is the only internal divider), so that update changed
-  nothing about the box/border CSS itself, only how the Comments tab's own
-  content is laid out inside it — see the floating-comments comment below.
-  Comments and Checks are two tabs inside the Changes pane — hand-rolled
-  rather than govukTabs(), since that macro pipes each panel through
-  Nunjucks' indent() filter (a known issue with markdown/code-like content
-  elsewhere in this prototype) and these tabs also need a different look
-  (underline, not boxed) to the ones used elsewhere, so reusing that
-  markup pattern would not fit anyway.
-
-  Clicking a comment's header still highlights the *section* it's linked
-  to (data-target-section) and scrolls the editor pane there — unchanged.
-  Every comment now always renders fully expanded (thread and reply box
-  both permanently visible, no collapse/reveal step) — see the Comments
-  panel comment further down for what that replaced.
-
-  The sidebar's active item (Overview) is a fixed example of what that
-  state looks like, not something the page keeps in sync with real scroll
-  position — nothing here reads scroll position for the *nav* at all
-  (only the Comments panel's floating positions do, see below).
-
-  Full width: govuk-width-container (from the kit's own template.njk, not a
-  file this page can touch) caps and centres everything passed to the
-  content block, so .app-experiment-page uses the standard "break out via
-  100vw" trick to escape it regardless of that container's own max-width,
-  rather than trying to override govuk-width-container itself.
-
-  No fixed height or internal scrolling on .app-experiment-box or either
-  pane inside it: the editor content and the Changes panel both grow with
-  their own content and scroll together as part of the ordinary page
-  scroll — an earlier version gave the box a viewport-relative height with
-  each pane scrolling independently inside it, which cut comments off and
-  broke the floating-comment tracking below, since a card's position was
-  being calculated against a scroll container that wasn't the one
-  actually moving. See .app-experiment-box in
-  _app-editor-experiment.scss and computeFloatingPositions() further down
-  for how position tracking works now that both columns share one scroll.
-
-  Editable content: [data-editor-content] is still contenteditable, but
-  the toolbar above it is now styled to match Tiptap's own Simple Editor
-  template (see the comment on that markup) and is purely visual — an
-  earlier version wired Bold/Italic/Heading to document.execCommand for
-  real formatting; that's gone entirely now, not kept underneath the new
-  icon set, per the brief this was rebuilt from. The section divs and ids
-  inside the content are unchanged, so the sidebar's plain #section-x
-  anchor links and the comment highlight-and-scroll logic both still work
-  exactly as before; contenteditable only affects typing and selection
-  inside the text, not clicks on the sidebar or the comments list. Each
-  section is
-  preceded by a app-experiment-boundary marker — dragging (or arrow-keying)
-  one now really does move paragraphs between the two sections it sits
-  between, see wireBoundaryHandle further down; "Add new content" appends
-  a brand new, empty one at the very end, after everything else here.
+  Not yet linked anywhere — a standalone page for reviewing this width
+  directly at /v5/manage-guidance/editor-experiment-narrow. Everything
+  below this comment (aside from removing the .app-experiment-page wrapper
+  div) is an exact copy of editor-experiment.html; see that file's own top
+  comment for how the page itself works, including the sticky toolbar/
+  Changes-tabs headers (position: sticky, bounded by
+  .app-experiment-editor/.app-experiment-changes' own shared height — see
+  .tiptap-toolbar's own comment for the mechanism), the sticky Content nav
+  sidebar (now with its own independent internal scroll — see
+  .app-experiment-nav in _app-editor-experiment.scss — so a long list
+  doesn't push the Save/Preview/Send for approval buttons below it out of
+  reach), the toolbar/tabs divider alignment, click-to-reveal "Reply"
+  links, selecting editor text to create a new anchored comment, the
+  Tiptap-styled toolbar, "Add new content", draggable Content-nav cards,
+  functional section boundaries (dragging or arrow-keying a boundary
+  handle reassigns paragraphs between the two sections either side of it,
+  snapped to paragraph boundaries — see wireBoundaryHandle in pageScripts),
+  the merged editor/Changes container with no internal scroll, Word-style
+  floating comments (white, rounded-corner cards at a flat 16px — see
+  .app-experiment-comment in _app-editor-experiment.scss), the Comments/
+  Checks tab switch (each label showing a live "(n)" count — see
+  updateTabCounts in pageScripts), flash-and-fade highlighting (not
+  persistent) shared by Content nav link clicks, comment/check clicks and
+  anchor-icon clicks — see flashHighlight in pageScripts — and the
+  "Preview" button (between Save and Send for approval) that posts the
+  editor's current live content — split into one customSteps-shaped entry
+  per Content-nav section, in that list's current order (see
+  buildCustomStepsFromEditor in pageScripts) — to
+  /v5/editor-experiment/preview, which renders the real
+  saved-document-view.html customSteps stepper from it (same nav, Version
+  tag, Content sidebar, search, "Part X of Y" dropdown and Back/Next any
+  real document's stepper has), with "Back to editor" restoring those same
+  in-progress edits here via restoredEditorHtml (app/routes.js). The
+  Changes panel's old "Show changes" button (for undoing "Hide") has been
+  removed entirely, having had no function; "Hide" itself is unchanged.
 #}
 {% extends "layouts/main.html" %}
 
@@ -192,8 +164,6 @@
 } %}
 
 {% block content %}
-
-<div class="app-experiment-page">
 
 <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
@@ -731,8 +701,6 @@
     </div>
 
   </div>
-
-</div>
 
 </div>
 

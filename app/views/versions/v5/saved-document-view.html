@@ -163,6 +163,23 @@
 {% set document = documents[id] if documents[id] else documents["countryside-stewardship-capital-grants"] %}
 
 {#
+  Every ?step= link (both sidebar shapes, Back/Next) is built from this
+  rather than a literal "/v5/find-guidance/document/" + id in four separate
+  places —
+  overridable by the route so /v5/editor-experiment/preview (editor-
+  experiment.html's "Preview" button, app/routes.js) can reuse this exact
+  customSteps rendering for live/unsaved editor content while keeping its
+  own step navigation inside the preview flow, without that route's own id
+  (there often isn't a real guidance-documents.js one) leaking into these
+  links. Unset for every real document, which keeps getting the exact same
+  href it always has. The two client-side navigation paths — the "Jump to
+  part" dropdown and search result selection, both in pageScripts below —
+  already use window.location.pathname rather than this, so they need no
+  such override.
+#}
+{% set stepLinkBase = stepLinkBase if stepLinkBase else "/v5/find-guidance/document/" + id %}
+
+{#
   A fixed mapping by section position rather than something read from each
   document — section 1 and 2 make up the first phase, section 3 the second,
   every section from the 4th on the third. "sfi-soil-health-actions" is the
@@ -259,7 +276,7 @@
                 {% if section.sectionNumber == currentStep.sectionNumber %}
                   <span class="app-document-content__custom-nav-current">{{ section.sectionName }}</span>
                 {% else %}
-                  <a class="app-document-content__custom-nav-link" href="/v5/find-guidance/document/{{ id }}?step={{ section.firstPartNumber }}">{{ section.sectionName }}</a>
+                  <a class="app-document-content__custom-nav-link" href="{{ stepLinkBase }}?step={{ section.firstPartNumber }}">{{ section.sectionName }}</a>
                 {% endif %}
               </li>
             {% endfor %}
@@ -271,7 +288,7 @@
                 {% if step.sectionNumber == stepNumber %}
                   <span class="app-document-content__custom-nav-current">{{ step.sectionName }}</span>
                 {% else %}
-                  <a class="app-document-content__custom-nav-link" href="/v5/find-guidance/document/{{ id }}?step={{ step.sectionNumber }}">{{ step.sectionName }}</a>
+                  <a class="app-document-content__custom-nav-link" href="{{ stepLinkBase }}?step={{ step.sectionNumber }}">{{ step.sectionName }}</a>
                 {% endif %}
               </li>
             {% endfor %}
@@ -551,14 +568,14 @@
         {% if stepNumber > 1 %}
           {{ govukButton({
             text: "Back",
-            href: "/v5/find-guidance/document/" + id + "?step=" + (stepNumber - 1),
+            href: stepLinkBase + "?step=" + (stepNumber - 1),
             classes: "govuk-button--secondary"
           }) }}
         {% endif %}
         {% if stepNumber < totalSteps %}
           {{ govukButton({
             text: "Next",
-            href: "/v5/find-guidance/document/" + id + "?step=" + (stepNumber + 1)
+            href: stepLinkBase + "?step=" + (stepNumber + 1)
           }) }}
         {% endif %}
       {% else %}

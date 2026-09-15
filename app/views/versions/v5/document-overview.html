@@ -42,12 +42,16 @@
 
   Breadcrumbs replace the old single Back link, and now follow ?from= (set
   by whichever page's own link led here) rather than always showing the same
-  fixed trail: "search" (organic-search.html) gets the full Guidance hub >
+  fixed trail: "search" (organic-search.html) gets the full
   Find guidance > Search for guidance trail; "find-guidance"
   (find-guidance.html) skips "Search for guidance", since that page was
   never visited on the way here. Anything else — no ?from=, or a value
   neither of those — falls back to the original fixed (full) trail, so a
-  direct visit to this page never breaks.
+  direct visit to this page never breaks. Starts from "Find guidance"
+  itself, not "Guidance hub" — that page (find-guidance.html) has no
+  breadcrumb of its own for the same reason (the top-level nav bar already
+  shows it as the current tab), so this is as far back as a trail here
+  needs to go.
 
   "Open" carries the same ?from= forward too (app/routes.js reads it back on
   the way in there, and uses it to send this page's own Back link — normally
@@ -88,7 +92,6 @@
 {% set publishedCell %}<span data-version-field="published">{{ currentVersion.published }}</span>{% endset %}
 
 {% set breadcrumbItems = [
-  { text: "Guidance hub", href: "/v5/start" },
   { text: "Find guidance", href: "/v5/find-guidance" }
 ] %}
 {% if from != "find-guidance" %}
