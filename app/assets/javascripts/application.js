@@ -23,7 +23,12 @@ const PREVIEW_KEY = 'rpa-guidance-hub.preview'
 // a full markdown implementation and does not need to be: the prototype only
 // has to look right, not to publish anything. GOV.UK renders its preview on the
 // server, which is what a real build would do.
-function renderMarkdown (markdown) {
+function renderMarkdown (markdown, options) {
+  // With { images: true } an image renders as a real <img> (safe URLs only);
+  // by default it renders as a placeholder, the behaviour the editor preview
+  // wants. v4's guide viewer opts in to real images.
+  const renderImages = Boolean(options && options.images)
+
   function escapeHtml (text) {
     return text
       .replace(/&/g, '&amp;')
@@ -55,7 +60,14 @@ function renderMarkdown (markdown) {
   // marks anything up as a problem. Quality issues belong in the issue list.
   function inline (text) {
     return escapeHtml(text)
-      .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, function (match, alt) {
+      .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, function (match, alt, url) {
+        if (renderImages) {
+          const src = safeUrl(url)
+          if (src) {
+            return '<img class="app-markdown-preview__img" src="' + src +
+              '" alt="' + alt.trim() + '">'
+          }
+        }
         return '<span class="app-markdown-preview__image">' +
           (alt.trim() ? 'Image: ' + alt : 'Image') +
           '</span>'
@@ -72,6 +84,7 @@ function renderMarkdown (markdown) {
 
   const html = []
   let listItems = []
+  let tableRows = []
 
   function flushList () {
     if (!listItems.length) return
@@ -79,8 +92,58 @@ function renderMarkdown (markdown) {
     listItems = []
   }
 
+  // A GitHub-style pipe table: a header row, a separator row of dashes, then
+  // body rows, each written | cell | cell |. The separator row is dropped and
+  // its position marks where the header ends. Converted Word documents can
+  // carry tables, so the viewer renders them rather than showing the pipes.
+  function splitCells (row) {
+    return row.replace(/^\||\|$/g, '').split('|').map(function (cell) {
+      return cell.trim()
+    })
+  }
+
+  function flushTable () {
+    if (!tableRows.length) return
+    const rows = tableRows
+    tableRows = []
+
+    const isSeparator = rows.length > 1 && rows[1].every(function (cell) {
+      return /^:?-{3,}:?$/.test(cell)
+    })
+    const head = isSeparator ? rows[0] : null
+    const body = isSeparator ? rows.slice(2) : rows
+
+    const out = ['<div class="app-markdown-preview__table-wrap">',
+      '<table class="govuk-table">']
+    if (head) {
+      out.push('<thead class="govuk-table__head"><tr class="govuk-table__row">')
+      head.forEach(function (cell) {
+        out.push('<th scope="col" class="govuk-table__header">' + inline(cell) + '</th>')
+      })
+      out.push('</tr></thead>')
+    }
+    out.push('<tbody class="govuk-table__body">')
+    body.forEach(function (cells) {
+      out.push('<tr class="govuk-table__row">')
+      cells.forEach(function (cell) {
+        out.push('<td class="govuk-table__cell">' + inline(cell) + '</td>')
+      })
+      out.push('</tr>')
+    })
+    out.push('</tbody></table></div>')
+    html.push(out.join(''))
+  }
+
   markdown.split('\n').forEach(function (line) {
     const trimmed = line.trim()
+
+    // Buffer consecutive table rows; anything else ends the table.
+    if (/^\|.*\|$/.test(trimmed)) {
+      flushList()
+      tableRows.push(splitCells(trimmed))
+      return
+    }
+    flushTable()
 
     if (!trimmed) {
       flushList()
@@ -109,6 +172,7 @@ function renderMarkdown (markdown) {
   })
 
   flushList()
+  flushTable()
   return html.join('')
 }
 
@@ -545,4 +609,427 @@ window.GOVUKPrototypeKit.documentReady(() => {
   if (!markdown && fallback) markdown = fallback.value
 
   target.innerHTML = renderMarkdown(markdown)
+})
+
+// ---------------------------------------------------------------------------
+// v3 search filters
+// ---------------------------------------------------------------------------
+
+// The filter behaviour copied from DEFRA/rpa-guidance-prototype (the guide
+// library module in src/client/javascripts/application.js): changing a facet
+// applies it immediately, which makes the explicit Apply button redundant,
+// and the filter column can be collapsed to give the results the full width.
+// Without JavaScript the Apply button stays and the toggle does nothing.
+window.GOVUKPrototypeKit.documentReady(() => {
+  const searchForm = document.querySelector('[data-module="app-v3-search"]')
+  if (!searchForm) return
+
+  const applyButton = searchForm.querySelector(
+    '[data-module="app-apply-filters"]'
+  )
+  const filterToggle = searchForm.querySelector(
+    '[data-module="app-filter-toggle"]'
+  )
+
+  if (applyButton) {
+    // Filters auto-apply on change with JS on, so the button is redundant.
+    // Remove it rather than set .hidden, which govuk-button's display overrides.
+    applyButton.remove()
+  }
+
+  searchForm
+    .querySelectorAll('input[type="checkbox"], input[type="radio"]')
+    .forEach((box) => {
+      box.addEventListener('change', () => searchForm.submit())
+    })
+
+  if (filterToggle) {
+    filterToggle.addEventListener('click', () => {
+      const hidden = searchForm.classList.toggle(
+        'app-v3-search-form--filters-hidden'
+      )
+      filterToggle.setAttribute('aria-expanded', String(!hidden))
+      filterToggle.textContent = hidden ? 'Show filters' : 'Hide filters'
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// TipTap guide editor (v3's update-existing-guide flow)
+// ---------------------------------------------------------------------------
+
+// Progressive enhancement over the markdown textarea on guide-edit.html.
+// TipTap is loaded from esm.sh at runtime rather than bundled — the
+// prototype kit has no JS build step — so with no network (or no JS) the
+// import never resolves and the textarea simply stays, which is the basic
+// accessible version working as designed. When TipTap does load, the
+// tiptap-markdown extension keeps the textarea's markdown in sync on every
+// edit, so the form posts exactly what the basic version would.
+window.GOVUKPrototypeKit.documentReady(() => {
+  const mount = document.querySelector('[data-module="app-tiptap-editor"]')
+  if (!mount) return
+
+  const fallback = mount.querySelector('[data-tiptap-fallback]')
+  const textarea = fallback && fallback.querySelector('textarea')
+  const toolbar = mount.querySelector('[data-tiptap-toolbar]')
+  const surface = mount.querySelector('[data-tiptap-surface]')
+  if (!textarea || !toolbar || !surface) return
+
+  // ?deps pins tiptap-markdown to the same @tiptap/core instance as the
+  // other imports, or its schema checks fail against a duplicate copy.
+  Promise.all([
+    import('https://esm.sh/@tiptap/core@2?deps=@tiptap/pm@2'),
+    import('https://esm.sh/@tiptap/starter-kit@2?deps=@tiptap/core@2,@tiptap/pm@2'),
+    import('https://esm.sh/tiptap-markdown@0.8.10?deps=@tiptap/core@2,@tiptap/pm@2')
+  ])
+    .then(([core, starterKit, markdown]) => {
+      const editor = new core.Editor({
+        element: surface,
+        extensions: [starterKit.default, markdown.Markdown],
+        content: textarea.value,
+        editorProps: {
+          attributes: {
+            role: 'textbox',
+            'aria-multiline': 'true',
+            'aria-label': 'Guide content'
+          }
+        },
+        onUpdate: () => {
+          textarea.value = editor.storage.markdown.getMarkdown()
+        }
+      })
+
+      const commands = {
+        bold: (chain) => chain.toggleBold(),
+        italic: (chain) => chain.toggleItalic(),
+        heading2: (chain) => chain.toggleHeading({ level: 2 }),
+        heading3: (chain) => chain.toggleHeading({ level: 3 }),
+        bulletList: (chain) => chain.toggleBulletList(),
+        orderedList: (chain) => chain.toggleOrderedList(),
+        undo: (chain) => chain.undo(),
+        redo: (chain) => chain.redo()
+      }
+
+      const isActive = {
+        bold: () => editor.isActive('bold'),
+        italic: () => editor.isActive('italic'),
+        heading2: () => editor.isActive('heading', { level: 2 }),
+        heading3: () => editor.isActive('heading', { level: 3 }),
+        bulletList: () => editor.isActive('bulletList'),
+        orderedList: () => editor.isActive('orderedList')
+      }
+
+      toolbar.querySelectorAll('[data-tiptap-command]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const command = commands[button.dataset.tiptapCommand]
+          if (command) command(editor.chain().focus()).run()
+        })
+      })
+
+      // aria-pressed follows the selection, so the toolbar reads back which
+      // formatting applies at the caret.
+      editor.on('transaction', () => {
+        toolbar.querySelectorAll('[aria-pressed]').forEach((button) => {
+          const check = isActive[button.dataset.tiptapCommand]
+          if (check) button.setAttribute('aria-pressed', String(check()))
+        })
+      })
+
+      toolbar.hidden = false
+      surface.hidden = false
+      fallback.hidden = true
+    })
+    .catch(() => {
+      // Offline, or the CDN is unreachable — the markdown textarea stays.
+    })
+})
+
+// ---------------------------------------------------------------------------
+// Quality check anchors (v3 guide editor)
+// ---------------------------------------------------------------------------
+
+// Each finding in the pane beside the editor is one button; clicking it
+// scrolls the editor straight to the passage the finding is about (located
+// by the finding's quoted text, falling back to the markdown line's text)
+// and flashes it — or, if the markdown textarea is still the editor,
+// selects that line instead.
+window.GOVUKPrototypeKit.documentReady(() => {
+  if (!document.querySelector('[data-finding-anchor]')) return
+
+  // The three panels beside the editor — version history, comments and
+  // quality checks — toggled by the link-styled buttons in the sticky bar.
+  // At most one is open at a time: opening one closes the others, and each
+  // link's text flips between Show and Hide. With every panel closed the
+  // side pane disappears and the editor takes the full width. The links
+  // ship hidden; without JavaScript all three panels simply render stacked.
+  const side = document.querySelector('[data-module="app-editor-panes"]')
+  const paneLinks = document.querySelector('[data-pane-links]')
+
+  if (side && paneLinks) {
+    const panes = side.querySelectorAll('[data-editor-pane]')
+    const toggles = paneLinks.querySelectorAll('[data-pane-toggle]')
+    const labels = {
+      versions: 'version history',
+      comments: 'comments',
+      checks: 'quality checks'
+    }
+    let active = 'checks'
+
+    function renderPanes () {
+      panes.forEach((pane) => {
+        pane.hidden = pane.dataset.editorPane !== active
+      })
+      side.hidden = !active
+      toggles.forEach((toggle) => {
+        const name = toggle.dataset.paneToggle
+        toggle.textContent = (name === active ? 'Hide ' : 'Show ') + labels[name]
+        toggle.setAttribute('aria-expanded', String(name === active))
+      })
+    }
+
+    toggles.forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        active = toggle.dataset.paneToggle === active ? null : toggle.dataset.paneToggle
+        renderPanes()
+      })
+    })
+
+    paneLinks.hidden = false
+    renderPanes()
+  }
+
+  const textarea = document.querySelector('[data-tiptap-fallback] textarea')
+
+  // The text a finding should land on: its quote if the rule recorded one,
+  // otherwise the markdown line itself, stripped of list/heading syntax.
+  function findingSnippet (button) {
+    const quote = (button.dataset.findingQuote || '').trim()
+    if (quote) return quote
+
+    const line = Number(button.dataset.findingLine)
+    const raw = (textarea ? textarea.value.split('\n')[line - 1] : '') || ''
+    return raw.replace(/^[#>\-*\d.\s]+/, '').trim().slice(0, 60)
+  }
+
+  // The highlight is an overlay positioned over the passage rather than a
+  // class on the passage itself: ProseMirror owns its DOM and its mutation
+  // observer reverts foreign attribute changes almost immediately, so a
+  // class added to one of its nodes never survives long enough to be seen.
+  function flash (element) {
+    const rect = element.getBoundingClientRect()
+    const overlay = document.createElement('div')
+    overlay.className = 'app-quality-flash-overlay'
+    overlay.style.top = rect.top + window.scrollY - 4 + 'px'
+    overlay.style.left = rect.left + window.scrollX - 8 + 'px'
+    overlay.style.width = rect.width + 16 + 'px'
+    overlay.style.height = rect.height + 8 + 'px'
+    document.body.appendChild(overlay)
+    overlay.addEventListener('animationend', () => overlay.remove())
+  }
+
+  function anchorInSurface (surface, button) {
+    const snippet = findingSnippet(button)
+    if (!snippet) return false
+
+    const blocks = surface.querySelectorAll('p, h1, h2, h3, li')
+    for (const block of blocks) {
+      if (block.textContent.includes(snippet)) {
+        // Instant, not smooth: ProseMirror's own focus and scroll handling
+        // cancels an in-flight smooth scroll, leaving the page where it was.
+        block.scrollIntoView({ block: 'center' })
+        flash(block)
+        return true
+      }
+    }
+    return false
+  }
+
+  function anchorInTextarea (button) {
+    const line = Number(button.dataset.findingLine)
+    const lines = textarea.value.split('\n')
+    const start = lines.slice(0, line - 1).join('\n').length + (line > 1 ? 1 : 0)
+
+    textarea.focus()
+    textarea.setSelectionRange(start, start + (lines[line - 1] || '').length)
+    // Rough but serviceable: put the target line about a third of the way
+    // down the visible box.
+    const lineHeight = textarea.scrollHeight / lines.length
+    textarea.scrollTop = Math.max(0, (line - 1) * lineHeight - textarea.clientHeight / 3)
+  }
+
+  // Delegated from the document, so the anchors work regardless of when the
+  // findings list was shown, hidden or re-rendered.
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-finding-anchor]')
+    if (!button) return
+
+    const surface = document.querySelector('[data-tiptap-surface] .ProseMirror')
+    const surfaceVisible = surface && !surface.closest('[hidden]')
+
+    if (surfaceVisible && anchorInSurface(surface, button)) return
+    if (textarea) anchorInTextarea(button)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// v4 guide viewer
+// ---------------------------------------------------------------------------
+
+// Renders the converted guidance on one page (with images), builds a contents
+// list from its section headings, and drives a simple in-document search —
+// the two-column reading layout without v2's page-by-page stepping. Uses
+// window.appRenderMarkdown (exported above) so it does not depend on the
+// standalone-preview module or its local-storage source.
+window.GOVUKPrototypeKit.documentReady(() => {
+  const root = document.querySelector('[data-module="app-guide-view"]')
+  if (!root || !window.appRenderMarkdown) return
+
+  const source = root.querySelector('[data-guide-view-source]')
+  const content = root.querySelector('[data-guide-view-content]')
+  const contents = root.querySelector('[data-guide-contents]')
+  if (!source || !content) return
+
+  content.innerHTML = window.appRenderMarkdown(source.value, { images: true })
+
+  // -- Contents, and showing/hiding it -----------------------------------
+
+  const headings = Array.from(content.querySelectorAll('h2, h3, h4, h5, h6'))
+  const contentsList = root.querySelector('[data-guide-contents-list]')
+  const contentsToggle = root.querySelector('[data-guide-contents-toggle]')
+
+  if (headings.length && contentsList) {
+    const used = Object.create(null)
+    const slugify = (text) => {
+      const base =
+        text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') ||
+        'section'
+      let slug = base
+      let n = 2
+      while (used[slug]) {
+        slug = base + '-' + n
+        n++
+      }
+      used[slug] = true
+      return slug
+    }
+
+    headings.forEach((heading) => {
+      heading.id = slugify(heading.textContent)
+      const item = document.createElement('li')
+      item.className =
+        'app-guide-view__contents-item app-guide-view__contents-item--' +
+        heading.tagName.toLowerCase()
+      const link = document.createElement('a')
+      link.className = 'govuk-link'
+      link.href = '#' + heading.id
+      link.textContent = heading.textContent
+      item.appendChild(link)
+      contentsList.appendChild(item)
+    })
+
+    // Show/hide the contents, the way the editor's panels toggle: a link-
+    // styled control that flips its label. Hiding gives the document the
+    // full width.
+    if (contentsToggle) {
+      contentsToggle.addEventListener('click', () => {
+        const hidden = root.classList.toggle('app-guide-view--contents-hidden')
+        contentsToggle.setAttribute('aria-expanded', String(!hidden))
+        contentsToggle.textContent = hidden ? 'Show contents' : 'Hide contents'
+      })
+    }
+  } else {
+    // Nothing to list, so no contents column and no toggle.
+    if (contents) contents.hidden = true
+    if (contentsToggle) contentsToggle.hidden = true
+  }
+
+  // -- Simple in-document search -----------------------------------------
+  //
+  // Highlights every match in the document, reports the count, and scrolls
+  // the first match into view. Clearing the box removes the highlights.
+
+  const searchInput = root.querySelector('[data-guide-search]')
+  const searchStatus = root.querySelector('[data-guide-search-status]')
+  const HIGHLIGHT = 'app-guide-view__match'
+
+  function clearHighlights () {
+    const marks = content.querySelectorAll('mark.' + HIGHLIGHT)
+    marks.forEach((mark) => {
+      const text = document.createTextNode(mark.textContent)
+      mark.parentNode.replaceChild(text, mark)
+    })
+    content.normalize()
+  }
+
+  function highlight (query) {
+    let count = 0
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT)
+    const targets = []
+    let node
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue.toLowerCase().includes(query)) targets.push(node)
+    }
+
+    targets.forEach((textNode) => {
+      const value = textNode.nodeValue
+      const lower = value.toLowerCase()
+      const fragment = document.createDocumentFragment()
+      let from = 0
+      let at = lower.indexOf(query, from)
+      while (at !== -1) {
+        if (at > from) {
+          fragment.appendChild(document.createTextNode(value.slice(from, at)))
+        }
+        const mark = document.createElement('mark')
+        mark.className = HIGHLIGHT
+        mark.textContent = value.slice(at, at + query.length)
+        fragment.appendChild(mark)
+        count++
+        from = at + query.length
+        at = lower.indexOf(query, from)
+      }
+      if (from < value.length) {
+        fragment.appendChild(document.createTextNode(value.slice(from)))
+      }
+      textNode.parentNode.replaceChild(fragment, textNode)
+    })
+
+    return count
+  }
+
+  function runSearch () {
+    clearHighlights()
+    const query = searchInput.value.trim().toLowerCase()
+
+    if (query.length < 2) {
+      searchStatus.textContent = ''
+      return
+    }
+
+    const count = highlight(query)
+    searchStatus.textContent = count
+      ? count + (count === 1 ? ' match' : ' matches')
+      : 'No matches'
+
+    const first = content.querySelector('mark.' + HIGHLIGHT)
+    if (first) first.scrollIntoView({ block: 'center' })
+  }
+
+  if (searchInput && searchStatus) {
+    let pending
+    searchInput.addEventListener('input', () => {
+      window.clearTimeout(pending)
+      pending = window.setTimeout(runSearch, 150)
+    })
+
+    // The magnifying-glass button matches the search component elsewhere.
+    // Search is already live, so it just runs it and returns focus.
+    const searchSubmit = root.querySelector('[data-guide-search-submit]')
+    if (searchSubmit) {
+      searchSubmit.addEventListener('click', () => {
+        runSearch()
+        searchInput.focus()
+      })
+    }
+  }
 })

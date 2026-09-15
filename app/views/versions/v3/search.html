@@ -1,0 +1,265 @@
+{#
+  Version 3's signed-in landing page — Home on the v3 top nav, and the whole
+  entry to the hub on one full-width screen, following the shape of v2's
+  organic-search.html but with the design changes that version is trying:
+
+  - the filter pane down the left copies the filter pattern from
+    DEFRA/rpa-guidance-prototype (src/server/routes/guidance/library.njk and
+    its guide-library JS module): a link-styled "Hide filters" toggle above
+    the panes collapses the whole column; with JavaScript on, ticking a
+    facet applies it immediately (so the Apply button removes itself);
+    selections survive the round trip and are shown as removable "Selected
+    filters" tags above the results, with a "Clear filters" link that keeps
+    the search. The facets still change nothing about the fixed results.
+  - the search box sits above both panes, left-aligned with the page
+    heading (capped at 720px, see _app-v3.scss): the prompt is inside the
+    field as a placeholder (with a visually hidden label), a green
+    magnifying-glass button submits it, and "Add new" — the way into
+    creating or uploading guidance — sits beside it. The filter pane starts
+    a level down, alongside the results / saved guides.
+  - nothing is listed until a search is explicitly made: `searched` comes
+    from app/routes.js, which switches on the presence of ?search in the URL
+    (the Search button and Apply filters both submit the same GET form), not
+    its content — the search itself is as unwired as v2's, so any query
+    returns the same fixed list from app/data/search-results.js. Until then
+    the pane holds just "My saved guides", which drops below the results
+    once there are any.
+  - saved guide rows and results carry no status tags for now — status
+    still shows on the document overview each links to
+
+  Results link to v3's own document overview (document-overview.html in this
+  folder) rather than the live one, so the loop back here stays inside v3.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+
+{% set pageName = "Guidance hub" %}
+
+{#
+  My saved guides as a table: the name opens the guide (via its document
+  overview), and each row can be removed — which sticks for the session, see
+  app/routes.js.
+#}
+{% set savedGuideRows = [] %}
+{% for item in savedGuides %}
+  {% set nameCell %}
+    <a class="govuk-link" href="/v3/document-overview/{{ item.id }}">{{ item.name }}</a>
+  {% endset %}
+  {% set removeCell %}
+    <a class="govuk-link" href="/v3/saved-guides/remove/{{ item.id }}">
+      Remove<span class="govuk-visually-hidden"> {{ item.name }} from my guides</span>
+    </a>
+  {% endset %}
+  {% set savedGuideRows = (savedGuideRows.push([
+    { html: nameCell },
+    { text: item.saved },
+    { html: removeCell }
+  ]), savedGuideRows) %}
+{% endfor %}
+
+{% set savedGuidesSection %}
+  <section id="saved-guides" aria-label="My saved guides">
+    <h2 class="govuk-heading-m">My saved guides</h2>
+
+    {% if savedGuides.length %}
+      {{ govukTable({
+        classes: "app-saved-guides",
+        head: [
+          { text: "Name", classes: "govuk-!-width-one-half" },
+          { text: "Date saved" },
+          { html: '<span class="govuk-visually-hidden">Action</span>' }
+        ],
+        rows: savedGuideRows
+      }) }}
+    {% else %}
+      <p class="govuk-body">You have no saved guides.</p>
+    {% endif %}
+  </section>
+{% endset %}
+
+{% set filtersHtml %}
+  {{ govukCheckboxes({
+    idPrefix: "scheme",
+    name: "scheme",
+    classes: "govuk-checkboxes--small",
+    values: selections.scheme,
+    fieldset: {
+      legend: { text: "Scheme or topic", classes: "govuk-fieldset__legend--s" }
+    },
+    items: [
+      { value: "sfi", text: "Sustainable Farming Incentive" },
+      { value: "countryside-stewardship", text: "Countryside Stewardship" },
+      { value: "cross-compliance", text: "Cross Compliance" }
+    ]
+  }) }}
+
+  {{ govukCheckboxes({
+    idPrefix: "document-type",
+    name: "documentType",
+    classes: "govuk-checkboxes--small",
+    values: selections.documentType,
+    fieldset: {
+      legend: { text: "Document type", classes: "govuk-fieldset__legend--s" }
+    },
+    items: [
+      { value: "guidance-document", text: "Guidance document" },
+      { value: "form", text: "Form" },
+      { value: "policy", text: "Policy" }
+    ]
+  }) }}
+
+  {{ govukRadios({
+    idPrefix: "date-updated",
+    name: "dateUpdated",
+    classes: "govuk-radios--small",
+    value: selections.dateUpdated | first,
+    fieldset: {
+      legend: { text: "Date updated", classes: "govuk-fieldset__legend--s" }
+    },
+    items: [
+      { value: "last-week", text: "Last week" },
+      { value: "last-month", text: "Last month" },
+      { value: "last-year", text: "Last year" }
+    ]
+  }) }}
+
+  {{ govukCheckboxes({
+    idPrefix: "status",
+    name: "status",
+    classes: "govuk-checkboxes--small",
+    values: selections.status,
+    fieldset: {
+      legend: { text: "Status", classes: "govuk-fieldset__legend--s" }
+    },
+    items: [
+      { value: "up-to-date", text: "Up to date" },
+      { value: "partially-updated", text: "Partially updated" },
+      { value: "out-of-date", text: "Out of date" }
+    ]
+  }) }}
+
+  <div class="app-v3-search__filter-actions">
+    {{ govukButton({
+      text: "Apply filters",
+      classes: "govuk-button--secondary govuk-!-margin-bottom-2",
+      attributes: { "data-module": "app-apply-filters" }
+    }) }}
+    <p class="govuk-body-s govuk-!-margin-bottom-0">
+      <a class="govuk-link" href="{{ clearHref }}">Clear filters</a>
+    </p>
+  </div>
+{% endset %}
+
+{% block content %}
+
+<h1 class="govuk-heading-l">Guidance hub</h1>
+
+<form method="get" action="/v3/search" data-module="app-v3-search">
+
+  <div class="app-search-row">
+
+    <div class="app-search-box">
+      <label class="govuk-visually-hidden" for="search">Search guidance</label>
+      <input
+        class="govuk-input app-search-box__input"
+        id="search"
+        name="search"
+        type="search"
+        value="{{ query }}"
+        placeholder="Search by document name, scheme or topic"
+      >
+      <button class="app-search-box__button" type="submit">
+        <span class="govuk-visually-hidden">Search</span>
+        <svg width="20" height="20" viewBox="0 0 27 27" aria-hidden="true" focusable="false">
+          <circle cx="11" cy="11" r="8.5" fill="none" stroke="currentColor" stroke-width="3"/>
+          <line x1="17.5" y1="17.5" x2="25.5" y2="25.5" stroke="currentColor" stroke-width="3"/>
+        </svg>
+      </button>
+    </div>
+
+    {#
+      The way into creating or uploading guidance — the same
+      what-would-you-like-to-do chooser v2 uses, v3's copy of it at
+      /v3/create-guidance.
+    #}
+    {{ govukButton({
+      text: "Add new",
+      href: "/v3/create-guidance",
+      classes: "govuk-!-margin-bottom-0"
+    }) }}
+
+  </div>
+
+  <div class="app-v3-search__toolbar">
+    <button type="button" class="app-toggle" data-module="app-filter-toggle" aria-expanded="true" aria-controls="search-filters">Hide filters</button>
+  </div>
+
+  <div class="app-v3-search">
+
+    <div class="app-v3-search__filters" id="search-filters">
+      {{ filtersHtml | safe }}
+    </div>
+
+    <div class="app-v3-search__results">
+
+      {% if selectedFilters.length %}
+        <div class="app-v3-search__selected">
+          <h2 class="govuk-heading-s govuk-!-margin-bottom-2">Selected filters</h2>
+          <ul class="app-v3-search__tags">
+            {% for filter in selectedFilters %}
+              <li>
+                <a class="app-filter-tag" href="{{ filter.href }}">{{ filter.label }} <span aria-hidden="true">&times;</span><span class="govuk-visually-hidden">, remove</span></a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if searched %}
+
+        <h2 class="govuk-heading-m app-search-results__count">{{ results | length }} results</h2>
+
+        <div class="app-search-results__sort">
+          <label class="govuk-label app-search-results__sort-label" for="sort">Sort by</label>
+          {{ govukSelect({
+            id: "sort",
+            name: "sort",
+            classes: "app-search-results__sort-select",
+            formGroup: { classes: "govuk-!-margin-bottom-0" },
+            items: [
+              { value: "most-relevant", text: "Most relevant", selected: true },
+              { value: "most-recently-updated", text: "Most recently updated" }
+            ]
+          }) }}
+        </div>
+
+        <ul class="app-search-results govuk-!-margin-bottom-8">
+          {% for result in results %}
+            <li class="app-search-results__item">
+
+              <h3 class="govuk-heading-s app-search-results__name">
+                <a class="govuk-link" href="/v3/document-overview/{{ result.id }}">{{ result.name }}</a>
+              </h3>
+
+              <p class="govuk-body app-search-results__description">{{ result.description }}</p>
+
+            </li>
+          {% endfor %}
+        </ul>
+
+      {% endif %}
+
+      {{ savedGuidesSection | safe }}
+
+    </div>
+
+  </div>
+
+</form>
+
+{% endblock %}

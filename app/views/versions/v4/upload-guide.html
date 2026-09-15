@@ -1,0 +1,47 @@
+{#
+  Version 4's simple guidance upload journey, based on v3's. Pick the Word
+  document here, wait through the upload and scan (upload-processing.html),
+  add the guide's details (upload-metadata.html — the richer set captured in
+  v2, after the upload and before the conversion), check everything
+  (upload-check.html), convert, then a success page (upload-converted.html)
+  that lets you view the converted guidance. No quality checks run for now,
+  so the success page is about reading the result rather than fixing it.
+
+  Nothing is really uploaded in a static prototype: the details live in the
+  session (app/routes.js), and the converted markdown is the shared sample
+  document.
+#}
+{% extends "layouts/v3.html" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Upload guidance" %}
+
+{% block content %}
+
+<div class="app-v3-prose">
+
+  <h1 class="govuk-heading-l">Upload guidance</h1>
+
+  <p class="govuk-body">
+    Upload a Word document and the hub will convert it into a guide. The
+    file is scanned for viruses before it is accepted.
+  </p>
+
+  <form method="post" action="/v4/upload-guide">
+
+    {{ govukFileUpload({
+      id: "guide-file",
+      name: "guideFile",
+      label: { text: "Word document", classes: "govuk-label--s" },
+      hint: { text: "Must be a .docx file" }
+    }) }}
+
+    {{ govukButton({ text: "Upload" }) }}
+
+  </form>
+
+</div>
+
+{% endblock %}
