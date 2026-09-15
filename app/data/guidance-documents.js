@@ -371,6 +371,271 @@ const guidanceDocuments = [
     }
   },
   {
+    // Added, along with the nine CS MA entries below it, purely so
+    // organic-search.html (v5) has enough results (20+) to actually show
+    // its pagination component — see app/views/versions/v5/organic-search.html
+    // and _app-organic-search.scss. showOnOrganicSearch: true on all ten,
+    // same as every other CS MA entry above.
+    id: 'cs-ma-claim-duplicate-option-code-check-2026',
+    title: 'CS MA Claim - Duplicate Option Code Check 2026',
+    description: 'Sets out how to identify and resolve cases where the same option code has been claimed more than once within a single agreement year.',
+    version: 'Version 1',
+    lastUpdated: '12 August 2026',
+    published: '18 February 2025',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '12 August 2026',
+        published: '18 February 2025',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '30 September 2026',
+        published: '10 September 2026',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-claim-ineligible-land-cover-type-2026',
+    title: 'CS MA Claim - Ineligible Land Cover Type 2026',
+    description: "Explains the checks applied when a claimed parcel's land cover type does not match the eligibility requirements for the selected option.",
+    version: 'Version 2',
+    lastUpdated: '22 July 2026',
+    published: '5 October 2024',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '15 August 2024',
+        published: '3 June 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '22 July 2026',
+        published: '5 October 2024',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-claim-late-claim-submission-rule-2026',
+    title: 'CS MA Claim - Late Claim Submission Rule 2026',
+    description: 'Covers how claims submitted after the deadline are flagged, and the checks required before a late submission can be accepted.',
+    version: 'Version 1',
+    lastUpdated: '3 June 2026',
+    published: '14 January 2025',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '3 June 2026',
+        published: '14 January 2025',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '20 August 2026',
+        published: '5 August 2026',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-missing-supporting-evidence-2026',
+    title: 'CS MA - Missing Supporting Evidence 2026',
+    description: 'Details the process for requesting missing supporting evidence from a claimant before a claim can progress to signoff.',
+    version: 'Version 2',
+    lastUpdated: '29 May 2026',
+    published: '9 March 2025',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '20 January 2025',
+        published: '2 December 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '29 May 2026',
+        published: '9 March 2025',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-claim-cross-agreement-boundary-overlap-2026',
+    title: 'CS MA Claim - Cross Agreement Boundary Overlap 2026',
+    description: 'Explains how to investigate and resolve cases where claimed parcels overlap with a boundary from a different agreement.',
+    version: 'Version 1',
+    lastUpdated: '16 April 2026',
+    published: '27 November 2024',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '16 April 2026',
+        published: '27 November 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '10 July 2026',
+        published: '22 June 2026',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-claim-historic-environment-feature-check-2026',
+    title: 'CS MA Claim - Historic Environment Feature Check 2026',
+    description: 'Sets out the checks required when a claimed option is located near a recorded historic environment feature.',
+    version: 'Version 2',
+    lastUpdated: '8 March 2026',
+    published: '20 August 2024',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '5 July 2024',
+        published: '14 May 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '8 March 2026',
+        published: '20 August 2024',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-claim-option-stacking-compatibility-2026',
+    title: 'CS MA Claim - Option Stacking Compatibility 2026',
+    description: 'Covers the compatibility rules for stacking multiple options on the same parcel, and how to identify conflicting combinations.',
+    version: 'Version 1',
+    lastUpdated: '19 February 2026',
+    published: '2 July 2024',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '19 February 2026',
+        published: '2 July 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '25 May 2026',
+        published: '9 May 2026',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-withdrawn-claim-reinstatement-2026',
+    title: 'CS MA - Withdrawn Claim Reinstatement 2026',
+    description: 'Explains the process for reinstating a previously withdrawn claim where the claimant has provided a valid reason.',
+    version: 'Version 2',
+    lastUpdated: '11 January 2026',
+    published: '30 September 2024',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '20 August 2024',
+        published: '3 July 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '11 January 2026',
+        published: '30 September 2024',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-claim-payment-rate-recalculation-2026',
+    title: 'CS MA Claim - Payment Rate Recalculation 2026',
+    description: "Sets out when a claim's payment rate must be recalculated following a change in scheme rates or claimed area.",
+    version: 'Version 1',
+    lastUpdated: '24 December 2025',
+    published: '16 May 2024',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '24 December 2025',
+        published: '16 May 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '15 March 2026',
+        published: '27 February 2026',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
+    id: 'cs-ma-claim-agreement-holder-change-notification-2026',
+    title: 'CS MA Claim - Agreement Holder Change Notification 2026',
+    description: 'Covers the checks required when a change of agreement holder is notified partway through a claim year.',
+    version: 'Version 2',
+    lastUpdated: '5 November 2025',
+    published: '12 April 2024',
+    category: 'Countryside Stewardship',
+    scheme: 'Countryside Stewardship',
+    year: 2026,
+    showOnOrganicSearch: true,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '3 February 2024',
+        published: '10 January 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '5 November 2025',
+        published: '12 April 2024',
+        versionNotes: 'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
+  },
+  {
     id: 'higher-tier-stewardship-options',
     title: 'Higher Tier stewardship options',
     description: 'An overview of the options available under a Higher Tier Countryside Stewardship agreement and how they differ from Mid Tier.',

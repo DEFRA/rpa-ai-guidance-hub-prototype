@@ -1,69 +1,44 @@
 {#
-  "Search organically" from find-guidance-new.html — search by document name,
-  date or type, as opposed to explaining a problem in your own words (see
-  ai-search.html). Not built: the search bar and every filter here are for
-  show, so this always renders the same fixed list of results regardless of
-  what is searched or ticked.
+  "Search guidance" for the Manage guidance side of the hub (v5 only) — a
+  fully independent duplicate of the Find guidance side's own
+  organic-search.html, not a shared template: this file, and the route
+  behind it (GET /v5/manage-guidance/search-guidance, app/routes.js), are
+  free to diverge from that page from here on without either affecting the
+  other. Anything that looks unfamiliar compared to organic-search.html is
+  explained below; everything else works the same way that page's own
+  comment already explains in detail, just against a different dataset.
 
-  results (id, title, description, version, lastUpdated, published) comes
-  from app/data/guidance-documents.js via app/routes.js, not
-  app/data/search-results.js any more — that older file only has a name and
-  a status, not the version/date fields this page's cards need, and had no
-  entries at all for the CS MA results. Using the same guidance-documents.js
-  file here as document-overview.html and saved-document-view.html also read
-  from (by id, via /v5/document-overview/:id and /v5/find-guidance/document/:id)
-  means whichever result is clicked shows the same title/description/version
-  all the way through, rather than each page defaulting to its own hardcoded
-  document.
+  results (id/title/description/version/lastUpdated/published/category/
+  scheme/year/state/overviewHref) comes from
+  buildManageGuidanceSearchResults() in app/routes.js — every document
+  currently in the Editing or Awaiting approval tabs on
+  all-guidance-docs.html, plus whichever sample "Published" documents (also
+  local to that file) have not been moved into Editing via "Start editing"
+  this session. state is this page's own concept, not read from
+  guidance-documents.js (nothing there has it) — "Draft" for an Editing
+  document, "Awaiting review" for an Awaiting approval one, "Published" for
+  a sample document. overviewHref is always the real
+  /v5/manage-guidance/document-overview page now — that route has its own
+  fallback lookup for a sample Published document's id, which shows a
+  different layout there (Version/Version notes/Last updated/Published, and
+  "Start editing" instead of "Continue editing") rather than the
+  Draft/Awaiting review one.
 
-  Filters sidebar: four collapsible groups rather than one flat list, each
-  toggled by its own button (not the accordion component — plain show/hide
-  is enough for four independent groups with no shared state between them).
-  Category alone starts open; the other three start collapsed. Each
-  toggle's own [aria-expanded] state drives its link-blue-vs-bold-black
-  styling directly in CSS, so it never needs to be tracked separately in JS.
+  State is a fifth filter group, positioned directly after Category —
+  otherwise the same collapsible checkbox-group pattern Scheme/Version
+  already use (OR within the group, AND against every other active
+  filter). stateTags below picks grey/yellow/turquoise rather than
+  organic-search.html's own green/purple Version tags, deliberately not
+  reusing either of those two colours — a card can show both a Version tag
+  and a State tag together, and giving State its own distinct palette
+  keeps the two from reading as the same kind of fact at a glance.
 
-  Search bar: the label is kept for screen readers but visually hidden,
-  since a visible label would sit above the input and make it taller than
-  the Search button beside it — with the label out of the flow, input and
-  button are the only two things left in the row, so align-items: stretch
-  makes them match height with nothing else to account for.
-
-  Search/filter/sort are genuinely wired up now, entirely client-side — see
-  pageScripts below and [data-search-results-data], which embeds a slim copy
-  of every result (app/routes.js) for that script to work against, so no
-  server round-trip is needed. The Search and Apply filters buttons are both
-  type="button" rather than submitting the surrounding <form> — with neither
-  left as a submit button, pressing Enter in the search input no longer
-  submits it either, native behaviour this relies on rather than a keydown
-  handler of its own. The <form> itself stays, mostly as a semantic grouping
-  for the fieldsets inside it, though a browser with JS disabled will still
-  submit it as a plain GET to this same route on any implicit submission
-  that manages to happen, reloading the same unfiltered page rather than
-  erroring — this page's search/filters were already just for show before
-  this change, on the server side, so that fallback is no worse than the
-  starting point.
-
-  Search text filters live, debounced, as the user types (or immediately on
-  clicking Search); Category/Scheme/Year/Version only take effect once
-  "Apply filters" is clicked, matching the existing UI pattern of a
-  submit-style button — both kinds of change re-render from the same
-  searchState object, combined with AND logic, so neither overwrites the
-  other's current value.
-
-  "Reset filters", directly below "Apply filters", clears every control
-  (search input, Category, Year, Scheme/Version checkboxes) and Sort by back
-  to its default, resets searchState to match, and re-renders — same render()
-  as everything else here, so this is just another way to reach the
-  "nothing applied" state rather than a special case of its own. A plain
-  govuk-link rather than a button, since it discards rather than commits.
-
-  .app-organic-search__filters and .app-search-results__header both use
-  position: sticky, independently, within their own column — no JS involved,
-  and no need for any to keep them constrained to the footer: a sticky
-  element can never stick past the bottom of its own containing block (here,
-  each one's own govuk-grid-column), so both stop sticking and scroll away
-  normally well before the footer comes into view.
+  The search box on all-guidance-docs.html feeds into this page exactly
+  the way find-guidance.html's own search box feeds into
+  organic-search.html — a plain GET <form> to
+  /v5/manage-guidance/search-guidance?q=, pre-filling and immediately
+  applying this page's own search input via initialSearchQuery, same
+  mechanism, independent route.
 #}
 {% extends "layouts/main.html" %}
 
@@ -74,11 +49,17 @@
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 
-{% set pageName = "Search for guidance" %}
+{% set pageName = "Search guidance" %}
 
 {% set versionTags = {
   "Version 1": { text: "Version 1", classes: "govuk-tag--green" },
   "Version 2": { text: "Version 2", classes: "govuk-tag--purple" }
+} %}
+
+{% set stateTags = {
+  "Draft": { text: "Draft", classes: "govuk-tag--grey" },
+  "Awaiting review": { text: "Awaiting review", classes: "govuk-tag--yellow" },
+  "Published": { text: "Published", classes: "govuk-tag--turquoise" }
 } %}
 
 {% block content %}
@@ -88,19 +69,19 @@
     {{ govukBreadcrumbs({
       classes: "govuk-!-margin-bottom-6",
       items: [
-        { text: "Find guidance", href: "/v5/find-guidance" },
+        { text: "Manage guidance", href: "/v5/all-guidance-docs" },
         { text: pageName }
       ]
     }) }}
   </div>
 </div>
 
-<form method="get" action="/v5/find-guidance/organic-search">
+<form method="get" action="/v5/manage-guidance/search-guidance">
 
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
 
-      <h1 class="govuk-heading-l">Search for guidance</h1>
+      <h1 class="govuk-heading-l">Search guidance</h1>
 
     </div>
   </div>
@@ -157,6 +138,30 @@
               { value: "sfi", text: "Sustainable Farming Incentive" },
               { value: "countryside-stewardship", text: "Countryside Stewardship" },
               { value: "cross-compliance", text: "Cross Compliance" }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="false" aria-controls="filter-group-state">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            State
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-state" data-filter-panel hidden>
+          {{ govukCheckboxes({
+            idPrefix: "state",
+            name: "state",
+            classes: "govuk-checkboxes--small",
+            fieldset: {
+              legend: { text: "State", classes: "govuk-visually-hidden" }
+            },
+            items: [
+              { value: "draft", text: "Draft" },
+              { value: "awaiting-review", text: "Awaiting review" },
+              { value: "published", text: "Published" }
             ]
           }) }}
         </div>
@@ -276,10 +281,13 @@
         {% for result in results %}
           <li class="app-search-results__item">
 
-            <div class="govuk-!-margin-bottom-2">{{ govukTag(versionTags[result.version]) }}</div>
+            <div class="govuk-!-margin-bottom-2">
+              {{ govukTag(versionTags[result.version]) }}
+              {{ govukTag(stateTags[result.state]) }}
+            </div>
 
             <h3 class="govuk-heading-s app-search-results__name">
-              <a class="govuk-link" href="/v5/document-overview/{{ result.id }}?from=search">{{ result.title }}</a>
+              <a class="govuk-link" href="{{ result.overviewHref }}">{{ result.title }}</a>
             </h3>
 
             <p class="govuk-body app-search-results__description">{{ result.description }}</p>
@@ -289,19 +297,6 @@
           </li>
         {% endfor %}
       </ul>
-
-      {#
-        Built entirely by the script below (renderPagination), not
-        server-rendered — the visible result list itself is always a
-        client-side slice of allResults (PAGE_SIZE per page) once that
-        script runs, on this very first render included, so the
-        pagination controls have to come from the same place. Empty/hidden
-        until then covers the no-JS case: every result still shows in one
-        long list with nothing broken, just unpaginated, same fallback
-        story the rest of this page's client-side search/filter/sort
-        already has.
-      #}
-      <div data-pagination hidden></div>
 
     </div>
 
@@ -338,8 +333,6 @@
       var resultsList = document.querySelector('[data-results-list]')
       var resultsEmpty = document.querySelector('[data-results-empty]')
       var resultsCount = document.querySelector('[data-results-count]')
-      var resultsHeader = document.querySelector('.app-search-results__header')
-      var paginationContainer = document.querySelector('[data-pagination]')
       if (!dataScript || !searchInput || !resultsList) return
 
       var allResults = JSON.parse(dataScript.textContent)
@@ -352,6 +345,11 @@
         'countryside-stewardship': 'Countryside Stewardship',
         'cross-compliance': 'Cross Compliance'
       }
+      var STATE_LABELS = {
+        draft: 'Draft',
+        'awaiting-review': 'Awaiting review',
+        published: 'Published'
+      }
       var SCHEME_LABELS = {
         'countryside-stewardship': 'Countryside Stewardship',
         'sustainable-farming-incentive': 'Sustainable Farming Incentive'
@@ -361,7 +359,7 @@
         'version-2': 'Version 2'
       }
 
-      // searchText updates live (debounced) as the user types; the four
+      // searchText updates live (debounced) as the user types; the five
       // filter fields only update when "Apply filters" is clicked — each
       // read fresh from their controls at that point, not tracked
       // separately, so this object is always last-known-applied state for
@@ -369,135 +367,11 @@
       var searchState = {
         searchText: '',
         category: 'all',
+        states: [],
         schemes: [],
         year: 'all',
         versions: [],
         sort: 'most-relevant'
-      }
-
-      // Pagination — a page of the current *filtered/sorted* result set,
-      // not the whole dataset. currentPage lives outside searchState
-      // itself since it isn't something to reset in one place alongside
-      // the filters (see resetToFirstPage, called wherever a search/
-      // filter/sort action already calls render() below) — it needs
-      // resetting to 1 on every one of those, but not on every render()
-      // (a page click calls render() too, deliberately keeping whichever
-      // page it just navigated to).
-      var PAGE_SIZE = 10
-      var currentPage = 1
-
-      function resetToFirstPage () {
-        currentPage = 1
-      }
-
-      var ARROW_PREV_SVG = '<svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13"><path d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"></path></svg>'
-      var ARROW_NEXT_SVG = '<svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg" height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13"><path d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z"></path></svg>'
-
-      // Which page numbers to actually show, GOV.UK's own "truncate with
-      // an ellipsis" convention: every page while there aren't many, or
-      // first/last plus a small window around the current page once
-      // there are — rather than a strip of 20+ links for a large result
-      // set. Returns a flat list mixing page numbers and the string
-      // 'ellipsis' for a gap, in order.
-      function paginationPageNumbers (totalPages, page) {
-        var pages = []
-        for (var i = 1; i <= totalPages; i++) {
-          if (i === 1 || i === totalPages || Math.abs(i - page) <= 1) {
-            pages.push(i)
-          }
-        }
-
-        var withEllipses = []
-        pages.forEach(function (pageNumber, index) {
-          if (index > 0 && pageNumber - pages[index - 1] > 1) {
-            withEllipses.push('ellipsis')
-          }
-          withEllipses.push(pageNumber)
-        })
-
-        return withEllipses
-      }
-
-      // Builds the same markup the govukPagination macro itself would
-      // (govuk-frontend's own component/pagination/template.njk) — by
-      // hand here rather than through that macro, since which
-      // Previous/Next/page links exist at all depends entirely on
-      // totalItems/page, worked out client-side as the result set
-      // changes, not something known at the time this page is rendered
-      // server-side. href="#" everywhere: every link here is intercepted
-      // and turned into a goToPage() call below rather than ever
-      // actually navigating anywhere.
-      function renderPagination (totalItems, page) {
-        if (!paginationContainer) return
-
-        var totalPages = Math.ceil(totalItems / PAGE_SIZE)
-
-        if (totalPages <= 1) {
-          paginationContainer.hidden = true
-          paginationContainer.innerHTML = ''
-          return
-        }
-
-        var html = '<nav class="govuk-pagination" role="navigation" aria-label="Search results pages">'
-
-        if (page > 1) {
-          html += '<div class="govuk-pagination__prev">' +
-            '<a class="govuk-link govuk-pagination__link" href="#" rel="prev" data-page="' + (page - 1) + '">' +
-            ARROW_PREV_SVG +
-            '<span class="govuk-pagination__link-title">Previous<span class="govuk-visually-hidden"> page</span></span>' +
-            '</a></div>'
-        }
-
-        html += '<ul class="govuk-pagination__list">'
-        paginationPageNumbers(totalPages, page).forEach(function (item) {
-          if (item === 'ellipsis') {
-            html += '<li class="govuk-pagination__item govuk-pagination__item--ellipses">&ctdot;</li>'
-            return
-          }
-
-          var isCurrent = item === page
-          html += '<li class="govuk-pagination__item' + (isCurrent ? ' govuk-pagination__item--current' : '') + '">' +
-            '<a class="govuk-link govuk-pagination__link" href="#" aria-label="Page ' + item + '"' +
-            (isCurrent ? ' aria-current="page"' : '') +
-            ' data-page="' + item + '">' + item + '</a></li>'
-        })
-        html += '</ul>'
-
-        if (page < totalPages) {
-          html += '<div class="govuk-pagination__next">' +
-            '<a class="govuk-link govuk-pagination__link" href="#" rel="next" data-page="' + (page + 1) + '">' +
-            '<span class="govuk-pagination__link-title">Next<span class="govuk-visually-hidden"> page</span></span>' +
-            ARROW_NEXT_SVG +
-            '</a></div>'
-        }
-
-        html += '</nav>'
-
-        paginationContainer.innerHTML = html
-        paginationContainer.hidden = false
-
-        paginationContainer.querySelectorAll('[data-page]').forEach(function (link) {
-          link.addEventListener('click', function (event) {
-            event.preventDefault()
-            goToPage(Number(link.dataset.page))
-          })
-        })
-      }
-
-      // Previous/Next/a page number — re-renders on the *same* filtered
-      // set (render() re-filters from scratch, but searchState itself
-      // hasn't changed, so the result is identical) showing just that
-      // page's slice, then scrolls the sticky results header back into
-      // view so the new page reads from the top rather than wherever the
-      // list happened to be scrolled to already.
-      function goToPage (page) {
-        currentPage = page
-        render()
-
-        var scrollTarget = resultsHeader || resultsList
-        if (scrollTarget && scrollTarget.scrollIntoView) {
-          scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
       }
 
       function getCheckedValues (name) {
@@ -519,6 +393,11 @@
       function matchesFilters (doc) {
         if (searchState.category !== 'all' && doc.category !== CATEGORY_LABELS[searchState.category]) {
           return false
+        }
+
+        if (searchState.states.length) {
+          var stateLabels = searchState.states.map(function (value) { return STATE_LABELS[value] })
+          if (stateLabels.indexOf(doc.state) === -1) return false
         }
 
         if (searchState.schemes.length) {
@@ -560,15 +439,33 @@
         return '<strong class="govuk-tag ' + className + '">' + escapeHtml(version) + '</strong>'
       }
 
+      // Deliberately not reusing Version's own green/purple — see the
+      // comment at the top of this file for why State gets its own
+      // distinct palette instead.
+      var STATE_CLASSES = {
+        Draft: 'govuk-tag--grey',
+        'Awaiting review': 'govuk-tag--yellow',
+        Published: 'govuk-tag--turquoise'
+      }
+
+      function stateTagHtml (state) {
+        var className = STATE_CLASSES[state] || 'govuk-tag--grey'
+        return '<strong class="govuk-tag ' + className + '">' + escapeHtml(state) + '</strong>'
+      }
+
       // Same markup/classes as the server-rendered cards in the view above,
-      // just built from the embedded JSON instead of Nunjucks.
+      // just built from the embedded JSON instead of Nunjucks. href comes
+      // straight off doc.overviewHref rather than being built from doc.id
+      // here, since where a card leads now depends on its state (a real
+      // document overview page for Draft/Awaiting review, the shared
+      // placeholder for a sample Published one) — see the route.
       function renderCard (doc) {
         var item = document.createElement('li')
         item.className = 'app-search-results__item'
         item.innerHTML =
-          '<div class="govuk-!-margin-bottom-2">' + versionTagHtml(doc.version) + '</div>' +
+          '<div class="govuk-!-margin-bottom-2">' + versionTagHtml(doc.version) + ' ' + stateTagHtml(doc.state) + '</div>' +
           '<h3 class="govuk-heading-s app-search-results__name">' +
-          '<a class="govuk-link" href="/v5/document-overview/' + encodeURIComponent(doc.id) + '?from=search">' + escapeHtml(doc.title) + '</a>' +
+          '<a class="govuk-link" href="' + escapeHtml(doc.overviewHref) + '">' + escapeHtml(doc.title) + '</a>' +
           '</h3>' +
           '<p class="govuk-body app-search-results__description">' + escapeHtml(doc.description) + '</p>' +
           '<p class="govuk-body-s app-search-results__dates">Last updated: ' + escapeHtml(doc.lastUpdated) + ' &middot; Published: ' + escapeHtml(doc.published) + '</p>'
@@ -578,35 +475,17 @@
       function render () {
         var matched = sortDocs(allResults.filter(matchesFilters))
 
-        // Total pages can shrink after a filter/sort narrows matched down
-        // (or after removing a filter grows it back) independently of
-        // whatever currentPage was already on — clamped here rather than
-        // only where a filter/search action resets it to 1, so landing on
-        // a page number that no longer exists (e.g. paging to 3, then
-        // applying a filter that leaves only 1 page) falls back to the
-        // last real page instead of showing nothing.
-        var totalPages = Math.max(Math.ceil(matched.length / PAGE_SIZE), 1)
-        if (currentPage > totalPages) currentPage = totalPages
-
-        var pageStart = (currentPage - 1) * PAGE_SIZE
-        var pageItems = matched.slice(pageStart, pageStart + PAGE_SIZE)
-
         resultsList.innerHTML = ''
-        pageItems.forEach(function (doc) {
+        matched.forEach(function (doc) {
           resultsList.appendChild(renderCard(doc))
         })
 
         resultsEmpty.hidden = matched.length !== 0
         resultsList.hidden = matched.length === 0
 
-        // Always the total across every page, not just how many are
-        // showing right now — matches the count shown before pagination
-        // existed, so "25 results" still means all 25, on whichever page.
         if (resultsCount) {
           resultsCount.textContent = matched.length + ' result' + (matched.length === 1 ? '' : 's')
         }
-
-        renderPagination(matched.length, currentPage)
       }
 
       var debounceTimer
@@ -614,7 +493,6 @@
         window.clearTimeout(debounceTimer)
         debounceTimer = window.setTimeout(function () {
           searchState.searchText = searchInput.value.trim().toLowerCase()
-          resetToFirstPage()
           render()
         }, 200)
       })
@@ -623,7 +501,6 @@
         searchButton.addEventListener('click', function () {
           window.clearTimeout(debounceTimer)
           searchState.searchText = searchInput.value.trim().toLowerCase()
-          resetToFirstPage()
           render()
         })
       }
@@ -631,10 +508,10 @@
       if (applyFiltersButton) {
         applyFiltersButton.addEventListener('click', function () {
           searchState.category = categorySelect ? categorySelect.value : 'all'
+          searchState.states = getCheckedValues('state')
           searchState.schemes = getCheckedValues('scheme')
           searchState.year = yearSelect ? yearSelect.value : 'all'
           searchState.versions = getCheckedValues('version')
-          resetToFirstPage()
           render()
         })
       }
@@ -642,7 +519,6 @@
       if (sortSelect) {
         sortSelect.addEventListener('change', function () {
           searchState.sort = sortSelect.value
-          resetToFirstPage()
           render()
         })
       }
@@ -661,38 +537,38 @@
           if (categorySelect) categorySelect.value = 'all'
           if (yearSelect) yearSelect.value = 'all'
           if (sortSelect) sortSelect.value = 'most-relevant'
+          document.querySelectorAll('input[name="state"]:checked').forEach(function (input) { input.checked = false })
           document.querySelectorAll('input[name="scheme"]:checked').forEach(function (input) { input.checked = false })
           document.querySelectorAll('input[name="version"]:checked').forEach(function (input) { input.checked = false })
 
           window.clearTimeout(debounceTimer)
           searchState.searchText = ''
           searchState.category = 'all'
+          searchState.states = []
           searchState.schemes = []
           searchState.year = 'all'
           searchState.versions = []
           searchState.sort = 'most-relevant'
 
-          resetToFirstPage()
           render()
         })
       }
 
-      // Arriving with ?q= (from the search box on find-guidance.html — see
-      // GET /v5/find-guidance/organic-search in app/routes.js, which reads
-      // it into initialSearchQuery and pre-fills this same input server-side
-      // above) applies it immediately, the same as typing it and pressing
-      // Search would, so the results are already filtered from the very
-      // first render rather than the visitor having to retype/resubmit
-      // what they just searched for.
+      // Arriving with ?q= (from the search box on all-guidance-docs.html —
+      // see GET /v5/manage-guidance/search-guidance in app/routes.js,
+      // which reads it into initialSearchQuery and pre-fills this same
+      // input server-side above) applies it immediately, the same as
+      // typing it and pressing Search would, so the results are already
+      // filtered on the very first render rather than the visitor having
+      // to retype/resubmit what they just searched for. A direct visit
+      // with no q leaves searchState at its default, so the unfiltered
+      // list already rendered server-side just stays as it is — this only
+      // runs render() again when there is actually an initial value to
+      // apply.
       if (searchInput.value) {
         searchState.searchText = searchInput.value.trim().toLowerCase()
+        render()
       }
-
-      // Always runs once on load, q or no q — this is also what applies
-      // pagination to the server-rendered (unpaginated, every result at
-      // once) list above for the very first paint, not just after a
-      // search/filter/sort action changes something.
-      render()
     })()
   </script>
 {% endblock %}

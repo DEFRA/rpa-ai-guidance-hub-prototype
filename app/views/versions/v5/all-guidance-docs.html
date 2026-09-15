@@ -26,7 +26,15 @@
   The search box directly below the intro paragraph — before "Create or
   upload guidance", not after, matching find-guidance.html's own
   search-box-first layout — is a plain GET <form> to
-  /v5/manage-guidance-search — see that route in app/routes.js — reusing
+  /v5/manage-guidance/search-guidance — a fully independent, filterable
+  results page (its own template and route, not sharing anything with
+  organic-search.html on the Find guidance side) built from every document
+  in the Editing/Awaiting approval tabs plus a handful of sample Published
+  ones — see app/views/versions/v5/manage-guidance/search-guidance.html
+  and buildManageGuidanceSearchResults() in app/routes.js. This used to
+  point at /v5/manage-guidance-search (the plain table-of-matches page,
+  see that file) — that route/template are untouched and still work if
+  visited directly, just no longer where this box itself leads. Reuses
   .app-search-bar/.app-search-bar__input as-is, the same
   GOV.UK-homepage-style layout find-guidance.html's own search box already
   uses. "Create or upload guidance" sits below it with its own
@@ -42,7 +50,6 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
-{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 
 {% set pageName = "All your guidance docs" %}
 
@@ -147,17 +154,13 @@
 
 {% block content %}
 
-<div class="govuk-grid-row">
-  <div class="govuk-grid-column-full">
-    {{ govukBreadcrumbs({
-      classes: "govuk-!-margin-bottom-6",
-      items: [
-        { text: "Guidance hub", href: "/v5/start" },
-        { text: pageName }
-      ]
-    }) }}
-  </div>
-</div>
+{#
+  No breadcrumb — this is the "Manage guidance" tab's own landing page (the
+  top-level nav bar above already shows that tab as current), same choice
+  as find-guidance.html makes for the "Find guidance" side. Pages one level
+  in (manage-guidance/document-overview.html, guidance-document.html) do
+  show a "Manage guidance > ..." trail back to here.
+#}
 
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
@@ -170,7 +173,7 @@
       being edited or awaiting approval.
     </p>
 
-    <form method="get" action="/v5/manage-guidance-search">
+    <form method="get" action="/v5/manage-guidance/search-guidance">
       <div class="app-search-bar">
         <div class="app-search-bar__input">
           {{ govukInput({

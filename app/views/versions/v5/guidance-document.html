@@ -15,6 +15,14 @@
   whatever a designer has already done with a finding — nothing here is
   recorded yet, so every tab shows a fixed mix of both rather than reflecting
   real state.
+
+  Breadcrumb starts from "Manage guidance" (/v5/all-guidance-docs) rather
+  than "Guidance hub > All your guidance docs" — those two used to be
+  separate crumbs pointing at different places, but "All your guidance
+  docs" already links to the exact same /v5/all-guidance-docs the
+  top-level nav bar's own "Manage guidance" tab does, so keeping both
+  would just show the same destination twice; one "Manage guidance" crumb
+  covers it.
 #}
 {% extends "layouts/main.html" %}
 
@@ -141,8 +149,7 @@
     {{ govukBreadcrumbs({
       classes: "govuk-!-margin-bottom-6",
       items: [
-        { text: "Guidance hub", href: "/v5/start" },
-        { text: "All your guidance docs", href: "/v5/all-guidance-docs" },
+        { text: "Manage guidance", href: "/v5/all-guidance-docs" },
         { text: pageName }
       ]
     }) }}

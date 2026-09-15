@@ -186,6 +186,14 @@
   list-style: none;
 }
 
+// .app-search-results has no bottom margin of its own (it is a list, not
+// a paragraph), so without this the pagination nav below it — built by
+// the script in organic-search.html — would sit flush against the last
+// result card with no breathing room above it.
+[data-pagination]:not([hidden]) {
+  margin-top: govuk-spacing(6);
+}
+
 .app-search-results__item {
   padding: govuk-spacing(4) 0;
   border-bottom: 1px solid $govuk-mid-grey;
