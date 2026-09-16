@@ -27,18 +27,47 @@
 //                like the dashboard link here, following whichever variant the
 //                participant was started on
 //
-// `status` is one of: current, superseded, archived.
+// `status` is one of: current, superseded, archived. The versions list at "/"
+// (app/views/index.html) only shows a "(current)"/"(archived)" suffix for
+// those two statuses — "superseded" versions are shown plain, matching what
+// the page already looked like before it read from this file.
+//
+// `entryHref` is the link target for the version's tile on that page.
 //
 
 module.exports = {
   versions: [
     {
+      // Frozen record only — no journeys, since app/views/versions/v1/**
+      // duplicates v2's pages exactly as they were and none of its routes
+      // read this file (see app/lib/prototypes.js's findStep, which only
+      // ever matches unprefixed/legacy paths).
       id: 'v1',
       name: 'Version 1',
-      status: 'current',
+      status: 'superseded',
+      date: null,
+      entryHref: '/v1/',
+      summary: 'Initial guidance document management and find/locate journey.',
+      changes: [],
+      journeys: []
+    },
+    {
+      // This entry's journeys/steps were previously labelled "v1" even
+      // though every step path is unprefixed (/designer/...), which only
+      // ever matched the live pages now namespaced under /v2/ — never the
+      // frozen /v1/ snapshot. Renamed to v2 and step paths re-prefixed
+      // below to match; content (summary/changes) is otherwise unchanged.
+      id: 'v2',
+      name: 'Version 2',
+      status: 'archived',
       date: '8 August 2026',
+      entryHref: '/v2/sign-in',
+      // The one-line blurb shown on the versions list at "/" — kept as the
+      // original hand-written text from when that page was static HTML.
+      // `changes` below is this version's own fuller build history, not
+      // currently rendered anywhere.
       summary:
-        'First pass at the designer journey. Documents run from 10 to 100 pages, so every page is sized for that. The two options are alternative approaches to migrating, tested against no fixed order and no set list of documents to get through.',
+        'Guidance document management and find/locate journey. Frozen — superseded by Version 5.',
       changes: [
         'Added sign in and the designer landing page',
         'Built the two migration approaches as alternatives, to decide between them in research',
@@ -65,31 +94,31 @@ module.exports = {
           description:
             'A designer converts a single Word document, then fixes what the quality checks found before sending it for approval.',
           steps: [
-            { name: 'Sign in', path: '/designer/sign-in' },
-            { name: 'Landing page', path: '/designer/dashboard' },
+            { name: 'Sign in', path: '/v2/designer/sign-in' },
+            { name: 'Landing page', path: '/v2/designer/dashboard' },
             {
               name: 'Upload a Word document',
-              path: '/designer/migrate/single/upload',
+              path: '/v2/designer/migrate/single/upload',
               startsBranch: true
             },
             {
               name: 'Checking your file',
-              path: '/designer/migrate/single/uploading'
+              path: '/v2/designer/migrate/single/uploading'
             },
             {
               name: 'Check the document',
-              path: '/designer/migrate/single/check'
+              path: '/v2/designer/migrate/single/check'
             },
             {
               name: 'Document migrated',
-              path: '/designer/migrate/single/confirmation'
+              path: '/v2/designer/migrate/single/confirmation'
             },
-            { name: 'Quality issues', path: '/designer/documents/issues' }
+            { name: 'Quality issues', path: '/v2/designer/documents/issues' }
           ],
           alternatives: [
             {
               name: 'File rejected by the virus check',
-              path: '/designer/migrate/single/rejected'
+              path: '/v2/designer/migrate/single/rejected'
             }
           ]
         },
@@ -102,34 +131,34 @@ module.exports = {
           description:
             'The designer converts several Word documents in one go, then picks which of the converted drafts to work on from what the quality checks found.',
           steps: [
-            { name: 'Sign in', path: '/designer/sign-in' },
-            { name: 'Landing page', path: '/designer/dashboard' },
+            { name: 'Sign in', path: '/v2/designer/sign-in' },
+            { name: 'Landing page', path: '/v2/designer/dashboard' },
             {
               name: 'Upload your Word documents',
-              path: '/designer/migrate/multiple/upload',
+              path: '/v2/designer/migrate/multiple/upload',
               startsBranch: true
             },
             {
               name: 'Checking your files',
-              path: '/designer/migrate/multiple/uploading'
+              path: '/v2/designer/migrate/multiple/uploading'
             },
             {
               name: 'Documents you have added',
-              path: '/designer/migrate/multiple/documents'
+              path: '/v2/designer/migrate/multiple/documents'
             },
             {
               name: 'Check your documents',
-              path: '/designer/migrate/multiple/check'
+              path: '/v2/designer/migrate/multiple/check'
             },
             {
               name: 'Conversion started',
-              path: '/designer/migrate/multiple/confirmation'
+              path: '/v2/designer/migrate/multiple/confirmation'
             },
             {
               name: 'Converted documents',
-              path: '/designer/migrate/multiple/queue'
+              path: '/v2/designer/migrate/multiple/queue'
             },
-            { name: 'Quality issues', path: '/designer/documents/issues' }
+            { name: 'Quality issues', path: '/v2/designer/documents/issues' }
           ]
         },
         {
@@ -141,13 +170,13 @@ module.exports = {
           description:
             'The designer opens the whole document and fixes what they choose, in whatever order. Findings are places to go to; nothing is recorded against them.',
           steps: [
-            { name: 'Sign in', path: '/designer/sign-in' },
-            { name: 'Landing page', path: '/designer/dashboard' },
-            { name: 'Your documents', path: '/designer/documents' },
-            { name: 'Quality issues', path: '/designer/documents/issues' },
+            { name: 'Sign in', path: '/v2/designer/sign-in' },
+            { name: 'Landing page', path: '/v2/designer/dashboard' },
+            { name: 'Your documents', path: '/v2/designer/documents' },
+            { name: 'Quality issues', path: '/v2/designer/documents/issues' },
             {
               name: 'Fix them in the editor',
-              path: '/designer/documents/edit',
+              path: '/v2/designer/documents/edit',
               startsBranch: true
             }
           ]
@@ -161,19 +190,19 @@ module.exports = {
           description:
             'The designer takes one finding at a time and records a verdict on each — fixed, false positive or will not fix — until none are left.',
           steps: [
-            { name: 'Sign in', path: '/designer/sign-in' },
-            { name: 'Landing page', path: '/designer/dashboard' },
-            { name: 'Your documents', path: '/designer/documents' },
-            { name: 'Quality issues', path: '/designer/documents/issues' },
+            { name: 'Sign in', path: '/v2/designer/sign-in' },
+            { name: 'Landing page', path: '/v2/designer/dashboard' },
+            { name: 'Your documents', path: '/v2/designer/documents' },
+            { name: 'Quality issues', path: '/v2/designer/documents/issues' },
             {
               name: 'A finding',
-              path: '/designer/documents/findings',
+              path: '/v2/designer/documents/findings',
               startsBranch: true,
               route: true
             },
             {
               name: 'Review complete',
-              path: '/designer/documents/review-complete'
+              path: '/v2/designer/documents/review-complete'
             }
           ]
         },
@@ -185,23 +214,60 @@ module.exports = {
           description:
             'The other route off the landing page, into the same markdown editor the migrate branch uses to fix issues.',
           steps: [
-            { name: 'Sign in', path: '/designer/sign-in' },
-            { name: 'Landing page', path: '/designer/dashboard' },
+            { name: 'Sign in', path: '/v2/designer/sign-in' },
+            { name: 'Landing page', path: '/v2/designer/dashboard' },
             {
               name: 'Your documents',
-              path: '/designer/documents',
+              path: '/v2/designer/documents',
               startsBranch: true
             },
-            { name: 'Edit a document', path: '/designer/documents/edit' }
+            { name: 'Edit a document', path: '/v2/designer/documents/edit' }
           ],
           alternatives: [
             {
               name: 'Preview the document in a new tab',
-              path: '/designer/documents/preview'
+              path: '/v2/designer/documents/preview'
             }
           ]
         }
       ]
+    },
+    // v3/v4/v5 don't drive a step-by-step journey banner on any of their own
+    // pages (only v2's designer/* journeys above do), so there's no value in
+    // modeling their ~40 pages as steps just to power this list — these are
+    // list-only entries.
+    {
+      id: 'v3',
+      name: 'Version 3',
+      status: 'superseded',
+      date: null,
+      entryHref: '/v3/',
+      summary:
+        'Single sign-in entry, then one full-width landing page combining search, collapsible filters and recent work.',
+      changes: [],
+      journeys: []
+    },
+    {
+      id: 'v4',
+      name: 'Version 4',
+      status: 'superseded',
+      date: null,
+      entryHref: '/v4/upload-guide',
+      summary:
+        "A simple guidance upload journey: upload, add the guide's details, check and convert, then view the converted guidance. No quality checks for now.",
+      changes: [],
+      journeys: []
+    },
+    {
+      id: 'v5',
+      name: 'Version 5',
+      status: 'current',
+      date: null,
+      entryHref: '/v5/sign-in',
+      summary:
+        'Homepage split between finding guidance and managing all guidance documents.',
+      changes: [],
+      journeys: []
     }
   ]
 }

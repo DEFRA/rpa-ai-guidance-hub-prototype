@@ -1,0 +1,19 @@
+{#
+  Full-width shape for landing and entry pages — a hero row plus a row of
+  tiles/sections beneath it. Use this instead of content.njk when a page has
+  no single reading column.
+#}
+{% extends "common/layouts/base.njk" %}
+
+{% set pageName = pageName or title %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      {% block hero %}{% endblock %}
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    {% block tiles %}{% endblock %}
+  </div>
+{% endblock %}
