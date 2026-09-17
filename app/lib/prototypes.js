@@ -9,21 +9,11 @@ const fs = require('fs')
 const path = require('path')
 
 const { versions } = require('../data/prototypes')
+const { templatePathFor, viewExtensions } = require('./view-paths')
 
 const viewsDir = path.join(__dirname, '..', 'views')
-const viewExtensions = ['.html', '.njk']
 
-// A step counts as built once a view file exists at its path. Every
-// versioned route (/v2/..., /v5/..., ...) renders from
-// app/views/versions/vN/... rather than app/views/vN/..., so a step path
-// under a version prefix is looked up there instead of literally.
-function templatePathFor(stepPath) {
-  const versionMatch = stepPath.match(/^\/(v\d+)\/(.+)$/)
-  return versionMatch
-    ? `/versions/${versionMatch[1]}/${versionMatch[2]}`
-    : stepPath
-}
-
+// A step counts as built once a view file exists at its path.
 function stepExists(stepPath) {
   const templatePath = templatePathFor(stepPath)
   return viewExtensions.some((extension) =>

@@ -7,6 +7,7 @@ const govukPrototypeKit = require('govuk-prototype-kit')
 const router = govukPrototypeKit.requests.setupRouter()
 
 const prototypes = require('../../lib/prototypes')
+const { getPageNotes } = require('../../lib/page-notes')
 const library = require('../../data/documents')
 const { guidedSearches } = require('../../data/guided-searches')
 const { favouritedGuidance } = require('../../data/favourited-guidance')
@@ -48,6 +49,13 @@ router.use((req, res, next) => {
     ...item,
     current: item.href === req.path
   }))
+  next()
+})
+
+// The Notes panel (app/views/partials/notes-panel.njk) reads this on every
+// page, whichever version it belongs to. See app/lib/page-notes.js.
+router.use((req, res, next) => {
+  res.locals.pageNotes = getPageNotes(req.path)
   next()
 })
 

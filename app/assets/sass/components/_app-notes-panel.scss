@@ -1,0 +1,90 @@
+// Notes panel — an off-canvas drawer for the designer/dev Notes feature.
+// See app/views/partials/notes-panel.njk and app/assets/javascripts/notes-panel.js.
+
+.app-notes-panel {
+  position: fixed;
+  top: 0;
+  right: -320px;
+  bottom: 0;
+  z-index: 1000;
+  width: 320px;
+  max-width: 90vw;
+  overflow-y: auto;
+  background: govuk-colour("white");
+  border-left: 1px solid $govuk-border-colour;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+  transition: right 0.2s ease-in-out;
+
+  &--open {
+    right: 0;
+  }
+}
+
+.app-notes-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: govuk-spacing(3);
+  border-bottom: 1px solid $govuk-border-colour;
+}
+
+.app-notes-panel__title {
+  @include govuk-font(19, $weight: "bold");
+  margin: 0;
+}
+
+.app-notes-panel__close {
+  @include govuk-font(24);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.app-notes-panel__body {
+  padding: govuk-spacing(3);
+}
+
+.app-notes-panel__url {
+  @include govuk-font(16);
+  margin-top: 0;
+  color: $govuk-secondary-text-colour;
+  word-break: break-all;
+}
+
+.app-notes-panel__status {
+  margin-top: 0;
+}
+
+.app-notes-panel__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-notes-panel__note {
+  padding-bottom: govuk-spacing(3);
+  margin-bottom: govuk-spacing(3);
+  border-bottom: 1px solid $govuk-border-colour;
+
+  &:last-child {
+    border-bottom: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.app-notes-panel__note-meta {
+  @include govuk-font(16);
+  color: $govuk-secondary-text-colour;
+  margin-bottom: govuk-spacing(1);
+
+  strong {
+    margin-right: govuk-spacing(2);
+  }
+}
+
+.app-notes-panel__note-text {
+  margin-bottom: 0;
+}
