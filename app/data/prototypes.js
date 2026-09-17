@@ -261,9 +261,24 @@ module.exports = {
     {
       id: 'v5',
       name: 'Version 5',
-      status: 'current',
+      status: 'archived',
       date: null,
       entryHref: '/v5/sign-in',
+      summary:
+        'Homepage split between finding guidance and managing all guidance documents. Frozen — superseded by Version 6.',
+      changes: [],
+      journeys: []
+    },
+    {
+      // A duplicate of Version 5's own main flow (sign-in, start, find
+      // guidance, manage guidance, editor-experiment), the same treatment
+      // Version 5 got from Version 2 — see app/views/v6/'s route modules
+      // and app/views/versions/v6/ for exactly what that covers.
+      id: 'v6',
+      name: 'Version 6',
+      status: 'current',
+      date: null,
+      entryHref: '/v6/sign-in',
       summary:
         'Homepage split between finding guidance and managing all guidance documents.',
       changes: [],

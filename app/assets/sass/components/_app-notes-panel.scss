@@ -1,36 +1,48 @@
 // Notes panel — an off-canvas drawer for the designer/dev Notes feature.
 // See app/views/partials/notes-panel.njk and app/assets/javascripts/notes-panel.js.
 
-// A real govukButton (see notes-panel.njk), just repositioned as a floating
-// trigger so it reads as a prominent call to action rather than a buried
-// footer link — same green, shadow and focus state as every other button in
-// the prototype, not a custom skin.
-.app-notes-trigger.govuk-button {
+// A tab docked to the right edge of the viewport, vertically centred —
+// the same pattern a few GOV.UK services use for a "Feedback" tab, rather
+// than a govuk-button, which would read as a call to action instead of a
+// persistent utility toggle. Solid Defra green and generous padding so it
+// still catches the eye rather than blending into the page furniture.
+.app-notes-trigger {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  top: 50%;
+  right: 0;
   z-index: 1001;
-  margin-bottom: 0;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  padding: govuk-spacing(3) govuk-spacing(2);
+  background: $defra-green;
+  border: 0;
+  border-radius: 8px 0 0 8px;
+  @include govuk-font(19, $weight: "bold");
+  letter-spacing: 0.5px;
+  color: govuk-colour("white");
+  cursor: pointer;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
   transition:
     opacity 0.15s ease-in-out,
-    transform 0.15s ease-in-out;
+    transform 0.15s ease-in-out,
+    background-color 0.15s ease-in-out,
+    padding 0.15s ease-in-out;
+
+  &:hover {
+    background: $defra-green-hover;
+    padding-right: govuk-spacing(3);
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-focus-colour;
+    outline-offset: 0;
+  }
 }
 
-// A separate top-level rule, not nested under .govuk-button — nesting it
-// there compiles the "&" to the end of the compound selector
-// (.app-notes-trigger.govuk-button--hidden), which never matches the class
-// notes-panel.js actually toggles.
 .app-notes-trigger--hidden {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(8px) scale(0.95);
-}
-
-.app-notes-trigger__icon {
-  position: relative;
-  top: 3px;
-  margin-right: 2px;
+  transform: translateY(-50%) translateX(100%);
 }
 
 .app-notes-panel {
@@ -89,34 +101,49 @@
   margin-top: 0;
 }
 
-.app-notes-panel__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.app-notes-panel__note {
-  padding-bottom: govuk-spacing(3);
-  margin-bottom: govuk-spacing(3);
-  border-bottom: 1px solid $govuk-border-colour;
-
-  &:last-child {
-    border-bottom: 0;
-    margin-bottom: 0;
-    padding-bottom: 0;
-  }
-}
-
-.app-notes-panel__note-meta {
+// Plain HTML from marked (see app/lib/page-notes.js) — no govuk-* classes of
+// its own, so it needs its own minimal typography rather than relying on
+// GOV.UK Frontend's component styles.
+.app-notes-panel__markdown {
   @include govuk-font(16);
-  color: $govuk-secondary-text-colour;
-  margin-bottom: govuk-spacing(1);
 
-  strong {
-    margin-right: govuk-spacing(2);
+  > :first-child {
+    margin-top: 0;
   }
-}
 
-.app-notes-panel__note-text {
-  margin-bottom: 0;
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @include govuk-font(19, $weight: "bold");
+    margin: govuk-spacing(4) 0 govuk-spacing(2);
+  }
+
+  p,
+  ul,
+  ol {
+    margin: 0 0 govuk-spacing(3);
+  }
+
+  ul,
+  ol {
+    padding-left: govuk-spacing(4);
+  }
+
+  hr {
+    margin: govuk-spacing(4) 0;
+    border: 0;
+    border-top: 1px solid $govuk-border-colour;
+  }
+
+  a {
+    color: $govuk-link-colour;
+
+    &:hover {
+      color: $govuk-link-hover-colour;
+    }
+  }
 }

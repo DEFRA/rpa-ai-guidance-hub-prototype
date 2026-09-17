@@ -1,48 +1,31 @@
 {#
   The versions list, and the homepage ("/"). Generated from
-  app/data/prototypes.js again (via app/lib/prototypes.js's getVersions(),
-  passed in as `versions` by the GET / handler in app/views/legacy/routes.js)
-  — the same file that drives the step order within v2's designer journey,
-  rather than the hand-written HTML this page became for a while (see git
-  history). A version's tile only gets a "(current)"/"(archived)" suffix for
-  those two statuses — every other status (e.g. "superseded") shows plain.
+  app/data/prototypes.js (via app/lib/prototypes.js's getVersions(), passed
+  in as `versions` by the GET / handler in app/views/legacy/routes.js) — the
+  same file that drives the step order within v2's designer journey, rather
+  than hand-written HTML (see git history). A version's tile only gets a
+  "(current)"/"(archived)" suffix for those two statuses — every other
+  status (e.g. "superseded") shows plain.
 
   Version 1 is a frozen copy of every page reachable from the homepage, at
-<<<<<<< Updated upstream
   app/views/versions/v1/ and the /v1/... routes in
   app/views/legacy/routes.js — built so it keeps working exactly as it does
   now, regardless of what changes in later versions. Version 2 — the
   original live flow — is namespaced under /v2/ for the same reason this
   page needed to move off "/" and onto it: something has to live at the
-  root that isn't any specific version. It's now frozen too, the same
-  treatment Version 1 already had, since Version 5 (a duplicate of Version
-  2's own main flow — sign-in, start, find guidance, manage guidance,
-  editor-experiment) is the current version. Both Version 2 and Version 5
-  link to their own sign-in page first (/v2/sign-in, /v5/sign-in) rather
-  than straight to start — sign-in is the intended front door for either
-  flow; both /start routes are still real and reachable directly, just no
-  longer where this page's own links send people first.
-=======
-  app/views/versions/v1/ and the /v1/... routes in app/routes.js — built so
-  it keeps working exactly as it does now, regardless of what changes in the
-  live version above it. Version 2 was namespaced under /v2/ for the same
-  reason this page needed to move off "/" and onto it: something has to live
-  at the root that isn't any specific version.
+  root that isn't any specific version.
 
   Version 5 is a duplicate of Version 2's own main flow (sign-in, start,
-  find guidance, manage guidance, editor-experiment — see the "Version 5"
-  block in app/routes.js and app/views/versions/v5/ for exactly what that
-  covers) at /v5/. Version 6 is the same duplication one step on — a
-  duplicate of Version 5's own main flow, at /v6/, now the current version —
-  Version 5 is frozen from this point on, the same treatment Version 2
-  (superseded by Version 5) and Version 1 already had, so its own tile below
-  is labelled "(archived)" and its link no longer says "(current)". Version
-  2, Version 5 and Version 6 all link to their own sign-in page first
+  find guidance, manage guidance, editor-experiment — see
+  app/views/versions/v5/ and app/views/v5/find-guidance/ for exactly what
+  that covers), now frozen the same way Version 2 was. Version 6 is the
+  same duplication one step on (see app/views/versions/v6/ and
+  app/views/v6/'s route modules) and is the current version. Version 2,
+  Version 5 and Version 6 all link to their own sign-in page first
   (/v2/sign-in, /v5/sign-in, /v6/sign-in) rather than straight to start —
-  sign-in is the intended front door for each flow; every /start route is
+  sign-in is the intended front door for either flow; every /start route is
   still real and reachable directly, just no longer where this page's own
   links send people first.
->>>>>>> Stashed changes
 #}
 {% extends "layouts/main.html" %}
 
@@ -55,7 +38,6 @@
 
     <h1 class="govuk-heading-l">RPA Guidance Hub - Prototype versions</h1>
 
-<<<<<<< Updated upstream
     {% for version in versions %}
       <div class="app-version">
         <h2 class="govuk-heading-m">
@@ -68,66 +50,6 @@
         </p>
       </div>
     {% endfor %}
-=======
-    <div class="app-version">
-      <h2 class="govuk-heading-m">
-        <a class="govuk-link" href="/v1/">Version 1</a>
-      </h2>
-      <p class="govuk-body">
-        Initial guidance document management and find/locate journey.
-      </p>
-    </div>
-
-    <div class="app-version">
-      <h2 class="govuk-heading-m">
-        <a class="govuk-link" href="/v2/sign-in">Version 2 (archived)</a>
-      </h2>
-      <p class="govuk-body">
-        Guidance document management and find/locate journey. Frozen — superseded by Version 5.
-      </p>
-    </div>
-
-    <div class="app-version">
-      <h2 class="govuk-heading-m">
-        <a class="govuk-link" href="/v3/">Version 3</a>
-      </h2>
-      <p class="govuk-body">
-        Single sign-in entry, then one full-width landing page combining
-        search, collapsible filters and recent work.
-      </p>
-    </div>
-
-    <div class="app-version">
-      <h2 class="govuk-heading-m">
-        <a class="govuk-link" href="/v4/upload-guide">Version 4</a>
-      </h2>
-      <p class="govuk-body">
-        A simple guidance upload journey: upload, add the guide's details,
-        check and convert, then view the converted guidance. No quality
-        checks for now.
-      </p>
-    </div>
-
-    <div class="app-version">
-      <h2 class="govuk-heading-m">
-        <a class="govuk-link" href="/v5/sign-in">Version 5 (archived)</a>
-      </h2>
-      <p class="govuk-body">
-        Homepage split between finding guidance and managing all guidance
-        documents. Frozen — superseded by Version 6.
-      </p>
-    </div>
-
-    <div class="app-version">
-      <h2 class="govuk-heading-m">
-        <a class="govuk-link" href="/v6/sign-in">Version 6 (current)</a>
-      </h2>
-      <p class="govuk-body">
-        Homepage split between finding guidance and managing all guidance
-        documents.
-      </p>
-    </div>
->>>>>>> Stashed changes
 
   </div>
 </div>

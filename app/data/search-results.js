@@ -17,31 +17,36 @@ const searchResults = [
   {
     id: 'countryside-stewardship-capital-grants',
     name: 'Countryside Stewardship: capital grants',
-    description: 'Explains the capital items available under Countryside Stewardship, including fencing and hedgerow restoration, and how to apply for a grant.',
+    description:
+      'Explains the capital items available under Countryside Stewardship, including fencing and hedgerow restoration, and how to apply for a grant.',
     status: 'Up to date'
   },
   {
     id: 'basic-payment-scheme-closing-rules',
     name: 'Basic Payment Scheme: closing rules',
-    description: 'Sets out what still applies to farmers with BPS entitlements or open legacy claims now the scheme has closed to new claims.',
+    description:
+      'Sets out what still applies to farmers with BPS entitlements or open legacy claims now the scheme has closed to new claims.',
     status: 'Partially updated'
   },
   {
     id: 'hedgerow-management-standards',
     name: 'Hedgerow management standards',
-    description: 'Covers cutting dates, buffer strips and record keeping for hedgerows under cross compliance and SFI actions.',
+    description:
+      'Covers cutting dates, buffer strips and record keeping for hedgerows under cross compliance and SFI actions.',
     status: 'Out of date'
   },
   {
     id: 'sfi-soil-health-actions',
     name: 'Sustainable Farming Incentive: soil health actions',
-    description: 'Explains the soil health actions available under SFI 23, what evidence to keep, and how they interact with other actions on the same land.',
+    description:
+      'Explains the soil health actions available under SFI 23, what evidence to keep, and how they interact with other actions on the same land.',
     status: 'Up to date'
   },
   {
     id: 'higher-tier-stewardship-options',
     name: 'Higher Tier stewardship options',
-    description: 'An overview of the options available under a Higher Tier Countryside Stewardship agreement and how they differ from Mid Tier.',
+    description:
+      'An overview of the options available under a Higher Tier Countryside Stewardship agreement and how they differ from Mid Tier.',
     status: 'Partially updated'
   }
 ]

@@ -1,30 +1,23 @@
-{% from "govuk/components/button/macro.njk" import govukButton %}
-
 {#
   Notes: a designer/dev annotation panel, inspired by "Alan" in
   defra-design/fcp-farming-front-door. Shows whatever this page's
-  `*.notes.json` file says (see app/lib/page-notes.js) — status, the intended
+  `*.notes.md` file says (see app/lib/page-notes.js) — status, the intended
   designer URL slug (which may not match this prototype's own route — see
-  CLAUDE.md), and a running list of comments left by whoever has worked on
-  the page.
+  CLAUDE.md), and a freeform markdown body — whatever the author wants:
+  dated entries, headings, bullet points — rendered as HTML.
 
   There's no way to add a note from the browser: edit the page's
-  `*.notes.json` file (next to its template) and commit it, same as any other
+  `*.notes.md` file (next to its template) and commit it, same as any other
   change to the prototype.
 
-  The toggle is a real govukButton (not a custom-styled one) so it carries
-  the same GOV.UK/Defra button look — colour, focus state, hover — as
-  everything else in the prototype; app-notes-trigger only repositions it as
-  a floating trigger, it doesn't restyle it.
+  The toggle is a tab docked to the screen edge, not a govuk-button — this is
+  a persistent utility toggle, not a call to action, and a solid button reads
+  as the latter. Follows the same pattern a few GOV.UK services use for a
+  "Feedback" tab fixed to the edge of the viewport.
 #}
-{% set notesTriggerIcon %}<svg class="app-notes-trigger__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M11 0l1.7 6.4L19 8l-6.3 1.6L11 16l-1.7-6.4L3 8l6.3-1.6L11 0zM19.5 14l.9 3.6L24 18.5l-3.6.9-.9 3.6-.9-3.6L15 18.5l3.6-.9.9-3.6z"/></svg>{% endset %}
-{{ govukButton({
-  html: notesTriggerIcon + ' Notes',
-  classes: "app-notes-trigger",
-  id: "app-notes-trigger",
-  type: "button",
-  attributes: { onclick: "toggleNotesPanel()" }
-}) }}
+<button type="button" class="app-notes-trigger" id="app-notes-trigger" onclick="toggleNotesPanel()">
+  Notes
+</button>
 
 <div class="app-notes-panel" id="app-notes-panel">
   <div class="app-notes-panel__header">
@@ -48,25 +41,15 @@
         </p>
       {% endif %}
 
-      {% if pageNotes.notes and pageNotes.notes.length %}
-        <ul class="app-notes-panel__list">
-          {% for note in pageNotes.notes %}
-            <li class="app-notes-panel__note">
-              <p class="app-notes-panel__note-meta">
-                {% if note.author %}<strong>{{ note.author }}</strong>{% endif %}
-                {% if note.date %}<span>{{ note.date }}</span>{% endif %}
-              </p>
-              <p class="app-notes-panel__note-text">{{ note.text }}</p>
-            </li>
-          {% endfor %}
-        </ul>
+      {% if pageNotes.html %}
+        <div class="app-notes-panel__markdown">{{ pageNotes.html | safe }}</div>
       {% else %}
         <p class="govuk-body-s">No notes for this page yet.</p>
       {% endif %}
     {% else %}
       <p class="govuk-body-s">
-        No notes for this page yet. Add a <code>page.notes.json</code>
-        (or <code>&lt;template&gt;.notes.json</code>) file alongside its
+        No notes for this page yet. Add a <code>page.notes.md</code>
+        (or <code>&lt;template&gt;.notes.md</code>) file alongside its
         template to leave one.
       </p>
     {% endif %}

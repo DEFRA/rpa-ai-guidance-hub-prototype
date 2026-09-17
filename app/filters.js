@@ -17,7 +17,7 @@ const addFilter = govukPrototypeKit.views.addFilter
 // string without a marker just comes back escaped and unchanged, so this can
 // be applied to every paragraph/bullet in saved-document-view.html rather
 // than singled out for one document.
-function escapeHtml (value) {
+function escapeHtml(value) {
   return String(value)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -26,7 +26,7 @@ function escapeHtml (value) {
     .replace(/'/g, '&#39;')
 }
 
-function renderLinkMarkers (value) {
+function renderLinkMarkers(value) {
   const text = String(value)
   const linkPattern = /{{LINK:([^}]+)}}/g
   let result = ''
@@ -35,7 +35,10 @@ function renderLinkMarkers (value) {
 
   while ((match = linkPattern.exec(text)) !== null) {
     result += escapeHtml(text.slice(lastIndex, match.index))
-    result += '<a href="#" class="govuk-link" onclick="return false;">' + escapeHtml(match[1]) + '</a>'
+    result +=
+      '<a href="#" class="govuk-link" onclick="return false;">' +
+      escapeHtml(match[1]) +
+      '</a>'
     lastIndex = linkPattern.lastIndex
   }
   result += escapeHtml(text.slice(lastIndex))

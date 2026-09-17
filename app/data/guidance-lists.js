@@ -24,6 +24,24 @@ const { guidanceDocuments } = require('./guidance-documents')
 
 const RECENTLY_OPENED_LIMIT = 5
 
+// A tab param, as carried by find-guidance.html's own Remove links
+// (?tab=recently-opened/saved-guidance), to that tab's display copy for
+// delete-search-confirm.html — listName for the confirmation message,
+// anchor for which tab to return to (saved-guidance's is
+// "favourited-guidance", matching that tab's own id in the govukTabs call
+// on find-guidance.html: its label reads "Saved guidance", but the id/
+// anchor was never renamed to match). Shared, unmodified, by v2/v5 (see
+// app/views/legacy/routes.js) and v6 (app/views/v6/find-guidance/) — purely
+// display copy, not session state, but kept in one place so all three stay
+// in sync.
+const REMOVE_CONFIRM_TABS = {
+  'recently-opened': { listName: 'Recently opened', anchor: 'recently-opened' },
+  'saved-guidance': {
+    listName: 'Saved guidance',
+    anchor: 'favourited-guidance'
+  }
+}
+
 function getRecentlyOpened(req) {
   if (!req.session.data.recentlyOpened) {
     req.session.data.recentlyOpened = [
@@ -66,9 +84,9 @@ function getSavedGuidance(req) {
 }
 
 // A tab param, as already carried by find-guidance.html's own Remove links
-// (?tab=recently-opened/saved-guidance) and REMOVE_CONFIRM_TABS in
-// app/views/legacy/routes.js, to whichever session array that tab is backed
-// by — used by the remove route to know which list to take an id out of.
+// (?tab=recently-opened/saved-guidance) and REMOVE_CONFIRM_TABS above, to
+// whichever session array that tab is backed by — used by the remove route
+// to know which list to take an id out of.
 function getListForTab(req, tabParam) {
   if (tabParam === 'recently-opened') return getRecentlyOpened(req)
   if (tabParam === 'saved-guidance') return getSavedGuidance(req)
@@ -127,6 +145,7 @@ function buildFindGuidanceRows(list) {
 }
 
 module.exports = {
+  REMOVE_CONFIRM_TABS,
   getRecentlyOpened,
   getSavedGuidance,
   getListForTab,
