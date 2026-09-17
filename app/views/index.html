@@ -7,7 +7,6 @@
   history). A version's tile only gets a "(current)"/"(archived)" suffix for
   those two statuses — every other status (e.g. "superseded") shows plain.
 
-  Version 1 is a frozen copy of every page reachable from the homepage, at
   app/views/versions/v1/ and the /v1/... routes in
   app/views/legacy/routes.js — built so it keeps working exactly as it does
   now, regardless of what changes in later versions. Version 2 — the
@@ -16,11 +15,19 @@
   root that isn't any specific version. It's now frozen too, the same
   treatment Version 1 already had, since Version 5 (a duplicate of Version
   2's own main flow — sign-in, start, find guidance, manage guidance,
-  editor-experiment) is the current version. Both Version 2 and Version 5
-  link to their own sign-in page first (/v2/sign-in, /v5/sign-in) rather
-  than straight to start — sign-in is the intended front door for either
-  flow; both /start routes are still real and reachable directly, just no
-  longer where this page's own links send people first.
+  editor-experiment) was, for a while, the current version.
+
+  Version 6 is the same duplication one step on — a duplicate of Version 5's
+  own main flow, at /v6/ (see the "Version 6" block in
+  app/views/legacy/routes.js and app/views/versions/v6/ for exactly what
+  that covers), now the current version. Version 5 is frozen from this point
+  on, the same treatment Version 2 (superseded by Version 5) and Version 1
+  already had, so its own tile below is labelled "(archived)" rather than
+  "(current)". Version 2, Version 5 and Version 6 all link to their own
+  sign-in page first (/v2/sign-in, /v5/sign-in, /v6/sign-in) rather than
+  straight to start — sign-in is the intended front door for each flow;
+  every /start route is still real and reachable directly, just no longer
+  where this page's own links send people first.
 #}
 {% extends "layouts/main.html" %}
 
