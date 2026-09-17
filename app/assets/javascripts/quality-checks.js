@@ -34,39 +34,84 @@
 
   // GS-002: steps must start with an action verb.
   const ACTION_VERBS = [
-    'open', 'select', 'enter', 'check', 'record', 'send', 'complete', 'review',
-    'confirm', 'add', 'remove', 'update', 'upload', 'download', 'print', 'sign',
-    'submit', 'tell', 'ask', 'call', 'email', 'go', 'choose', 'find', 'read',
-    'set', 'save', 'close', 'return', 'contact', 'use', 'compare', 'copy',
-    'attach', 'reject', 'approve', 'escalate', 'log', 'note', 'search'
+    'open',
+    'select',
+    'enter',
+    'check',
+    'record',
+    'send',
+    'complete',
+    'review',
+    'confirm',
+    'add',
+    'remove',
+    'update',
+    'upload',
+    'download',
+    'print',
+    'sign',
+    'submit',
+    'tell',
+    'ask',
+    'call',
+    'email',
+    'go',
+    'choose',
+    'find',
+    'read',
+    'set',
+    'save',
+    'close',
+    'return',
+    'contact',
+    'use',
+    'compare',
+    'copy',
+    'attach',
+    'reject',
+    'approve',
+    'escalate',
+    'log',
+    'note',
+    'search'
   ]
 
   // Section 11: wording the tool must flag when no measurable rule is given.
   const AMBIGUOUS_WORDS = [
-    'where possible', 'wherever possible', 'as appropriate', 'appropriate',
-    'as necessary', 'if necessary', 'relevant', 'as required', 'suitable',
-    'in a timely manner', 'reasonable'
+    'where possible',
+    'wherever possible',
+    'as appropriate',
+    'appropriate',
+    'as necessary',
+    'if necessary',
+    'relevant',
+    'as required',
+    'suitable',
+    'in a timely manner',
+    'reasonable'
   ]
 
   const MAX_SENTENCE_WORDS = 25
 
-  function words (text) {
+  function words(text) {
     return text.trim().split(/\s+/).filter(Boolean)
   }
 
-  function sentences (text) {
-    return text.split(/(?<=[.!?])\s+/).filter(function (s) { return s.trim() })
+  function sentences(text) {
+    return text.split(/(?<=[.!?])\s+/).filter(function (s) {
+      return s.trim()
+    })
   }
 
-  function isNumberedStep (line) {
+  function isNumberedStep(line) {
     return /^\s*\d+\.\s+/.test(line)
   }
 
-  function isBullet (line) {
+  function isBullet(line) {
     return /^\s*[-*]\s+/.test(line)
   }
 
-  function stripMarkdown (line) {
+  function stripMarkdown(line) {
     return line
       .replace(/^\s*#{1,6}\s+/, '')
       .replace(/^\s*\d+\.\s+/, '')
@@ -102,10 +147,14 @@
         ]
 
         return fields
-          .filter(function (field) { return !field.pattern.test(markdown) })
+          .filter(function (field) {
+            return !field.pattern.test(markdown)
+          })
           .map(function (field) {
             // No line: this is about the guide as a whole.
-            return { title: 'The purpose statement has no "' + field.label + '" line' }
+            return {
+              title: 'The purpose statement has no "' + field.label + '" line'
+            }
           })
       }
     },
@@ -140,9 +189,16 @@
         const text = stripMarkdown(line)
         // A conditional sentence that does not use the required structure.
         if (!/\bif\b/i.test(text)) return []
-        if (/\bIF\b[\s\S]*\bTHEN\b/.test(text) && /NEXT STEP/i.test(text)) return []
-        if (!/^(if|.*\bif the\b|.*\bif you\b|.*\bif it\b)/i.test(text)) return []
-        return [{ title: 'Decision point does not use IF, THEN and NEXT STEP', quote: text }]
+        if (/\bIF\b[\s\S]*\bTHEN\b/.test(text) && /NEXT STEP/i.test(text))
+          return []
+        if (!/^(if|.*\bif the\b|.*\bif you\b|.*\bif it\b)/i.test(text))
+          return []
+        return [
+          {
+            title: 'Decision point does not use IF, THEN and NEXT STEP',
+            quote: text
+          }
+        ]
       }
     },
     {
@@ -158,9 +214,13 @@
       detect: function (line) {
         if (!isNumberedStep(line)) return []
         const text = stripMarkdown(line)
-        const first = (words(text)[0] || '').toLowerCase().replace(/[^a-z]/g, '')
+        const first = (words(text)[0] || '')
+          .toLowerCase()
+          .replace(/[^a-z]/g, '')
         if (ACTION_VERBS.indexOf(first) !== -1) return []
-        return [{ title: 'Step does not start with an action verb', quote: text }]
+        return [
+          { title: 'Step does not start with an action verb', quote: text }
+        ]
       }
     },
     {
@@ -172,7 +232,8 @@
         'A step MUST NOT contain multiple instructions joined by and, then or before unless the actions cannot be separated.',
       whyItMatters:
         'Compound steps are the commonest cause of a reader completing half an instruction and believing they are done.',
-      recommendation: 'Split this into separate numbered steps, one action each.',
+      recommendation:
+        'Split this into separate numbered steps, one action each.',
       detect: function (line) {
         if (!isNumberedStep(line)) return []
         const text = stripMarkdown(line)
@@ -193,13 +254,16 @@
         'Sentences SHOULD be 25 words or fewer where this does not change the meaning.',
       whyItMatters:
         'Long sentences are harder to follow, and operational readers are usually scanning rather than reading.',
-      recommendation: 'Split the sentence, or cut the words that carry no meaning.',
+      recommendation:
+        'Split the sentence, or cut the words that carry no meaning.',
       detect: function (line) {
         const text = stripMarkdown(line)
         if (!text || /^#{1,6}/.test(line)) return []
 
         return sentences(text)
-          .filter(function (sentence) { return words(sentence).length > MAX_SENTENCE_WORDS })
+          .filter(function (sentence) {
+            return words(sentence).length > MAX_SENTENCE_WORDS
+          })
           .map(function (sentence) {
             return {
               title: 'Sentence is ' + words(sentence).length + ' words',
@@ -230,7 +294,8 @@
             if (seen[acronym]) return
             seen[acronym] = true
             // Explained if the acronym appears in brackets after words.
-            if (new RegExp('\\w+\\s*\\(' + acronym + '\\)').test(markdown)) return
+            if (new RegExp('\\w+\\s*\\(' + acronym + '\\)').test(markdown))
+              return
             // IF / THEN are structural, not acronyms.
             if (['IF', 'THEN', 'NEXT', 'STEP'].indexOf(acronym) !== -1) return
             found.push({
@@ -255,7 +320,9 @@
       recommendation: 'Rewrite so the sentence says who does what.',
       detect: function (line) {
         const text = stripMarkdown(line)
-        const match = text.match(/\b(is|are|was|were|be|been|being)\s+(\w+ed|sent|made|given|taken|written|held|kept|shown)\b/i)
+        const match = text.match(
+          /\b(is|are|was|were|be|been|being)\s+(\w+ed|sent|made|given|taken|written|held|kept|shown)\b/i
+        )
         if (!match) return []
         return [{ title: 'Passive voice: "' + match[0] + '"', quote: text }]
       }
@@ -278,7 +345,10 @@
         AMBIGUOUS_WORDS.forEach(function (word) {
           const expression = new RegExp('\\b' + word + '\\b', 'i')
           if (expression.test(text)) {
-            found.push({ title: 'Ambiguous wording: "' + word + '"', quote: text })
+            found.push({
+              title: 'Ambiguous wording: "' + word + '"',
+              quote: text
+            })
           }
         })
 
@@ -327,7 +397,9 @@
         lines.forEach(function (line, index) {
           if (!isBullet(line)) return
           const text = stripMarkdown(line)
-          const first = (words(text)[0] || '').toLowerCase().replace(/[^a-z]/g, '')
+          const first = (words(text)[0] || '')
+            .toLowerCase()
+            .replace(/[^a-z]/g, '')
           if (ACTION_VERBS.indexOf(first) === -1) return
           found.push({
             title: 'Bulleted item is an action, so the order may matter',
@@ -345,13 +417,13 @@
   // Running the checks
   // ---------------------------------------------------------------------
 
-  function severityTag (severity) {
+  function severityTag(severity) {
     return SEVERITY_TAGS[severity] || SEVERITY_TAGS.info
   }
 
   // The nearest heading above a line, used as the finding's location so a
   // reader can tell where in the document it sits without a line number.
-  function sectionsFor (lines) {
+  function sectionsFor(lines) {
     let current = 'Introduction'
     return lines.map(function (line) {
       const heading = line.trim().match(/^#{1,6}\s+(.*)$/)
@@ -360,14 +432,14 @@
     })
   }
 
-  function findIssues (markdown) {
+  function findIssues(markdown) {
     const lines = markdown.split('\n')
     const sections = sectionsFor(lines)
     const issues = []
 
     RULES.forEach(function (rule) {
       if (rule.scope === 'document') {
-        (rule.detect(markdown, lines) || []).forEach(function (hit) {
+        ;(rule.detect(markdown, lines) || []).forEach(function (hit) {
           // Some document-level rules point at a line (an unexplained acronym);
           // others are about the guide as a whole (a missing section).
           issues.push(buildIssue(rule, hit, hit.line || 1, sections, !hit.line))
@@ -376,7 +448,7 @@
       }
 
       lines.forEach(function (line, index) {
-        (rule.detect(line, index) || []).forEach(function (hit) {
+        ;(rule.detect(line, index) || []).forEach(function (hit) {
           issues.push(buildIssue(rule, hit, index + 1, sections))
         })
       })
@@ -384,7 +456,9 @@
 
     return issues
       .sort(function (a, b) {
-        const bySeverity = SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity)
+        const bySeverity =
+          SEVERITY_ORDER.indexOf(a.severity) -
+          SEVERITY_ORDER.indexOf(b.severity)
         return bySeverity !== 0 ? bySeverity : a.line - b.line
       })
       .map(function (issue, index) {
@@ -396,7 +470,7 @@
       })
   }
 
-  function buildIssue (rule, hit, line, sections, wholeDocument) {
+  function buildIssue(rule, hit, line, sections, wholeDocument) {
     return {
       ruleId: rule.id,
       ruleName: rule.name,
@@ -408,26 +482,30 @@
       whyItMatters: rule.whyItMatters,
       recommendation: rule.recommendation,
       line: line,
-      section: wholeDocument ? 'Whole document' : (sections[line - 1] || 'Introduction')
+      section: wholeDocument
+        ? 'Whole document'
+        : sections[line - 1] || 'Introduction'
     }
   }
 
   // Counts per severity, worst first, omitting empty ones.
-  function severityCounts (issues) {
-    return SEVERITY_ORDER
-      .map(function (severity) {
-        return {
-          severity: severity,
-          tag: severityTag(severity),
-          count: issues.filter(function (issue) { return issue.severity === severity }).length
-        }
-      })
-      .filter(function (entry) { return entry.count > 0 })
+  function severityCounts(issues) {
+    return SEVERITY_ORDER.map(function (severity) {
+      return {
+        severity: severity,
+        tag: severityTag(severity),
+        count: issues.filter(function (issue) {
+          return issue.severity === severity
+        }).length
+      }
+    }).filter(function (entry) {
+      return entry.count > 0
+    })
   }
 
   // The requirements separate what must be fixed from what is advisory, and the
   // POC front end splits its task list the same way.
-  function split (issues) {
+  function split(issues) {
     return {
       important: issues.filter(function (issue) {
         return issue.severity === 'critical' || issue.severity === 'high'

@@ -15,6 +15,7 @@ body {
 // Defra branding for internal, non-GOV.UK services
 // https://digital.defra.gov.uk/design/branding
 @import "components/defra-header";
+@import "components/defra-home-header";
 @import "components/defra-service-navigation";
 @import "components/defra-footer";
 
@@ -39,6 +40,9 @@ body {
 
 // Version 3 — full-width layout, collapsible filters, recent work cards
 @import "components/app-v3";
+
+// Notes — the designer/dev annotation panel, shown on every version
+@import "components/app-notes-panel";
 
 // The last components still shipping GOV.UK green (#00703c), re-pointed at
 // Defra green so every green on the service matches — buttons are already

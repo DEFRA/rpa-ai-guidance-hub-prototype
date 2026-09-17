@@ -29,6 +29,7 @@
 
 {% block header %}
   {% include "partials/defra-header.njk" %}
+  {% include "partials/notes-panel.njk" %}
 {% endblock %}
 
 {#
@@ -84,6 +85,7 @@
 #}
 {% block scripts %}
   <script src="/public/javascripts/quality-checks.js"></script>
+  <script src="/public/javascripts/notes-panel.js"></script>
   {% include "govuk-prototype-kit/includes/scripts.njk" %}
   {% block pageScripts %}{% endblock %}
 {% endblock %}

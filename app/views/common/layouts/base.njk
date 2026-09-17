@@ -1,0 +1,7 @@
+{#
+  Chrome only. Everything else (Defra header/footer, phase banner, back link,
+  quality-checks script) already lives in layouts/main.html — this just gives
+  page modules a stable name to extend, per the page-module convention, that
+  isn't the kit's own layout path.
+#}
+{% extends "layouts/main.html" %}

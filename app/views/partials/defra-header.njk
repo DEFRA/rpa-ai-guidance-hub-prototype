@@ -8,7 +8,11 @@
   The crest is decorative and hidden from screen readers — the service name link
   carries the accessible name instead.
 
-  Set `navigation` in app/routes.js to show the service navigation bar.
+  Set `navigation` in app/views/legacy/routes.js to show the service
+  navigation bar — also set `isV6Home` there (v6's find-guidance.html/
+  all-guidance-docs.html only) for the taller green "home header" variant of
+  it instead; every other v6 page shows neither, using a govukBreadcrumbs
+  component in its own content instead.
 #}
 <header class="defra-header" role="banner">
   <div class="govuk-width-container">
@@ -29,19 +33,51 @@
         and show no header link here — they sign out through the service
         navigation below (main removed the old shared placeholder). v1 (isV1,
         set for every /v1/... path) keeps the original, still-unwired "Sign
-        in" placeholder. /v5/sign-in itself (isV5SignIn) reads the same way —
-        a visitor there has not signed in yet. Every other v5 page (isV5)
-        reads "Sign out" and links to /v5/sign-in.
+        in" placeholder. /v5/sign-in and /v6/sign-in themselves (isV5SignIn/
+        isV6SignIn) read the same way — a visitor there has not signed in
+        yet. Every other v5 page (isV5) reads "Sign out" and links to
+        /v5/sign-in; every other v6 page (isV6) does the same for /v6/.
       #}
-      {% if isV1 or isV5SignIn %}
+      {% if isV1 or isV5SignIn or isV6SignIn %}
         <a href="#" class="defra-header__sign-in">Sign in</a>
       {% elif isV5 %}
         <a href="/v5/sign-in" class="defra-header__sign-in">Sign out</a>
+      {% elif isV6 %}
+        <a href="/v6/sign-in" class="defra-header__sign-in">Sign out</a>
       {% endif %}
     </div>
   </div>
 </header>
-{% if navigation and navigation.length %}
+{% if isV6Home and navigation and navigation.length %}
+  {#
+    v6's own "home" pages only (find-guidance.html, all-guidance-docs.html —
+    isV6Home set in app/views/legacy/routes.js) — a taller green banner replacing the
+    plain service-navigation bar every other page still uses below, with a
+    page title and a short description of what each tab is for inside the
+    green area itself, and the same Find guidance/Manage guidance items as
+    bordered, more prominent tabs rather than small underlined links.
+    Bespoke, no GOV.UK Design System or Defra pattern equivalent for this —
+    flagged rather than built silently. Reuses the exact same `navigation`
+    array (text/href/current) the plain bar below renders from, just styled
+    and marked up differently, so both stay driven by the one
+    V6_NAVIGATION list in app/routes.js.
+  #}
+  <div class="defra-home-header">
+    <div class="govuk-width-container">
+      <h1 class="defra-home-header__title">RPA Guidance hub</h1>
+      <p class="defra-home-header__description">Find guidance to help you review and process claims, or manage guidance documents if you're responsible for keeping them up to date.</p>
+      <nav class="defra-home-header__tabs" aria-label="Service navigation">
+        <ul class="defra-home-header__tabs-list">
+          {% for item in navigation %}
+            <li class="defra-home-header__tabs-item">
+              <a class="defra-home-header__tab{% if item.current %} defra-home-header__tab--active{% endif %}" href="{{ item.href }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.text }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+{% elif navigation and navigation.length %}
   <nav class="defra-service-navigation" aria-label="Service navigation">
     <div class="govuk-width-container">
       <ul class="defra-service-navigation__list">

@@ -16,8 +16,159 @@
   box-sizing: border-box;
 }
 
-// Sticks the Content nav + Save/Preview/Send for approval buttons in view
-// while the (much taller) editor/Changes column beside it scrolls — this
+// padding-bottom is a safety margin against .app-experiment-footer-bar
+// below, fixed to the bottom of the viewport — a belt-and-braces measure
+// on top of that bar's own height already being subtracted from
+// .app-experiment-nav/.app-experiment-editor/.app-experiment-changes'
+// own max-height estimates (which is what actually keeps their normal
+// content clear of it day to day): this covers the case those estimates
+// run short on an unusually small/short viewport, or the page ends up
+// needing to scroll for some other reason, so nothing at the very bottom
+// of the page can ever end up hidden underneath the fixed bar even then.
+// Matches .app-experiment-footer-bar's own height estimate (see its own
+// comment for the derivation). Scoped to this class (added to the same
+// .govuk-grid-row both editor-experiment.html and its narrow-container
+// duplicate share) rather than .app-experiment-page above, specifically
+// so it applies on the narrow duplicate too — that page has no
+// .app-experiment-page wrapper of its own (see its own top comment), but
+// does share this same row, so this reaches both without needing two
+// separate rules.
+.app-experiment-row {
+  padding-bottom: 70px;
+}
+
+// GOV.UK Design System deviation — see this element's own comment in
+// editor-experiment.html for why a fixed footer bar is flagged rather
+// than treated as a standard pattern. left/right: 0 (rather than
+// width: 100%) is what makes this genuinely full viewport width
+// regardless of .app-experiment-page's own 100vw-breakout/padding above
+// it — position: fixed positions against the viewport itself, not this
+// bar's own DOM ancestors (none of them create a new containing block —
+// .app-experiment-page's position: relative alone does not; only a
+// transform/filter/will-change: transform would, and nothing here has
+// one), so this could equally sit anywhere in the document and still
+// render full-bleed at the bottom of the screen. padding-left/right: 40px
+// matches .app-experiment-page's own side padding, so the buttons here
+// line up with the rest of the page's own content rather than sitting
+// flush against the viewport edge.
+//
+// Height (used elsewhere on this page — see the comment on this
+// element's own markup): padding-top/bottom: govuk-spacing(3) = 15px
+// each side, plus the buttons' own real 40px height
+// (.govuk-button/govuk-px-to-rem(40px), same figure this file's other
+// button-height rules already use), plus this element's own 1px
+// border-top = 71px, rounded to 70px — a derived figure, not a guess,
+// but still only an estimate of how govuk-button actually renders (no
+// screenshot tool available in this environment to verify pixel-exact).
+//
+// justify-content: flex-end right-aligns the three buttons within the
+// bar (Save/Preview/Send for approval still in that DOM order — this
+// only changes where the group as a whole sits, not each button's
+// position relative to the others).
+.app-experiment-footer-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: govuk-spacing(3);
+  padding: govuk-spacing(3) 40px;
+  border-top: 1px solid $govuk-mid-grey;
+  background-color: $govuk-white;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
+}
+
+// The page title + its own "Rename" (beginTitleRename/finishTitleRename,
+// pageScripts) — sits inside .govuk-grid-column-three-quarters now,
+// directly above the toolbar/box rather than full-width above the whole
+// grid row, specifically so its own left edge lines up with theirs
+// instead of the sidebar's, which is what it shared before.
+//
+// width matches .tiptap-toolbar/.app-experiment-editor's own width
+// exactly (same calc() reconstruction of .app-experiment-box's flex
+// math as .tiptap-toolbar's own rule uses — see that rule's own comment
+// for the derivation; kept in these two places rather than shared via a
+// class, since a title/Rename row and a formatting toolbar have nothing
+// else in common to justify sharing a selector for). Without this, this
+// element (a normal block child of .govuk-grid-column-three-quarters,
+// like .tiptap-toolbar before its own width was corrected the same way)
+// would default to the FULL column width — wider than the toolbar/editor
+// beneath it, not narrower — but with no border/background of its own to
+// make that width visible either way, what actually reads as "this row's
+// own width" is only ever how far its own content (the H1 and Rename
+// link) visually reaches, which was narrower than the toolbar/editor
+// regardless of the container's own (invisible) box width. Fixing that
+// needs both this width AND justify-content: space-between below: the
+// combination is what pushes Rename out to the same right edge the
+// toolbar/editor's own right edge sits at, rather than sitting
+// immediately after the heading with only its own gap between them —
+// constraining the width alone, with nothing to push into the reclaimed
+// space, would have changed nothing visible at all.
+.app-experiment-title-wrapper {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  width: calc((100% - 20px) * 3 / 5);
+  gap: govuk-spacing(1);
+  margin-bottom: 35px;
+}
+
+// Real (long) document titles routinely wrap onto two lines within this
+// row's own constrained width above, which pushes "Rename" (flex-wrap)
+// onto its own line beneath the heading rather than sitting beside it —
+// govuk-heading-m's own 20px desktop margin-bottom (confirmed real,
+// non-responsive, via the .app-experiment-sidebar padding-top derivation
+// elsewhere in this file) still applies to the heading in that wrapped
+// case, stacking with the row's own gap above to leave "Rename" 30px
+// below the title rather than close to it. Zeroing it here — scoped to
+// this element specifically, not the shared govuk-heading-m class other
+// pages still use unmodified — plus this row's own gap (reduced above,
+// govuk-spacing(1) = 5px) is what actually closes that gap down to 5px:
+// removing the margin alone, with nothing to replace the visual breathing
+// room it provided, would have looked like a mistake rather than a
+// deliberate tightening.
+//
+// This element's own margin-bottom above was increased by exactly the
+// same 20px this removes (15px → 35px), so the title area's total
+// height in the single-line (non-wrapping) case — the one
+// .app-experiment-sidebar's own padding-top and .app-experiment-changes'
+// own margin-top/height are both derived against — is unchanged: the
+// heading's own box is 20px shorter, this row's own trailing margin is
+// 20px taller, net zero. Only the *wrapped* case's internal
+// heading-to-Rename spacing actually changes; "Content"/"Changes"/the
+// toolbar's own top offsets, already re-verified once by real browser
+// measurement (see /tmp/dom-test/playwright-checks/
+// measure-heading-alignment.js), stay exactly where that fix left them
+// for a title that fits on one line.
+.app-experiment-title-wrapper [data-page-title] {
+  margin-bottom: 0;
+}
+
+.app-experiment-title-rename {
+  @extend .app-experiment-hide-link;
+}
+
+.app-experiment-title-rename-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 30em;
+  height: 40px;
+}
+
+.app-experiment-title-rename-save {
+  flex: 0 0 auto;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  box-shadow: none;
+}
+
+// Sticks the Content nav in view while the (much taller) editor/Changes
+// column beside it scrolls — this
 // is plain CSS position: sticky, not a scroll listener: its containing
 // block is .govuk-grid-row, which (a float-based grid, cleared) is
 // exactly as tall as its tallest child — the .govuk-grid-column-three-
@@ -29,9 +180,31 @@
 // organic-search.html: nothing else on this page is itself sticky/fixed
 // above it (the Defra header and phase banner both scroll away
 // normally), so 0 is the correct offset, not a fallback.
+// padding-top pushes the "Content" heading (and everything below it)
+// down to align with the top of .tiptap-toolbar in the column beside it
+// — the same target .app-experiment-changes' own margin-top aligns
+// "Changes" with (see that rule's own comment) — rather than with the
+// top of the "Guidance title" caption/title area above that toolbar (a
+// brief version of this aligned with the caption instead; this restores
+// the toolbar-aligned target both other headings now share). 90px is the
+// real rendered height of everything above the toolbar in that column:
+// govuk-caption-m's own 19px font-size × 1.3157895 line-height = 25px
+// (no margin-bottom of its own), plus .app-experiment-title-wrapper's H1
+// (govuk-heading-m there: 24px font-size × 1.25 line-height = 30px, plus
+// its own 20px margin-bottom, both counted in the flex row's own cross
+// size, since flex line cross-size includes each item's margins) = 50px,
+// plus .app-experiment-title-wrapper's own 15px margin-bottom below that
+// = 90px total — the same figure and derivation this rule has carried
+// before, reapplied now that the alignment target is the toolbar again.
+// A derived figure, not a guess, but still only correct at the
+// breakpoint govuk-caption-m/govuk-heading-m use those particular font
+// metrics at — no screenshot tool available in this environment to
+// verify pixel-exact against the mockup, or re-check at other
+// breakpoints.
 .app-experiment-sidebar {
   position: sticky;
   top: 0;
+  padding-top: 90px;
 }
 
 // Its own independent scroll, separate from the sticky positioning above —
@@ -42,18 +215,53 @@
 // never scrollable into view, since the sidebar itself never scrolls past
 // the bottom of the (much taller) editor column beside it. max-height is a
 // best-effort estimate of "100vh minus everything else in this column" —
-// the Content heading above the list, and the Add new content link, Save/
-// Preview/Send for approval buttons and hint paragraph below it — added up
-// from their own type-scale sizes/margins the same way .tiptap-toolbar's
-// own min-height is elsewhere in this file, not measured against a real
-// render (no screenshot tool available in this environment); flagged as an
-// estimate that may need nudging, not an exact fit. It does not account
-// for "Add new content"'s own form being open (its own extra height on
-// top of the buttons/hint below is small enough to fall within the
-// estimate's rounding either way). min-height is a floor so the list
-// doesn't collapse to something unusably short on a very small viewport.
+// the Content heading above the list and the Add new content link below
+// it (Save/Preview/Send for approval and their own hint text used to sit
+// below the list too, until they moved into .app-experiment-footer-bar —
+// see that element's own comment; this figure has been reduced to match,
+// but now needs .app-experiment-footer-bar's own fixed height added back
+// in its place, since that bar covers the same amount of the viewport
+// regardless of which column's content it sits below) — added up from
+// their own type-scale sizes/margins the same way .tiptap-toolbar's own
+// min-height is elsewhere in this file, not measured against a real
+// render (no screenshot tool available in this environment); flagged as
+// an estimate that may need nudging, not an exact fit. It does not
+// account for "Add new content"'s own form being open (its own extra
+// height is small enough to fall within the estimate's rounding either
+// way). min-height is a floor so the list doesn't collapse to something
+// unusably short on a very small viewport.
+// Shown only once a Content nav card's own checkbox is selected
+// (wireNavItemSelection, pageScripts, sets/clears the [hidden] attribute
+// here) — absent from layout entirely otherwise, not just visually
+// collapsed, so it never reserves space above the list while nothing is
+// selected.
+.app-experiment-nav-actions {
+  display: flex;
+  gap: govuk-spacing(3);
+  margin-bottom: govuk-spacing(2);
+
+  // [hidden] and this class are both single-attribute/class selectors of
+  // equal specificity, and an author stylesheet's display: flex above
+  // beats the browser's own default [hidden] { display: none } rule at
+  // that tie (author styles always win over the user-agent stylesheet,
+  // regardless of specificity) — without this, wireNavItemSelection
+  // (pageScripts) setting navActionsBar.hidden back to true was being
+  // silently overridden right back to visible, which is what made Rename/
+  // Delete show unconditionally instead of only once a card is selected.
+  // Same fix, same reasoning, as .app-experiment-changes' and
+  // [data-tab-panel="comments"]'s own &[hidden] rules elsewhere in this
+  // file.
+  &[hidden] {
+    display: none;
+  }
+}
+
+.app-experiment-nav-actions__button {
+  @extend .app-experiment-hide-link;
+}
+
 .app-experiment-nav {
-  max-height: calc(100vh - 340px);
+  max-height: calc(100vh - 270px);
   min-height: 150px;
   overflow-y: auto;
   margin: 0 0 govuk-spacing(4);
@@ -61,18 +269,13 @@
   list-style: none;
 }
 
-// Draggable cards — border reuses the exact same mid-grey
-// .app-experiment-comment already uses for cards in the Changes panel,
-// so these read as the same "card" language already established
-// elsewhere on this page; background is white (not that same light-grey
-// fill any more) so a non-active card doesn't compete visually with the
-// blue-tinted active one below. No border-radius: flat, square corners
-// everywhere else on this page (.app-experiment-box, every button/input)
-// and GOV.UK Design System components don't round corners either — the one
-// exception is .app-experiment-comment's own 6px radius, added afterwards
-// specifically for the Changes panel's cards; left square here rather than
-// matched to it, since nothing asked for that and it would be the odd one
-// out against everything else on this page, comment cards aside.
+// Content nav cards — border reuses the exact same mid-grey
+// .app-experiment-comment already uses for cards in the Changes panel, and
+// the same 6px border-radius as that card and .app-experiment-box below,
+// so all three read as one consistent "card" language across the page,
+// rather than each having its own separate corner treatment; background
+// is white (not that same light-grey fill any more) so a non-active card
+// doesn't compete visually with the blue-tinted active one below.
 .app-experiment-nav__item {
   display: flex;
   align-items: center;
@@ -80,6 +283,7 @@
   margin-bottom: govuk-spacing(2);
   padding: govuk-spacing(2) govuk-spacing(3);
   border: 1px solid $govuk-mid-grey;
+  border-radius: 6px;
   background-color: $govuk-white;
 }
 
@@ -87,8 +291,8 @@
 // already used once before for a "this one is flagged" card state),
 // rather than the old flat-list version's left-edge bar — that bar sat
 // well against a plain background, but would visually collide with the
-// drag handle now every item is its own bordered card, so this replaces
-// it rather than trying to preserve it pixel-for-pixel.
+// Move up/down buttons now every item is its own bordered card, so this
+// replaces it rather than trying to preserve it pixel-for-pixel.
 .app-experiment-nav__item--active {
   border-color: govuk-colour("blue");
   background-color: govuk-tint(govuk-colour("blue"), 90%);
@@ -99,37 +303,100 @@
   }
 }
 
-// Drag feedback — the dragged card fades while it's being moved, same
-// low-key treatment as a native OS drag ghost, so it's obvious which card
-// is in motion without needing a custom drag image.
-.app-experiment-nav__item--dragging {
-  opacity: 0.4;
+// Owns the flex-grow role in the card's row that .app-experiment-nav__link
+// itself used to, now that a checkbox sits before it and the link is
+// nested one level deeper inside this wrapper — kept as its own element
+// (rather than putting flex/min-width back on the link) since rename
+// (beginNavRename/finishNavRename, pageScripts) swaps this wrapper's own
+// innerHTML between the real link and a text input + Save button, and
+// both need the same amount of row space either way.
+.app-experiment-nav__label-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: govuk-spacing(1);
 }
 
 .app-experiment-nav__link {
-  flex: 1 1 auto;
   min-width: 0;
 }
 
-// The grip/dots drag handle — a real (if not keyboard-operable, see the
-// pageScripts comment on wireNavDragAndDrop for why) button rather than a
-// plain span, so it at least gets a visible :focus state and isn't
-// mistaken for decoration if it's ever inspected; tabindex="-1" keeps it
-// out of the regular Tab order since it currently has no keyboard
-// interaction of its own to offer.
-.app-experiment-nav__handle {
+// A plain native checkbox — single-select is enforced in JS
+// (wireNavItemSelection), not by using type="radio" here, per the brief
+// this was built from.
+.app-experiment-nav__checkbox {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+// Rename's own input, replacing the link inside
+// .app-experiment-nav__label-wrapper temporarily — sized to fill the same
+// row space the link itself normally does.
+.app-experiment-nav__rename-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+}
+
+// Height-matched to the input beside it, same reasoning and mechanism as
+// .app-experiment-add-comment__button elsewhere in this file: a
+// govuk-button's own height comes from padding around a line of text
+// rather than an explicit value, which lands a couple of pixels off the
+// input's own fixed height without this.
+.app-experiment-nav__rename-save {
+  flex: 0 0 auto;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  box-shadow: none;
+}
+
+// Move up/Move down — real buttons on the right of each card, replacing
+// the earlier drag handle entirely (see the pageScripts comment on
+// updateNavMoveButtonStates/wireNavItemMoveButtons for why: this pair is
+// fully keyboard/screen-reader operable, the handle it replaces was not).
+.app-experiment-nav__move-buttons {
   display: flex;
   flex: 0 0 auto;
+  gap: govuk-spacing(1);
+}
+
+.app-experiment-nav__move-button {
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  border: 0;
-  background: none;
-  color: $govuk-secondary-text-colour;
-  cursor: grab;
+  border: 1px solid $govuk-mid-grey;
+  border-radius: 4px;
+  background: $govuk-white;
+  color: $govuk-text-colour;
+  cursor: pointer;
 
-  &:active {
-    cursor: grabbing;
+  &:hover:not(:disabled) {
+    background-color: $govuk-light-grey;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+    background-color: $govuk-yellow;
+    border-color: $govuk-yellow;
+    color: $govuk-black;
+  }
+
+  // Greyed out, same as GOV.UK Frontend's own disabled input pattern —
+  // the item at whichever end of the list this button would otherwise
+  // move past, so there is nowhere further for it to go.
+  &:disabled {
+    border-color: $govuk-mid-grey;
+    color: $govuk-secondary-text-colour;
+    background-color: $govuk-light-grey;
+    cursor: not-allowed;
   }
 }
 
@@ -202,35 +469,90 @@
   }
 }
 
-// The single bordered box holding both panes — flat, no shadow or radius,
-// per the brief. Flex so the two panes sit side by side, with gap (not a
-// dividing border — see .app-experiment-changes below) as the separation
-// between them. No height/overflow of its own any more — the box (and
-// both panes inside it) grow with their content and scroll as part of the
-// ordinary page scroll, rather than being a fixed-height widget with its
-// own internal scroll area; align-items: stretch still makes both panes
-// match whichever one is naturally taller. This is what lets a floating
-// comment (app-experiment-comment--floating below) track its anchor's
-// position purely from the two elements' relative layout — see
-// computeFloatingPositions() in editor-experiment.html's pageScripts —
-// since there is no longer a separate scroll container whose position
-// that calculation would otherwise need to account for.
+// Pure layout now — a flex row sitting the editor and Changes panel side
+// by side in the same place they always were, but no border/background/
+// scroll of its own any more: .app-experiment-editor is the one with a
+// visible box around it (toolbar + guidance content only — see its own
+// comment), and .app-experiment-changes deliberately has none at all (see
+// its own comment) — this element exists solely to place the two next to
+// each other with a consistent gap between them, the same gap used to be
+// the only separation between them when they shared one box. align-items:
+// stretch keeps both the same height, so a shorter Changes panel's own
+// max-height still reads as matching the editor's, not falling short of
+// it.
 .app-experiment-box {
   display: flex;
   align-items: stretch;
   gap: govuk-spacing(4);
-  border: 1px solid $govuk-mid-grey;
 }
 
-// flex-grow ratio (3:2) approximates the ~60/40 split. When the changes
-// pane is hidden ([hidden] takes it out of flow entirely) this pane simply
-// becomes the only flex item left, so it fills the full width with no JS
-// needed to add a width class to it.
+// The editor's own bordered/rounded box — guidance content only now (the
+// toolbar is a separate card above it again — see .tiptap-toolbar's own
+// comment — and the Changes panel is a fully separate, unboxed sibling —
+// see .app-experiment-box above and .app-experiment-changes below).
+// flex-direction: column is kept even though [data-editor-content] is
+// currently the only child, so a future addition here would stack rather
+// than sit side by side by default.
+//
+// max-height/overflow-y: auto give this box its own independent scroll —
+// sized to fit the editor's own content only, not the toolbar above it or
+// anything in the Changes panel, but now also leaving room below for
+// .app-experiment-footer-bar, fixed to the bottom of the viewport — this
+// figure is that bar's own ~70px taller than it would otherwise be (see
+// that element's own comment for its height derivation), so this box's
+// own bottom edge always clears it. Still a best-effort estimate of
+// "100vh minus everything above and below this box" (the Defra header,
+// breadcrumb, page title + Rename and the toolbar above; the footer bar
+// below — added up from their own type-scale sizes/heights the same way
+// this file's other max-height estimates elsewhere are, not measured
+// against a real render, no screenshot tool available in this
+// environment) — flagged as an estimate that may need nudging, not an
+// exact fit. min-height is a floor so the box doesn't collapse to
+// something unusably short on a very small viewport, same reasoning as
+// .app-experiment-nav's own floor — and, now, also the floor the user's
+// own manual resize (below) can't drag past, so it can never end up
+// showing less than a handful of lines of content either way. flex: 3 1 0
+// keeps the same ~60/40 width split with .app-experiment-changes as
+// before; when the Changes pane is hidden ([hidden] takes it out of flow
+// entirely) this becomes the only flex item left in .app-experiment-box,
+// so it fills the full width with no JS needed to add a width class to
+// it.
+//
+// resize: vertical — a manual drag handle in the bottom-right corner,
+// native to the browser (no custom icon/JS needed, no separate handle
+// element to add: this is the exact same mechanism a resizable
+// <textarea> already uses, drawn and operated entirely by the browser
+// itself), letting the user grow or shrink this box's own height by
+// dragging. Requires overflow other than visible to appear at all —
+// already true here (overflow-y: auto, above) — and is bounded
+// automatically by this element's own min-height/max-height already set
+// above: the user cannot drag past either, so "a sensible minimum" and
+// "no fixed maximum beyond what's practical for the page layout" both
+// come for free from properties this rule already had, not new values
+// introduced for this. resize: vertical (rather than both/horizontal)
+// is what keeps the width fixed — the native resize handle simply never
+// offers a horizontal drag when set this way. Deliberately not touching
+// align-items: stretch on .app-experiment-box (this element's own
+// parent): once the browser's own resize interaction gives this element
+// an explicit height, that takes priority over the flex stretch
+// fallback for this item specifically (stretch only ever applies when an
+// item's own cross-size is otherwise indeterminate — the same reason a
+// resizable textarea inside an align-items: stretch flex row already
+// keeps a user's manual resize instead of snapping back), so
+// .app-experiment-changes beside it is never pulled along by this and
+// keeps scrolling exactly as it already does, fully independent of
+// whatever height this box is dragged to.
 .app-experiment-editor {
   display: flex;
   flex: 3 1 0;
   flex-direction: column;
   min-width: 0;
+  max-height: calc(100vh - 390px);
+  min-height: 400px;
+  overflow-y: auto;
+  resize: vertical;
+  border: 1px solid $govuk-mid-grey;
+  border-radius: 6px;
 }
 
 // Tiptap-styled toolbar — see the top-of-file template comment and the
@@ -242,57 +564,58 @@
 // square, shadow-free look — contained entirely to this toolbar and the
 // dropdown menus it opens, not bled into anything else here.
 //
-// flex: 0 0 auto (unchanged from the toolbar this replaced) keeps this
-// row a fixed size within .app-experiment-editor's own column flex
-// layout, so .app-experiment-content still gets all the remaining space
-// — wrapping onto a second row (flex-wrap: wrap) grows this row's own
-// height instead of squashing icons or overflowing the container, which
-// is what keeps this usable at the narrower, document-overview.html-
-// matched container width from earlier.
-// min-height (not height) + box-sizing: border-box is what lines this
-// row's own border-bottom up with .app-experiment-changes__fixed's —
-// computed from GOV.UK's own documented type/spacing scale (padding-top
-// govuk-spacing(4)=20px + the "Hide" link row + govuk-heading-m's own
-// 30px line-height/20px margin-bottom + the tabs row), since there's no
-// way to measure the real rendered height directly here — this is a
-// best-effort match, not a verified pixel-perfect one; nudge this value
-// if the two lines are visibly off once viewed. min-height rather than
-// height specifically so a wrapped (2+ row) toolbar at a narrow width
-// can still grow taller than this floor instead of clipping — divider
-// alignment is only guaranteed to hold for the un-wrapped, single-row
-// case this was computed against.
+// Its own full border + 6px radius + margin-bottom (matching
+// .app-experiment-editor's own radius below it) is what gives it the
+// "visually separated, own distinct area" look asked for — two clearly
+// separate blocks with a gap between them, not fused to the top of the
+// box below it with only an internal divider line (a brief merged
+// version of this existed in between; this restores the separated one).
 //
-// position: sticky/top: 0 here is what pins this row (and, separately,
-// .app-experiment-changes__fixed below) to the top of the editor
-// container while the guidance text scrolls beneath it — "relative to
-// the editor container, not the browser viewport" in practice means:
-// there is no overflow: auto ancestor on this page for it to stick
-// within (deliberately — see .app-experiment-box above, from the change
-// that removed internal scrolling entirely), so a sticky element's
-// un-stick point is bounded by its own containing block instead —
-// .app-experiment-editor here, whose own rendered height is stretched to
-// match .app-experiment-changes (align-items: stretch on
-// .app-experiment-box, both columns share one height, whichever is
-// naturally taller) — so this un-sticks at the bottom of that shared
-// height, i.e. roughly where "Show changes" sits, not part way down an
-// arbitrarily-tall page. z-index: 1 keeps this painted above the
-// guidance text scrolling underneath it once stuck (that text has no
-// z-index of its own, so 1 is already enough — kept well below this
-// toolbar's own dropdown menus at z-index: 2, which sit above it anyway
-// simply by being its descendants).
+// No position: sticky/min-height any more — both existed purely to keep
+// this pinned within .app-experiment-editor's own scroll while the two
+// shared that one box; now that the toolbar sits outside that box
+// entirely (a plain, non-scrolling element in normal page flow above
+// it), neither concern applies — it simply stays on screen because it is
+// never part of any scrolling area to begin with.
+//
+// flex-wrap: wrap still grows this element's own height rather than
+// squashing icons or overflowing if the column gets narrow.
+//
+// width matches .app-experiment-editor's own rendered width exactly, not
+// the full column (which also includes .app-experiment-changes and the
+// gap between them) and not fit-content (tried briefly, then reverted —
+// left an ugly gap between the toolbar's right edge and the Changes
+// panel beside it, since a shrunk toolbar no longer lined up with
+// anything). This element is a normal block child of
+// .govuk-grid-column-three-quarters, a sibling of .app-experiment-box
+// (not inside any flex/grid context of its own), so it has no direct way
+// to ask "be as wide as one specific flex item inside a sibling
+// element" — the calc() below reconstructs that width by replicating
+// .app-experiment-box's own flex math by hand instead: that box is
+// display: flex with a 20px gap (govuk-spacing(4)) between
+// .app-experiment-editor (flex: 3 1 0) and .app-experiment-changes
+// (flex: 2 1 0); with both at flex-basis: 0 and min-width: 0 (so no
+// content-size floor ever overrides the pure ratio), the available width
+// after the gap splits 3:2, i.e. editor gets 3/5 of (100% − 20px). This
+// is a precise reconstruction of that same arithmetic, not an estimate —
+// but it will silently drift out of sync if .app-experiment-box's own
+// gap or either flex-grow value ever changes without updating this to
+// match, since nothing ties the two together structurally.
+//
+// flex-wrap: wrap still grows this element's own height rather than
+// squashing icons or overflowing if the column gets narrow.
 .tiptap-toolbar {
   display: flex;
   flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: center;
+  width: calc((100% - 20px) * 3 / 5);
   gap: govuk-spacing(1);
-  min-height: 133px;
   padding: govuk-spacing(2) govuk-spacing(3);
+  margin-bottom: govuk-spacing(4);
   box-sizing: border-box;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  border-bottom: 1px solid $govuk-mid-grey;
+  border: 1px solid $govuk-mid-grey;
+  border-radius: 6px;
   background-color: $govuk-white;
 }
 
@@ -369,6 +692,28 @@
   width: auto;
   padding: 0 govuk-spacing(2);
   font-weight: 400;
+}
+
+// The text/highlight colour picker — a plain round swatch, not a real
+// colour picker (no picker UI opens on click, same "visual only" scope
+// as every other toolbar control here): the mockup this was built from
+// shows a solid black circle, so that is what this is, statically, rather
+// than reading it as "whatever colour is currently selected" with
+// nothing that could ever change it.
+.tiptap-toolbar__colour-swatch {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background-color: $govuk-black;
+  cursor: pointer;
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 2px;
+  }
 }
 
 .tiptap-toolbar__icon {
@@ -504,58 +849,174 @@
   }
 }
 
-// The Google Docs-style "add a comment" icon that appears next to a text
-// selection — position: absolute (not fixed), placed in document
-// coordinates via window.scrollX/Y + getBoundingClientRect() in
-// pageScripts, so it scrolls away with the text it points at exactly
-// like any other in-flow content on this page, rather than staying
-// pinned to one spot on screen. One reusable element repositioned on
-// each new selection instead of a fresh one created every time — see
-// editorSelectionTrigger in pageScripts.
-.app-editor-selection-trigger {
-  position: absolute;
-  z-index: 20;
+// Deliberately no border/background/border-radius here at all — the
+// Changes panel reads as a lighter, distinct area next to the boxed
+// editor (.app-experiment-editor), not a second matching box: its own
+// "Changes" heading, the Comments/Checks tabs, and each comment's own
+// already-bordered/rounded card (.app-experiment-comment) are the only
+// visual structure it has. overflow-y: auto gives it its own scroll,
+// fully independent of the editor's. flex-direction: column stacks
+// __fixed (header, "Changes" heading, tabs — stays out of the scrolling
+// content) above __scroll (the tab panels, the only part that actually
+// scrolls) — see both classes' own comments below.
+//
+// margin-top: -120px pulls this whole column up so "Changes" — the
+// heading itself, not just this column's own outer box — starts level
+// with the top of .tiptap-toolbar/"Content" beside it. This figure comes
+// from two parts, and getting only the first of them was exactly what
+// left "Changes" visibly lower than "Content" despite several earlier
+// attempts at this: the outer part (this column's own box needs to sit
+// 72px higher to clear the toolbar's own footprint above
+// .app-experiment-box — its rendered height, 52px, plus its own 20px
+// margin-bottom, both confirmed by real measurement below) is only where
+// this COLUMN's own top lands, not where the "Changes" TEXT itself
+// renders — .app-experiment-changes__fixed's own 20px padding-top, plus
+// .app-experiment-changes__header's (the "Hide" row) own height and
+// margin-bottom sit between this column's own top and the heading below
+// them, adding another 48px the column's own position alone can never
+// account for, however precisely that part is measured. 72 + 48 = 120px.
+// Both figures were confirmed by actually loading the page in a real
+// browser (Playwright/Chromium, not jsdom or hand-derived arithmetic —
+// jsdom cannot compute real layout at all, and every earlier attempt at
+// this that relied on reasoning about box models instead of measuring
+// the actual rendered page missed the 48px part) and reading
+// getBoundingClientRect() on both this column and the "Changes" heading
+// itself directly: at margin-top: -72px the column's own top measured
+// exactly level with the toolbar's (both 325px in that run's viewport),
+// confirming the outer part was already correct, while the heading
+// itself measured 48px lower (373px) — the actual bug. At -120px, the
+// heading's own getBoundingClientRect().top now measures numerically
+// equal to "Content"'s and the toolbar's own top, re-confirmed after
+// applying this value, not assumed from the arithmetic alone.
+//
+// height: calc(100vh - 270px), not max-height — an explicit target
+// height, not a ceiling, kept in step with the margin-top above: this
+// column's own top is 120px higher than the editor's own top (the
+// margin-top above), so it needs 120px more height than
+// .app-experiment-editor's own max-height (calc(100vh - 390px)) to keep
+// this column's own BOTTOM edge landing in the same place editor's own
+// does, despite starting 120px further up — 390 − 120 = 270. height
+// rather than max-height sidesteps a genuine ambiguity align-items:
+// stretch (this element's parent, .app-experiment-box) would otherwise
+// introduce — stretch only applies to an item whose own cross-size is
+// auto, so an explicit height here is guaranteed to render as specified
+// regardless of how stretch would otherwise have resolved this and
+// .app-experiment-editor's respective sizes against each other.
+// min-height stays as a floor for very small viewports, same reasoning
+// as .app-experiment-editor's own. Still only a best-effort estimate of
+// the surrounding chrome's real pixel heights at other viewport sizes
+// than the one actually measured, and will drift out of sync if
+// .app-experiment-editor's own max-height, this column's own margin-top,
+// .tiptap-toolbar's own height/margin-bottom, or
+// .app-experiment-changes__fixed/__header's own padding/height/margin
+// ever change without updating this figure and re-measuring to match.
+.app-experiment-changes {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
+  flex: 2 1 0;
+  flex-direction: column;
+  margin-top: -120px;
+  min-width: 0;
+  height: calc(100vh - 270px);
+  min-height: 400px;
+  overflow-y: auto;
+
+  // "Hide" (editor-experiment.html's pageScripts) sets the [hidden]
+  // attribute on this element — without this, the browser's own
+  // [hidden] { display: none } UA rule and this class's own display: flex
+  // above tie on specificity, and author styles always win a tie
+  // regardless of origin, so the pane would stay visibly flexed rather
+  // than actually disappear. Same fix, same reasoning, as the Checks tab
+  // panel's own &[hidden] rule elsewhere in this file.
+  &[hidden] {
+    display: none;
+  }
+
+  // GOV.UK Design System deviation, flagged rather than treated as
+  // compliant: a fade-out overlay signalling "more content below" has no
+  // GDS equivalent — flagged the same way this file's other non-standard
+  // fixed/sticky elements already are. position: sticky + bottom: 0 (the
+  // same mechanism .app-experiment-changes__fixed below already uses for
+  // its own top: 0 sticky header, just anchored to the opposite edge)
+  // keeps this pinned to the bottom of THIS element's own scroll
+  // viewport as the comment list scrolls beneath it, rather than
+  // scrolling away with that content the way a plain position: absolute
+  // overlay placed inside a scrolling container would (absolute
+  // positioning is relative to the nearest positioned ancestor's padding
+  // box, which for a scrolling container is a fixed point in the
+  // scrolled *content*, not the visible viewport — sticky is what
+  // actually stays on screen). margin-top: -32px cancels this
+  // pseudo-element's own 32px of flow height straight back out, so it
+  // does not add 32px of blank scrollable space after the last card —
+  // it overlays the last 32px of real content instead of extending past
+  // it. pointer-events: none so it never intercepts a click meant for
+  // whatever comment card is actually underneath it near the bottom
+  // edge. Present unconditionally, whether or not there is currently
+  // anything to scroll to — CSS alone has no clean way to detect
+  // "content overflows" and hide this only then; when nothing overflows
+  // it simply sits at the natural end of the (short) content, faint
+  // enough by design not to read as a stray mark either way.
+  &::after {
+    content: "";
+    display: block;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    margin-top: -32px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), $govuk-white);
+    pointer-events: none;
+  }
+}
+
+// The way back once "Hide" collapses the pane above — fixed to the
+// viewport's own right edge and vertically centred (not placed in normal
+// document flow after the editor content, which can be arbitrarily tall
+// and would push a plain in-flow button far below the fold with nothing
+// on screen to say it still exists). z-index above the toolbar/sidebar/
+// changes-header's own sticky z-index: 1, so it is never painted over by
+// any of them regardless of scroll position.
+.app-experiment-show-changes {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 3;
+  padding: govuk-spacing(2) govuk-spacing(3);
   border: 1px solid $govuk-mid-grey;
-  border-radius: 4px;
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
   background-color: $govuk-white;
-  color: $govuk-secondary-text-colour;
-  box-shadow: 0 1px 4px rgba(11, 12, 12, 0.2);
+  box-shadow: -2px 2px 6px rgba(0, 0, 0, 0.15);
+  font-family: $govuk-font-family;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+  font-weight: 700;
+  color: $govuk-link-colour;
   cursor: pointer;
 
   &:hover {
-    color: $govuk-link-colour;
-    border-color: $govuk-link-colour;
+    background-color: $govuk-light-grey;
+    text-decoration: underline;
   }
 
   &:focus {
     outline: 3px solid $govuk-yellow;
     outline-offset: 0;
+    background-color: $govuk-yellow;
+    color: $govuk-black;
   }
 }
 
-// A column flex container, same reasoning as .app-experiment-editor above —
-// __fixed (header, "Changes" heading, tabs) stays outside the scrolling
-// area, __scroll is the only part that scrolls.
-.app-experiment-changes {
-  display: flex;
-  flex: 2 1 0;
-  flex-direction: column;
-  min-width: 0;
-}
-
-// Sticky for the same reason and by the same mechanism as .tiptap-toolbar
-// above (see its own comment) — bounded by .app-experiment-changes' own
-// rendered height, which align-items: stretch on .app-experiment-box
-// keeps matched to .app-experiment-editor's, so both this and the
-// toolbar un-stick at the same scroll position. background-color is new
-// here (the page background is already white throughout, so it made no
-// visible difference before) — needed now so the floating comment cards
+// Sticky within .app-experiment-changes' own scroll (see the comment
+// there) — this pane's own header (Hide, "Changes", the tabs) stays
+// visible while just the comment list beneath it scrolls.
+// .app-experiment-editor has nothing of its own pinned inside its
+// scroll any more (the toolbar sits above that box entirely now, in
+// normal page flow, not inside its scroll — see .tiptap-toolbar's own
+// comment) so this is the only sticky element left on the page, not one
+// of a matched pair. background-color needed so the comment cards
 // scrolling underneath this once stuck don't show through it.
 .app-experiment-changes__fixed {
   flex: 0 0 auto;
@@ -566,12 +1027,10 @@
   background-color: $govuk-white;
 }
 
-// No overflow/height of its own any more — both tab panels inside now
-// flow and scroll with the rest of the page, same as
-// .app-experiment-content on the editor side (see the comment on
-// .app-experiment-box above). display: flex + column is kept purely to
-// stack app-experiment-floating-comments above app-experiment-comments-static
-// inside the Comments panel below.
+// No overflow/height of its own — .app-experiment-changes, its own
+// parent, is what actually scrolls (see that class's own comment).
+// display: flex + column is kept purely to stack the comments list above
+// the Checks list inside whichever tab panel is showing.
 .app-experiment-changes__scroll {
   display: flex;
   flex-direction: column;
@@ -601,31 +1060,17 @@
   }
 }
 
-// Word-style floating comments live here, in normal document flow — no
-// position: relative/absolute any more (an earlier version positioned
-// each card absolutely with a JS-computed `top`, which is what let a
-// wrong/stale value for one card render it on top of another card's
-// content instead of below it). computeFloatingPositions() in
-// editor-experiment.html's pageScripts instead sets each card's own
-// margin-top to roughly line it up with its anchor — since margin-top is
-// clamped to never go negative, one card can never be pushed up into the
-// one before it: normal block flow makes overlapping siblings
-// structurally impossible here, not just something the algorithm happens
-// to avoid. This container needs no explicit height either, unlike
-// before — normal-flow children size their own parent automatically.
-.app-experiment-floating-comments {
+// The Comments tab's own list — a normal stacked column, ordered to match
+// each comment's anchor position in the editor content (document order,
+// not creation/render order — see sortCommentsByAnchorOrder/
+// insertCommentInOrder, editor-experiment.html's pageScripts), not
+// pixel-positioned against anything. Each card's own margin-bottom (the
+// base .app-experiment-comment rule below) is the only spacing between
+// them — ordinary, consistent card spacing, not a value calculated to
+// simulate document distance the way an earlier version's margin-top
+// once was.
+.app-experiment-comments-list {
   padding: 0 govuk-spacing(4);
-}
-
-// The non-floating part of the Comments tab: the selection preview, the
-// "Add a comment" input, and (in data-comments-list-static) any comment
-// added that way, which never gets an anchor and so has nothing to float
-// against — always at the bottom, in normal document flow, visually
-// separated from the floating region above it by its own top border.
-.app-experiment-comments-static {
-  flex: 0 0 auto;
-  padding: govuk-spacing(3) govuk-spacing(4) govuk-spacing(4);
-  border-top: 1px solid $govuk-mid-grey;
 }
 
 .app-experiment-changes__header {
@@ -702,10 +1147,16 @@
 // below for what used to be here) — no padding/cursor of its own,
 // .app-experiment-comment__header below carries both, since it is always
 // the clickable (data-highlight-trigger) part; border/background/margin
-// stay here as the one thing every card shares, floating or static. White,
-// not grey, with a modest 6px radius (matching the toolbar's own button
-// radius elsewhere on this page, the closest existing rounded element) —
-// the border is what now separates a card from the page, not a fill.
+// stay here as the one thing every card shares. White, not grey, with a
+// modest 6px radius (matching the toolbar's own button radius elsewhere
+// on this page, the closest existing rounded element) — the border is
+// what now separates a card from the page, not a fill. margin-bottom is
+// the ONLY spacing between cards in the list (sortCommentsByAnchorOrder/
+// insertCommentInOrder, editor-experiment.html's pageScripts, just
+// reorder cards, they never touch spacing) — an earlier version also set
+// a live margin-top on some cards to line each one up with its own
+// anchor's pixel position; that, and the .app-experiment-comment--floating
+// modifier class that marked which cards it applied to, are both gone.
 //
 // font-size: a flat GOV.UK body-s-equivalent 16px for every comment card,
 // reply, and their Add/Reply/Delete controls — deliberately NOT the real
@@ -739,21 +1190,6 @@
   .govuk-button {
     font-size: 16px;
   }
-}
-
-// Word-style floating comments: absolutely positioned within
-// app-experiment-floating-comments above — normal document flow, same as
-// every other comment card (base rule above), not position: absolute.
-// Only comments with an anchorId (app/routes.js) get this class, applied
-// server-side; it exists purely as a marker computeFloatingPositions()
-// (editor-experiment.html's pageScripts) uses to find which cards to
-// adjust — margin-top is what actually moves a card, set live there, on
-// top of (additional to) the margin-bottom every card already has from
-// the base rule above. The transition is what makes a recalculated
-// margin-top read as gliding smoothly into its new position rather than
-// jumping.
-.app-experiment-comment--floating {
-  transition: margin-top 120ms ease-out;
 }
 
 .app-experiment-comment__header {
@@ -811,8 +1247,19 @@
   list-style: none;
 }
 
+// A light grey tint (the same token .app-editor-anchor already uses for
+// its own "distinct but not alarming" highlight, lighter than the card's
+// own $govuk-mid-grey border) so a reply reads as part of the thread but
+// visually distinct from the original (white) comment above it — in
+// addition to, not instead of, the divider line between multiple replies
+// below. The negative left/right margin cancels the matching padding
+// added here, so the tint still bleeds to the same edges
+// .app-experiment-comment__thread's own padding already established,
+// rather than sitting inset further than the thread content around it.
 .app-experiment-comment__reply {
-  padding-top: govuk-spacing(3);
+  padding: govuk-spacing(3) govuk-spacing(2);
+  margin: 0 (-govuk-spacing(2));
+  background-color: $govuk-light-grey;
 
   & + & {
     border-top: 1px solid $govuk-mid-grey;
@@ -837,11 +1284,38 @@
 // content was tallest), which is what made the button render taller than
 // the input instead of sitting at its own natural height beside it.
 // Centring lets each child keep its own natural height and lines them up
-// on the same middle instead.
+// on the same middle instead. Still used as-is (side-by-side) by the
+// Content nav sidebar's "Add new content" input — see the stacked
+// override just below, scoped to .app-experiment-comment specifically so
+// it does not reach that sidebar instance, which reuses these same class
+// names but was not part of what was asked to change here.
 .app-experiment-add-comment {
   display: flex;
   align-items: center;
   gap: govuk-spacing(2);
+}
+
+// Stacked, not side-by-side, for every input+"Add" pairing inside the
+// Comments panel specifically — the main "add a comment" draft card
+// (buildDraftCommentCardHTML, editor-experiment.html's pageScripts) and
+// every reply form (.app-experiment-reply-form) on every comment card,
+// both of which sit inside .app-experiment-comment. This replaces the
+// side-by-side layout above for those cases only: input first, full
+// width (align-items: stretch, rather than centred, now stretches the
+// input across the column instead of down the row), "Add" button
+// directly beneath it, left-aligned to its own natural width rather than
+// stretched to match.
+.app-experiment-comment .app-experiment-add-comment {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.app-experiment-comment .app-experiment-add-comment__input {
+  flex: 0 0 auto;
+}
+
+.app-experiment-comment .app-experiment-add-comment__button {
+  align-self: flex-start;
 }
 
 // .govuk-form-group carries a bottom margin by default — zeroed out here
@@ -885,16 +1359,53 @@
   box-shadow: none;
 }
 
+// A draft (not-yet-submitted) comment's own small "Cancel" control, sits
+// above its input — right-aligned in its own row rather than beside the
+// input, since there's no author/timestamp meta line on a draft for it to
+// line up against the way a submitted comment's own Delete does.
+.app-experiment-draft-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: govuk-spacing(1);
+}
+
+// Same "looks like a link, not a button" treatment as
+// .app-experiment-hide-link, reused rather than redefined.
+.app-experiment-draft-cancel {
+  @extend .app-experiment-hide-link;
+}
+
+// Auto-expanding as the user types (autoGrowTextarea, pageScripts)
+// instead of a fixed single-line height like every other input on this
+// page — resize: none since the height is already driven automatically
+// (a manual drag-handle would just fight it), overflow: hidden so no
+// scrollbar ever flashes while its height is being read/set on every
+// keystroke. margin-bottom: 0 overrides govuk-textarea's own built-in
+// 20px — unlike govuk-input (which has none), govuk-textarea carries
+// that margin itself, and .govuk-!-margin-bottom-0 on the form-group
+// wrapper (this element's own parent, not this element) doesn't reach it
+// — without this override a 20px gap would open up above the Add button
+// that the equivalent input-based draft never had.
+.app-experiment-draft-textarea {
+  overflow: hidden;
+  resize: none;
+  margin-bottom: 0;
+}
+
 .app-experiment-checks {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+// Severity tag first, description text beneath it — a column flex rather
+// than the previous row (text left, tag pushed right via space-between),
+// swapped to match in markup order too, so this is a real top-to-bottom
+// reading order, not just a visual stack with the DOM order unchanged.
 .app-experiment-check {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
   gap: govuk-spacing(2);
   padding: govuk-spacing(3);
   margin-bottom: govuk-spacing(2);
@@ -909,4 +1420,16 @@
 
 .app-experiment-check__text {
   flex-grow: 1;
+}
+
+// GOV.UK Design System deviation: govukTag has square corners (border-
+// radius: 0) everywhere else this prototype uses it — rounded here
+// specifically to match .app-experiment-comment/.app-experiment-box's own
+// 6px radius elsewhere on this page, per this page's own established
+// "card" language. Scoped to .app-experiment-check .govuk-tag rather than
+// the bare .govuk-tag class, so it doesn't reach any other tag on this or
+// any other page. Colours, spacing and position are untouched — this is
+// the one property being changed.
+.app-experiment-check .govuk-tag {
+  border-radius: 6px;
 }

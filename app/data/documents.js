@@ -20,14 +20,44 @@
 //
 
 const documents = [
-  { name: 'Applying for the Sustainable Farming Incentive', pages: 84, issues: 31, status: 'Draft' },
-  { name: 'Countryside Stewardship: capital grants', pages: 96, issues: 0, status: 'Awaiting approval' },
+  {
+    name: 'Applying for the Sustainable Farming Incentive',
+    pages: 84,
+    issues: 31,
+    status: 'Draft'
+  },
+  {
+    name: 'Countryside Stewardship: capital grants',
+    pages: 96,
+    issues: 0,
+    status: 'Awaiting approval'
+  },
   { name: 'How inspections work', pages: 42, issues: 12, status: 'Draft' },
-  { name: 'Payment deadlines and what to expect', pages: 18, issues: 0, status: 'Published' },
+  {
+    name: 'Payment deadlines and what to expect',
+    pages: 18,
+    issues: 0,
+    status: 'Published'
+  },
   { name: 'Cross compliance rules', pages: 71, issues: 22, status: 'Draft' },
-  { name: 'Hedgerow management standards', pages: 24, issues: 0, status: 'Published' },
-  { name: 'Soil testing and nutrient management', pages: 38, issues: 0, status: 'Awaiting approval' },
-  { name: 'Woodland creation: eligibility', pages: 55, issues: 14, status: 'Draft' }
+  {
+    name: 'Hedgerow management standards',
+    pages: 24,
+    issues: 0,
+    status: 'Published'
+  },
+  {
+    name: 'Soil testing and nutrient management',
+    pages: 38,
+    issues: 0,
+    status: 'Awaiting approval'
+  },
+  {
+    name: 'Woodland creation: eligibility',
+    pages: 55,
+    issues: 14,
+    status: 'Draft'
+  }
 ]
 
 // The documents in one upload, for the option where several are sent at once.

@@ -23,13 +23,13 @@ const PREVIEW_KEY = 'rpa-guidance-hub.preview'
 // a full markdown implementation and does not need to be: the prototype only
 // has to look right, not to publish anything. GOV.UK renders its preview on the
 // server, which is what a real build would do.
-function renderMarkdown (markdown, options) {
+function renderMarkdown(markdown, options) {
   // With { images: true } an image renders as a real <img> (safe URLs only);
   // by default it renders as a placeholder, the behaviour the editor preview
   // wants. v4's guide viewer opts in to real images.
   const renderImages = Boolean(options && options.images)
 
-  function escapeHtml (text) {
+  function escapeHtml(text) {
     return text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -45,7 +45,7 @@ function renderMarkdown (markdown, options) {
   //
   // Entity-encoded attempts (&#106;avascript:) are already dead, because the
   // ampersand is escaped before this runs.
-  function safeUrl (url) {
+  function safeUrl(url) {
     const bare = url.trim().replace(/[\u0000-\u001f\s]/g, '')
     if (/^(https?:|mailto:|#|\/|\.)/i.test(bare)) return url
     // No scheme at all means a relative link, which is fine.
@@ -58,25 +58,34 @@ function renderMarkdown (markdown, options) {
   //
   // The preview shows how the guidance will read once published, so it never
   // marks anything up as a problem. Quality issues belong in the issue list.
-  function inline (text) {
+  function inline(text) {
     return escapeHtml(text)
       .replace(/!\[([^\]]*)\]\(([^)]*)\)/g, function (match, alt, url) {
         if (renderImages) {
           const src = safeUrl(url)
           if (src) {
-            return '<img class="app-markdown-preview__img" src="' + src +
-              '" alt="' + alt.trim() + '">'
+            return (
+              '<img class="app-markdown-preview__img" src="' +
+              src +
+              '" alt="' +
+              alt.trim() +
+              '">'
+            )
           }
         }
-        return '<span class="app-markdown-preview__image">' +
+        return (
+          '<span class="app-markdown-preview__image">' +
           (alt.trim() ? 'Image: ' + alt : 'Image') +
           '</span>'
+        )
       })
       .replace(/\[([^\]]+)\]\(([^)]*)\)/g, function (match, label, url) {
         const href = safeUrl(url)
         return href
           ? '<a class="govuk-link" href="' + href + '">' + label + '</a>'
-          : '<span class="app-markdown-preview__blocked" title="Link removed: unsafe address">' + label + '</span>'
+          : '<span class="app-markdown-preview__blocked" title="Link removed: unsafe address">' +
+              label +
+              '</span>'
       })
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
@@ -86,9 +95,13 @@ function renderMarkdown (markdown, options) {
   let listItems = []
   let tableRows = []
 
-  function flushList () {
+  function flushList() {
     if (!listItems.length) return
-    html.push('<ul class="govuk-list govuk-list--bullet">' + listItems.join('') + '</ul>')
+    html.push(
+      '<ul class="govuk-list govuk-list--bullet">' +
+        listItems.join('') +
+        '</ul>'
+    )
     listItems = []
   }
 
@@ -96,29 +109,40 @@ function renderMarkdown (markdown, options) {
   // body rows, each written | cell | cell |. The separator row is dropped and
   // its position marks where the header ends. Converted Word documents can
   // carry tables, so the viewer renders them rather than showing the pipes.
-  function splitCells (row) {
-    return row.replace(/^\||\|$/g, '').split('|').map(function (cell) {
-      return cell.trim()
-    })
+  function splitCells(row) {
+    return row
+      .replace(/^\||\|$/g, '')
+      .split('|')
+      .map(function (cell) {
+        return cell.trim()
+      })
   }
 
-  function flushTable () {
+  function flushTable() {
     if (!tableRows.length) return
     const rows = tableRows
     tableRows = []
 
-    const isSeparator = rows.length > 1 && rows[1].every(function (cell) {
-      return /^:?-{3,}:?$/.test(cell)
-    })
+    const isSeparator =
+      rows.length > 1 &&
+      rows[1].every(function (cell) {
+        return /^:?-{3,}:?$/.test(cell)
+      })
     const head = isSeparator ? rows[0] : null
     const body = isSeparator ? rows.slice(2) : rows
 
-    const out = ['<div class="app-markdown-preview__table-wrap">',
-      '<table class="govuk-table">']
+    const out = [
+      '<div class="app-markdown-preview__table-wrap">',
+      '<table class="govuk-table">'
+    ]
     if (head) {
       out.push('<thead class="govuk-table__head"><tr class="govuk-table__row">')
       head.forEach(function (cell) {
-        out.push('<th scope="col" class="govuk-table__header">' + inline(cell) + '</th>')
+        out.push(
+          '<th scope="col" class="govuk-table__header">' +
+            inline(cell) +
+            '</th>'
+        )
       })
       out.push('</tr></thead>')
     }
@@ -157,7 +181,17 @@ function renderMarkdown (markdown, options) {
       // rather than competing with it.
       const level = Math.min(heading[1].length + 1, 6)
       const size = level === 2 ? 'govuk-heading-m' : 'govuk-heading-s'
-      html.push('<h' + level + ' class="' + size + '">' + inline(heading[2]) + '</h' + level + '>')
+      html.push(
+        '<h' +
+          level +
+          ' class="' +
+          size +
+          '">' +
+          inline(heading[2]) +
+          '</h' +
+          level +
+          '>'
+      )
       return
     }
 
@@ -194,7 +228,7 @@ window.appRenderMarkdown = renderMarkdown
 // produced by exactly the same code.
 const qualityChecks = window.appQualityChecks
 
-function headingsIn (markdown) {
+function headingsIn(markdown) {
   const headings = []
 
   markdown.split('\n').forEach(function (line, index) {
@@ -228,14 +262,17 @@ window.GOVUKPrototypeKit.documentReady(() => {
   const count = Number(progress.dataset.count || 1)
 
   const stages = [
-    { text: count > 1 ? 'Uploading ' + count + ' files' : 'Uploading your file', percent: 30 },
+    {
+      text: count > 1 ? 'Uploading ' + count + ' files' : 'Uploading your file',
+      percent: 30
+    },
     { text: 'Scanning for viruses', percent: 70 },
     { text: 'Upload complete', percent: 100 }
   ]
 
   let index = 0
 
-  function advance () {
+  function advance() {
     const stage = stages[index]
     status.textContent = stage.text
     bar.style.width = stage.percent + '%'
@@ -244,7 +281,9 @@ window.GOVUKPrototypeKit.documentReady(() => {
     if (index < stages.length) {
       window.setTimeout(advance, 1200)
     } else if (next) {
-      window.setTimeout(function () { window.location.href = next }, 800)
+      window.setTimeout(function () {
+        window.location.href = next
+      }, 800)
     }
   }
 
@@ -268,8 +307,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
   const summary = document.querySelector('[data-editor-summary]')
   const worklist = document.querySelector('[data-editor-worklist]')
 
-
-  function escapeHtml (text) {
+  function escapeHtml(text) {
     return String(text)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -282,7 +320,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
   // Uses execCommand where it is available so the browser's own undo stack
   // still works — retyping everything after an accidental toolbar press would
   // be miserable in a 100-page document.
-  function replaceSelection (text) {
+  function replaceSelection(text) {
     editor.focus()
     let inserted = false
 
@@ -300,7 +338,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
 
   // Grows the selection out to whole lines, so prefixing a heading or a bullet
   // works wherever the caret happens to be sitting.
-  function selectWholeLines () {
+  function selectWholeLines() {
     const value = editor.value
     let start = editor.selectionStart
     let end = editor.selectionEnd
@@ -312,22 +350,38 @@ window.GOVUKPrototypeKit.documentReady(() => {
     return value.slice(start, end)
   }
 
-  function prefixLines (build) {
+  function prefixLines(build) {
     const selected = selectWholeLines()
     const lines = selected.split('\n')
 
-    replaceSelection(lines.map(function (line, index) {
-      // Drop any prefix already there, so pressing the button twice swaps the
-      // style instead of stacking it up.
-      const bare = line.replace(/^(\s*)(#{1,6}\s+|[-*]\s+|\d+\.\s+)/, '$1')
-      return build(bare, index)
-    }).join('\n'))
+    replaceSelection(
+      lines
+        .map(function (line, index) {
+          // Drop any prefix already there, so pressing the button twice swaps the
+          // style instead of stacking it up.
+          const bare = line.replace(/^(\s*)(#{1,6}\s+|[-*]\s+|\d+\.\s+)/, '$1')
+          return build(bare, index)
+        })
+        .join('\n')
+    )
   }
 
   const actions = {
-    h2: function () { prefixLines(function (line) { return line.trim() ? '## ' + line : line }) },
-    h3: function () { prefixLines(function (line) { return line.trim() ? '### ' + line : line }) },
-    bullets: function () { prefixLines(function (line) { return line.trim() ? '- ' + line : line }) },
+    h2: function () {
+      prefixLines(function (line) {
+        return line.trim() ? '## ' + line : line
+      })
+    },
+    h3: function () {
+      prefixLines(function (line) {
+        return line.trim() ? '### ' + line : line
+      })
+    },
+    bullets: function () {
+      prefixLines(function (line) {
+        return line.trim() ? '- ' + line : line
+      })
+    },
     numbers: function () {
       let n = 0
       prefixLines(function (line) {
@@ -339,7 +393,9 @@ window.GOVUKPrototypeKit.documentReady(() => {
     link: function () {
       const start = editor.selectionStart
       const selected = editor.value.slice(start, editor.selectionEnd)
-      replaceSelection('[' + (selected || 'link text') + '](https://www.gov.uk)')
+      replaceSelection(
+        '[' + (selected || 'link text') + '](https://www.gov.uk)'
+      )
     },
     image: function () {
       imagePanel.hidden = !imagePanel.hidden
@@ -349,7 +405,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
 
   // -- Rendering ------------------------------------------------------------
 
-  function renderSummary (issues) {
+  function renderSummary(issues) {
     if (!summary) return
 
     if (!issues.length) {
@@ -359,20 +415,31 @@ window.GOVUKPrototypeKit.documentReady(() => {
     }
 
     summary.innerHTML =
-      '<p class="app-issue-bar__total">' + issues.length +
-        (issues.length === 1 ? ' issue to fix' : ' issues to fix') + '</p>' +
+      '<p class="app-issue-bar__total">' +
+      issues.length +
+      (issues.length === 1 ? ' issue to fix' : ' issues to fix') +
+      '</p>' +
       '<ul class="app-issue-bar__groups">' +
-      qualityChecks.severityCounts(issues).map(function (entry) {
-        return '<li class="app-issue-bar__group">' +
-          '<span class="govuk-tag ' + entry.tag.classes + '">' +
-            entry.count + ' ' + escapeHtml(entry.tag.text.toLowerCase()) +
-          '</span>' +
-          '</li>'
-      }).join('') +
+      qualityChecks
+        .severityCounts(issues)
+        .map(function (entry) {
+          return (
+            '<li class="app-issue-bar__group">' +
+            '<span class="govuk-tag ' +
+            entry.tag.classes +
+            '">' +
+            entry.count +
+            ' ' +
+            escapeHtml(entry.tag.text.toLowerCase()) +
+            '</span>' +
+            '</li>'
+          )
+        })
+        .join('') +
       '</ul>'
   }
 
-  function renderWorklist (issues) {
+  function renderWorklist(issues) {
     if (!worklist) return
 
     if (!issues.length) {
@@ -382,35 +449,54 @@ window.GOVUKPrototypeKit.documentReady(() => {
 
     worklist.innerHTML =
       '<ul class="app-worklist">' +
-      issues.map(function (issue) {
-        return '<li class="app-worklist__item">' +
-          '<span class="govuk-tag ' + issue.severityTag.classes + ' app-worklist__severity">' +
+      issues
+        .map(function (issue) {
+          return (
+            '<li class="app-worklist__item">' +
+            '<span class="govuk-tag ' +
+            issue.severityTag.classes +
+            ' app-worklist__severity">' +
             escapeHtml(issue.severityTag.text) +
-          '</span>' +
-          '<span class="app-worklist__title">' +
+            '</span>' +
+            '<span class="app-worklist__title">' +
             escapeHtml(issue.title) +
-            '<span class="app-worklist__rule">' + escapeHtml(issue.ruleId) + '</span>' +
-          '</span>' +
-          '<button type="button" class="app-worklist__go govuk-link" data-line="' + issue.line + '">' +
-            'Go to line ' + issue.line +
-          '</button>' +
-        '</li>'
-      }).join('') +
+            '<span class="app-worklist__rule">' +
+            escapeHtml(issue.ruleId) +
+            '</span>' +
+            '</span>' +
+            '<button type="button" class="app-worklist__go govuk-link" data-line="' +
+            issue.line +
+            '">' +
+            'Go to line ' +
+            issue.line +
+            '</button>' +
+            '</li>'
+          )
+        })
+        .join('') +
       '</ul>'
   }
 
-  function renderOutline (headings) {
+  function renderOutline(headings) {
     if (!outline) return
 
     outline.innerHTML =
       '<option value="">Jump to a section…</option>' +
-      headings.map(function (heading) {
-        const indent = heading.level > 1 ? '— '.repeat(heading.level - 1) : ''
-        return '<option value="' + heading.line + '">' + escapeHtml(indent + heading.text) + '</option>'
-      }).join('')
+      headings
+        .map(function (heading) {
+          const indent = heading.level > 1 ? '— '.repeat(heading.level - 1) : ''
+          return (
+            '<option value="' +
+            heading.line +
+            '">' +
+            escapeHtml(indent + heading.text) +
+            '</option>'
+          )
+        })
+        .join('')
   }
 
-  function update () {
+  function update() {
     const markdown = editor.value
     const issues = qualityChecks.findIssues(markdown)
 
@@ -425,24 +511,28 @@ window.GOVUKPrototypeKit.documentReady(() => {
   // keystroke costs about 30ms. Waiting for a pause in typing keeps the
   // textarea responsive whatever the document size.
   let pending
-  function scheduleUpdate () {
+  function scheduleUpdate() {
     window.clearTimeout(pending)
     pending = window.setTimeout(update, 150)
   }
 
   // Puts the caret on a line and scrolls it into view. This is what makes a
   // 100-page document workable: an issue is a place you can go to.
-  function goToLine (lineNumber) {
+  function goToLine(lineNumber) {
     const lines = editor.value.split('\n')
     let start = 0
     for (let i = 0; i < lineNumber - 1 && i < lines.length; i++) {
       start += lines[i].length + 1
     }
 
-    const lineHeight = parseFloat(window.getComputedStyle(editor).lineHeight) || 20
+    const lineHeight =
+      parseFloat(window.getComputedStyle(editor).lineHeight) || 20
 
     editor.focus()
-    editor.setSelectionRange(start, start + (lines[lineNumber - 1] || '').length)
+    editor.setSelectionRange(
+      start,
+      start + (lines[lineNumber - 1] || '').length
+    )
     editor.scrollTop = Math.max(0, (lineNumber - 4) * lineHeight)
 
     // Bring the preview to the same place, which is the whole point of having
@@ -466,7 +556,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
   let syncing = false
   let syncTimer
 
-  function syncScroll (from, to) {
+  function syncScroll(from, to) {
     if (syncing) return
     syncing = true
 
@@ -475,7 +565,9 @@ window.GOVUKPrototypeKit.documentReady(() => {
     to.scrollTop = fromMax > 0 ? (from.scrollTop / fromMax) * toMax : 0
 
     window.clearTimeout(syncTimer)
-    syncTimer = window.setTimeout(function () { syncing = false }, 100)
+    syncTimer = window.setTimeout(function () {
+      syncing = false
+    }, 100)
   }
 
   // -- Wiring ---------------------------------------------------------------
@@ -496,20 +588,28 @@ window.GOVUKPrototypeKit.documentReady(() => {
   })
 
   if (imagePanel) {
-    imagePanel.querySelector('[data-editor-image-insert]').addEventListener('click', () => {
-      const file = imagePanel.querySelector('[data-editor-image-file]').value.trim()
-      const description = imagePanel.querySelector('[data-editor-image-alt]').value.trim()
+    imagePanel
+      .querySelector('[data-editor-image-insert]')
+      .addEventListener('click', () => {
+        const file = imagePanel
+          .querySelector('[data-editor-image-file]')
+          .value.trim()
+        const description = imagePanel
+          .querySelector('[data-editor-image-alt]')
+          .value.trim()
 
-      // Alt text is asked for at the point the image goes in, which is how
-      // GOV.UK's editor does it — it stops the commonest quality issue at
-      // source rather than reporting it afterwards.
-      replaceSelection('![' + description + '](' + (file || 'image.png') + ')')
+        // Alt text is asked for at the point the image goes in, which is how
+        // GOV.UK's editor does it — it stops the commonest quality issue at
+        // source rather than reporting it afterwards.
+        replaceSelection(
+          '![' + description + '](' + (file || 'image.png') + ')'
+        )
 
-      imagePanel.querySelector('[data-editor-image-file]').value = ''
-      imagePanel.querySelector('[data-editor-image-alt]').value = ''
-      imagePanel.hidden = true
-      scheduleUpdate()
-    })
+        imagePanel.querySelector('[data-editor-image-file]').value = ''
+        imagePanel.querySelector('[data-editor-image-alt]').value = ''
+        imagePanel.hidden = true
+        scheduleUpdate()
+      })
   }
 
   if (worklist) {
@@ -527,13 +627,21 @@ window.GOVUKPrototypeKit.documentReady(() => {
   }
 
   // A finding links here with ?line=N, so "go to a specific issue" lands on it.
-  const requestedLine = Number(new URLSearchParams(window.location.search).get('line'))
+  const requestedLine = Number(
+    new URLSearchParams(window.location.search).get('line')
+  )
   if (requestedLine > 0) {
-    window.setTimeout(function () { goToLine(requestedLine) }, 0)
+    window.setTimeout(function () {
+      goToLine(requestedLine)
+    }, 0)
   }
 
-  editor.addEventListener('scroll', function () { syncScroll(editor, preview) })
-  preview.addEventListener('scroll', function () { syncScroll(preview, editor) })
+  editor.addEventListener('scroll', function () {
+    syncScroll(editor, preview)
+  })
+  preview.addEventListener('scroll', function () {
+    syncScroll(preview, editor)
+  })
 
   // Hand the current markdown to the new tab so the preview there shows unsaved
   // changes rather than the last saved draft.
@@ -577,10 +685,14 @@ window.GOVUKPrototypeKit.documentReady(() => {
         start += lines[i].length + 1
       }
 
-      const lineHeight = parseFloat(window.getComputedStyle(target).lineHeight) || 20
+      const lineHeight =
+        parseFloat(window.getComputedStyle(target).lineHeight) || 20
 
       target.focus()
-      target.setSelectionRange(start, start + (lines[lineNumber - 1] || '').length)
+      target.setSelectionRange(
+        start,
+        start + (lines[lineNumber - 1] || '').length
+      )
       target.scrollTop = Math.max(0, (lineNumber - 2) * lineHeight)
     })
   })
@@ -594,7 +706,9 @@ window.GOVUKPrototypeKit.documentReady(() => {
 // in local storage so unsaved edits are included, and falls back to the saved
 // draft embedded in the page when this is opened directly.
 window.GOVUKPrototypeKit.documentReady(() => {
-  const target = document.querySelector('[data-module="app-standalone-preview"]')
+  const target = document.querySelector(
+    '[data-module="app-standalone-preview"]'
+  )
   if (!target) return
 
   const fallback = document.querySelector('[data-preview-source]')
@@ -679,8 +793,12 @@ window.GOVUKPrototypeKit.documentReady(() => {
   // other imports, or its schema checks fail against a duplicate copy.
   Promise.all([
     import('https://esm.sh/@tiptap/core@2?deps=@tiptap/pm@2'),
-    import('https://esm.sh/@tiptap/starter-kit@2?deps=@tiptap/core@2,@tiptap/pm@2'),
-    import('https://esm.sh/tiptap-markdown@0.8.10?deps=@tiptap/core@2,@tiptap/pm@2')
+    import(
+      'https://esm.sh/@tiptap/starter-kit@2?deps=@tiptap/core@2,@tiptap/pm@2'
+    ),
+    import(
+      'https://esm.sh/tiptap-markdown@0.8.10?deps=@tiptap/core@2,@tiptap/pm@2'
+    )
   ])
     .then(([core, starterKit, markdown]) => {
       const editor = new core.Editor({
@@ -775,21 +893,25 @@ window.GOVUKPrototypeKit.documentReady(() => {
     }
     let active = 'checks'
 
-    function renderPanes () {
+    function renderPanes() {
       panes.forEach((pane) => {
         pane.hidden = pane.dataset.editorPane !== active
       })
       side.hidden = !active
       toggles.forEach((toggle) => {
         const name = toggle.dataset.paneToggle
-        toggle.textContent = (name === active ? 'Hide ' : 'Show ') + labels[name]
+        toggle.textContent =
+          (name === active ? 'Hide ' : 'Show ') + labels[name]
         toggle.setAttribute('aria-expanded', String(name === active))
       })
     }
 
     toggles.forEach((toggle) => {
       toggle.addEventListener('click', () => {
-        active = toggle.dataset.paneToggle === active ? null : toggle.dataset.paneToggle
+        active =
+          toggle.dataset.paneToggle === active
+            ? null
+            : toggle.dataset.paneToggle
         renderPanes()
       })
     })
@@ -802,20 +924,23 @@ window.GOVUKPrototypeKit.documentReady(() => {
 
   // The text a finding should land on: its quote if the rule recorded one,
   // otherwise the markdown line itself, stripped of list/heading syntax.
-  function findingSnippet (button) {
+  function findingSnippet(button) {
     const quote = (button.dataset.findingQuote || '').trim()
     if (quote) return quote
 
     const line = Number(button.dataset.findingLine)
     const raw = (textarea ? textarea.value.split('\n')[line - 1] : '') || ''
-    return raw.replace(/^[#>\-*\d.\s]+/, '').trim().slice(0, 60)
+    return raw
+      .replace(/^[#>\-*\d.\s]+/, '')
+      .trim()
+      .slice(0, 60)
   }
 
   // The highlight is an overlay positioned over the passage rather than a
   // class on the passage itself: ProseMirror owns its DOM and its mutation
   // observer reverts foreign attribute changes almost immediately, so a
   // class added to one of its nodes never survives long enough to be seen.
-  function flash (element) {
+  function flash(element) {
     const rect = element.getBoundingClientRect()
     const overlay = document.createElement('div')
     overlay.className = 'app-quality-flash-overlay'
@@ -827,7 +952,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
     overlay.addEventListener('animationend', () => overlay.remove())
   }
 
-  function anchorInSurface (surface, button) {
+  function anchorInSurface(surface, button) {
     const snippet = findingSnippet(button)
     if (!snippet) return false
 
@@ -844,17 +969,21 @@ window.GOVUKPrototypeKit.documentReady(() => {
     return false
   }
 
-  function anchorInTextarea (button) {
+  function anchorInTextarea(button) {
     const line = Number(button.dataset.findingLine)
     const lines = textarea.value.split('\n')
-    const start = lines.slice(0, line - 1).join('\n').length + (line > 1 ? 1 : 0)
+    const start =
+      lines.slice(0, line - 1).join('\n').length + (line > 1 ? 1 : 0)
 
     textarea.focus()
     textarea.setSelectionRange(start, start + (lines[line - 1] || '').length)
     // Rough but serviceable: put the target line about a third of the way
     // down the visible box.
     const lineHeight = textarea.scrollHeight / lines.length
-    textarea.scrollTop = Math.max(0, (line - 1) * lineHeight - textarea.clientHeight / 3)
+    textarea.scrollTop = Math.max(
+      0,
+      (line - 1) * lineHeight - textarea.clientHeight / 3
+    )
   }
 
   // Delegated from the document, so the anchors work regardless of when the
@@ -901,8 +1030,10 @@ window.GOVUKPrototypeKit.documentReady(() => {
     const used = Object.create(null)
     const slugify = (text) => {
       const base =
-        text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') ||
-        'section'
+        text
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') || 'section'
       let slug = base
       let n = 2
       while (used[slug]) {
@@ -952,7 +1083,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
   const searchStatus = root.querySelector('[data-guide-search-status]')
   const HIGHLIGHT = 'app-guide-view__match'
 
-  function clearHighlights () {
+  function clearHighlights() {
     const marks = content.querySelectorAll('mark.' + HIGHLIGHT)
     marks.forEach((mark) => {
       const text = document.createTextNode(mark.textContent)
@@ -961,7 +1092,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
     content.normalize()
   }
 
-  function highlight (query) {
+  function highlight(query) {
     let count = 0
     const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT)
     const targets = []
@@ -997,7 +1128,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
     return count
   }
 
-  function runSearch () {
+  function runSearch() {
     clearHighlights()
     const query = searchInput.value.trim().toLowerCase()
 

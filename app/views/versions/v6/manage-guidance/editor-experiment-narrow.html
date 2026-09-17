@@ -1,0 +1,2302 @@
+{#
+  Narrow-container comparison duplicate of /v6/editor-experiment
+  (app/views/versions/v6/editor-experiment.html) — same content, same
+  three-column layout (Content nav / editor / Changes panel), identical
+  pageScripts, only the outer container differs: no .app-experiment-page
+  full-width breakout here, so the whole page sits inside the standard
+  govuk-width-container/govuk-main-wrapper the layout already provides —
+  the exact same container width, side margins and top padding as
+  /v6/document-overview.html, which uses that same default, unoverridden
+  container.
+
+  Not yet linked anywhere — a standalone page for reviewing this width
+  directly at /v6/manage-guidance/editor-experiment-narrow. Everything
+  below this comment (aside from removing the .app-experiment-page wrapper
+  div) is an exact copy of editor-experiment.html; see that file's own top
+  comment for how the page itself works, including the page title with its
+  own "Rename" (beginTitleRename/finishTitleRename in pageScripts), the
+  Tiptap-styled toolbar as its own separate, visually-distinct card above
+  the editor (not fused to it — see .tiptap-toolbar's own comment), and
+  the editor (guidance content only) and Changes panel as two genuinely
+  separate, independently-scrolling areas side by side
+  (.app-experiment-editor bordered/rounded, .app-experiment-changes
+  deliberately not — see both classes' own comments in
+  _app-editor-experiment.scss), the sticky
+  Content nav sidebar (own independent internal scroll — see
+  .app-experiment-nav in _app-editor-experiment.scss — so a long list
+  doesn't push "Add new content" below it out of reach, with its
+  "Content" heading padding-top'd down to align with the toolbar row
+  beside it rather than the page title above that — see
+  .app-experiment-sidebar's own comment), the fixed
+  .app-experiment-footer-bar at the bottom of the viewport holding
+  Save/Preview/Send for approval (moved out of the sidebar — see that
+  element's own comment, including the GOV.UK Design System deviation
+  flagged there), setActiveNavItem moving the
+  sidebar's blue active-section tint to whichever Content nav link was
+  last clicked (pageScripts), click-to-reveal "Reply" links, selecting
+  editor text to create a new anchored comment (inserted into the
+  Comments list at the position matching its anchor's own document order
+  — see sortCommentsByAnchorOrder/insertCommentInOrder in pageScripts —
+  not pixel-matched to anything), draggable Content-nav cards, functional
+  section boundaries (dragging or arrow-keying a boundary handle
+  reassigns paragraphs between the two sections either side of it,
+  snapped to paragraph boundaries — see wireBoundaryHandle in
+  pageScripts), a normal stacked comment list (white, rounded-corner
+  cards at a flat 16px — see .app-experiment-comment in
+  _app-editor-experiment.scss), the Comments/Checks tab switch (each label
+  showing a live "(n)" count — see updateTabCounts in pageScripts),
+  flash-and-fade highlighting (not persistent) shared by Content nav link
+  clicks, comment/check clicks and anchor-icon clicks — see flashHighlight
+  in pageScripts — and the "Preview" button (between Save and Send for
+  approval) that posts the editor's current live content — split into one
+  customSteps-shaped entry per Content-nav section, in that list's current
+  order (see buildCustomStepsFromEditor in pageScripts) — to
+  /v6/editor-experiment/preview, which renders the real
+  saved-document-view.html customSteps stepper from it (same nav, Version
+  tag, Content sidebar, search, "Part X of Y" dropdown and Back/Next any
+  real document's stepper has), with "Back to editor" restoring those same
+  in-progress edits here via restoredEditorHtml (app/routes.js). The
+  Changes panel's old "Show changes" button (for undoing "Hide") has been
+  removed entirely, having had no function; "Hide" itself is unchanged.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+
+{#
+  One shared icon macro for the whole Tiptap-styled toolbar below, rather
+  than repeating the <svg> wrapper (viewBox/stroke/etc, identical for all
+  of them) 25+ times — every icon is a plain 24x24, stroke-only line icon
+  (no fills except the two small solid dots in the bullet-list icon),
+  matching the icon style Tiptap's own toolbar uses (Lucide icons), not
+  copied from that library directly (no dependency pulled in), just drawn
+  to look the same: simple, minimal, recognisable shapes. See the
+  "GOV.UK Design System deviation" note further down for why this whole
+  toolbar looks nothing like govuk-frontend's own icon-free, text-label
+  buttons.
+#}
+{% macro ttIcon(name) %}
+  <svg class="tiptap-toolbar__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+    {% if name == "undo" %}
+      <path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/>
+    {% elif name == "redo" %}
+      <path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 7"/>
+    {% elif name == "chevron-down" %}
+      <path d="M6 9l6 6 6-6"/>
+    {% elif name == "bullet-list" %}
+      <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+      <circle cx="4" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.4" fill="currentColor" stroke="none"/>
+    {% elif name == "ordered-list" %}
+      <line x1="11" y1="6" x2="20" y2="6"/><line x1="11" y1="12" x2="20" y2="12"/><line x1="11" y1="18" x2="20" y2="18"/>
+      <path d="M4 5h2v4"/><path d="M4 9h2"/><path d="M4 14h2.5l-2.5 2.5h2.5"/>
+    {% elif name == "quote" %}
+      <path d="M7 7h4v4c0 2.2-1.3 3.4-3.5 3.6"/><path d="M15 7h4v4c0 2.2-1.3 3.4-3.5 3.6"/>
+    {% elif name == "code-block" %}
+      <rect x="2.5" y="4.5" width="19" height="15" rx="1"/><polyline points="9 10 6.5 12 9 14"/><polyline points="15 10 17.5 12 15 14"/>
+    {% elif name == "bold" %}
+      <path d="M6.5 4.5h5.5a3.3 3.3 0 0 1 0 6.6H6.5z"/><path d="M6.5 11.1h6.2a3.4 3.4 0 0 1 0 6.8H6.5z"/>
+    {% elif name == "italic" %}
+      <line x1="10.5" y1="4.5" x2="16.5" y2="4.5"/><line x1="7.5" y1="19.5" x2="13.5" y2="19.5"/><line x1="14.5" y1="4.5" x2="9.5" y2="19.5"/>
+    {% elif name == "strikethrough" %}
+      <line x1="5.5" y1="12" x2="18.5" y2="12"/><path d="M8 7c0-1.6 1.6-2.7 4-2.7s4 1.1 4 2.7"/><path d="M8 17c0 1.6 1.6 2.7 4 2.7s4-1.1 4-2.7"/>
+    {% elif name == "code" %}
+      <polyline points="9 6 4 12 9 18"/><polyline points="15 6 20 12 15 18"/>
+    {% elif name == "underline" %}
+      <path d="M6.5 4.5v6.5a5.5 5.5 0 0 0 11 0V4.5"/><line x1="5" y1="19.5" x2="19" y2="19.5"/>
+    {% elif name == "highlight" %}
+      <path d="M9.5 15.5L15 4.7l3.6 1.8-5.5 10.8z"/><path d="M5 20.5l2.7-5.4 2.8 1.8-2.7 5.4z"/>
+    {% elif name == "link" %}
+      <path d="M9.5 14.5l5-5"/><path d="M8 11.3l-2.3 2.3a3.4 3.4 0 0 0 4.8 4.8L13 16"/><path d="M16 12.7l2.3-2.3a3.4 3.4 0 0 0-4.8-4.8L11 8"/>
+    {% elif name == "superscript" %}
+      <path d="M4 7.5l8 10"/><path d="M12 7.5l-8 10"/><path d="M15 5.5h4"/><path d="M15 5.4c0-1 .8-1.6 2-1.6s2 .6 2 1.6c0 1.4-4.7 2.7-4.7 4.7h4.7"/>
+    {% elif name == "subscript" %}
+      <path d="M4 6.5l8 10"/><path d="M12 6.5l-8 10"/><path d="M15 14.5h4"/><path d="M15 14.4c0-1 .8-1.6 2-1.6s2 .6 2 1.6c0 1.4-4.7 2.7-4.7 4.7h4.7"/>
+    {% elif name == "align-left" %}
+      <line x1="4.5" y1="6" x2="19.5" y2="6"/><line x1="4.5" y1="12" x2="14.5" y2="12"/><line x1="4.5" y1="18" x2="17" y2="18"/>
+    {% elif name == "align-center" %}
+      <line x1="4.5" y1="6" x2="19.5" y2="6"/><line x1="7.5" y1="12" x2="16.5" y2="12"/><line x1="6" y1="18" x2="18" y2="18"/>
+    {% elif name == "align-right" %}
+      <line x1="4.5" y1="6" x2="19.5" y2="6"/><line x1="9.5" y1="12" x2="19.5" y2="12"/><line x1="7" y1="18" x2="19.5" y2="18"/>
+    {% elif name == "align-justify" %}
+      <line x1="4.5" y1="6" x2="19.5" y2="6"/><line x1="4.5" y1="12" x2="19.5" y2="12"/><line x1="4.5" y1="18" x2="19.5" y2="18"/>
+    {% elif name == "image" %}
+      <rect x="3" y="4.5" width="18" height="15" rx="1"/><circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15.5l-5-5-4 4-3-3-6 5.5"/>
+    {% elif name == "search" %}
+      <circle cx="10.5" cy="10.5" r="6"/><line x1="15" y1="15" x2="20" y2="20"/>
+    {% elif name == "sun" %}
+      <circle cx="12" cy="12" r="4"/><line x1="12" y1="2.5" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="21.5"/><line x1="4.2" y1="12" x2="2.5" y2="12"/><line x1="21.5" y1="12" x2="19.8" y2="12"/><line x1="5.6" y1="5.6" x2="6.9" y2="6.9"/><line x1="17.1" y1="17.1" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="6.9" y2="17.1"/><line x1="17.1" y1="6.9" x2="18.4" y2="5.6"/>
+    {% elif name == "moon" %}
+      <path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2z"/>
+    {% endif %}
+  </svg>
+{% endmacro %}
+
+{#
+  documentTitle/editorSections (app/routes.js, from ?id=) replace the fixed
+  "SFI 23 Guidance document" sample below when a document was actually
+  matched — see the {% if editorSections %} branch further down for the
+  dynamic content area itself; sections here only needs id/name from each
+  one (editorSections also carries heading/body, used by that branch), so
+  the sidebar nav loop below works unchanged either way.
+#}
+{% set pageName = documentTitle if documentTitle else "SFI 23 Guidance document" %}
+
+{#
+  Reached from "Continue editing" on manage-guidance/document-overview.html
+  (POST /v6/manage-guidance/start-editing, app/routes.js) — part of the
+  Manage guidance flow, not Find guidance. guidanceDocumentId (set
+  alongside documentTitle, only when ?id= matched a real
+  guidance-documents.js entry) links the middle crumb back to that
+  document's own guidance-document.html; a direct/no-?id= visit (the fixed
+  sample) has no such document to link to, so that crumb is left out
+  rather than pointing nowhere.
+#}
+{% set editorBreadcrumbItems = [{ text: "Manage guidance", href: "/v6/all-guidance-docs" }] %}
+{% if guidanceDocumentId %}
+  {% set editorBreadcrumbItems = (editorBreadcrumbItems.push({ text: documentTitle, href: "/v6/guidance-document/" + guidanceDocumentId }), editorBreadcrumbItems) %}
+{% endif %}
+{% set editorBreadcrumbItems = (editorBreadcrumbItems.push({ text: "Edit" }), editorBreadcrumbItems) %}
+
+{% set sections = editorSections if editorSections else [
+  { id: "section-1", name: "Overview" },
+  { id: "section-2", name: "Eligibility criteria" },
+  { id: "section-3", name: "Payment rates" },
+  { id: "section-4", name: "Application process" },
+  { id: "section-5", name: "Supporting evidence" },
+  { id: "section-6", name: "Review dates" }
+] %}
+
+{#
+  comments (each with a replies array, possibly empty) comes from
+  app/routes.js — GET /v6/editor-experiment — rather than being hardcoded
+  here: replies added below persist in req.session.data.editorExperimentReplies
+  and have to be merged into the base sample thread data server-side
+  before this renders. See EDITOR_EXPERIMENT_COMMENTS/
+  buildEditorExperimentComments in routes.js. default([]) is just a safety
+  net for this one route always passing it.
+#}
+{% set comments = comments | default([]) %}
+
+{% set checks = [
+  { text: "Payment rate figure is outdated", severity: "High", section: "section-3" },
+  { text: "Missing alt text on supporting image", severity: "Medium", section: "section-5" },
+  { text: "Heading level skips from H2 to H4", severity: "Low", section: "section-4" },
+  { text: "Broken internal link to related guidance", severity: "Medium", section: "section-6" },
+  { text: "Sentence exceeds recommended reading age", severity: "Low", section: "section-2" }
+] %}
+
+{% set severityTags = {
+  "High": { text: "High", classes: "govuk-tag--red" },
+  "Medium": { text: "Medium", classes: "govuk-tag--yellow" },
+  "Low": { text: "Low", classes: "govuk-tag--blue" }
+} %}
+
+{% block content %}
+
+{#
+  The way back once "Hide" (data-hide-changes, further down) collapses
+  the Comments/Checks column — position: fixed to the viewport, not
+  wherever it happens to fall in document flow, specifically because the
+  editor pane it appears alongside can be arbitrarily tall: a plain button
+  placed after the (now full-width) editor content, as this was first
+  built, could end up far below the fold with nothing on screen to say it
+  still exists. Fixed to the right edge and vertically centred instead, so
+  it's on screen at any scroll position — see pageScripts for the
+  hidden/hidden-toggle wiring, unchanged from that first version, only
+  this element's own positioning is different.
+#}
+<button type="button" class="app-experiment-show-changes" data-show-changes hidden>Show comments</button>
+
+{{ govukBreadcrumbs({
+  classes: "govuk-!-margin-bottom-4",
+  items: editorBreadcrumbItems
+}) }}
+
+<div class="govuk-grid-row app-experiment-row">
+
+  <div class="govuk-grid-column-one-quarter app-experiment-sidebar">
+
+    <h2 class="govuk-heading-m">Content</h2>
+
+    {#
+      Each item has its own Move up/Move down buttons — reordering is
+      visual/list-only, see wireNavItemMoveButtons()/updateNavMoveButtonStates()
+      in pageScripts: moving a card moves its <li> within this <ul>,
+      nothing else. It does not touch, and has no way to touch, the editor
+      content's own section-N divs or their order — moving "Land checks"
+      above "Force Majeure" here leaves the editor content showing them in
+      exactly the order it always has. data-highlight-trigger/
+      data-target-section on each link (unchanged) still work identically
+      regardless of list position, since they look section-N up by id, not
+      by where this link happens to sit in the list. Fully keyboard/
+      screen-reader accessible — real, individually-labelled buttons —
+      replacing an earlier drag-and-drop version that had no keyboard
+      equivalent at all.
+    #}
+    {#
+      Selecting a card's checkbox (single-select — checking one always
+      unchecks whichever other was checked, see wireNavItemSelection in
+      pageScripts) reveals this actions bar, hidden/absent otherwise.
+      Rename/Delete both act on whichever one card is currently selected;
+      neither is reachable with nothing selected. Plain text links, not
+      buttons — same "looks like a link" reset as .app-experiment-hide-link
+      — including for Delete: this removes a card from a design-experiment
+      page, not real content, the same reasoning a destructive-red button
+      was judged disproportionate for a comment's own Delete elsewhere on
+      this page.
+    #}
+    <div class="app-experiment-nav-actions" data-nav-actions hidden>
+      <button type="button" class="app-experiment-nav-actions__button" data-nav-rename>Rename</button>
+      <button type="button" class="app-experiment-nav-actions__button" data-nav-delete>Delete</button>
+    </div>
+
+    <nav aria-label="Content">
+      <ul class="app-experiment-nav" data-content-nav-list>
+        {% for section in sections %}
+          <li class="app-experiment-nav__item{% if loop.first %} app-experiment-nav__item--active{% endif %}">
+            <input type="checkbox" class="app-experiment-nav__checkbox" data-nav-select aria-label="Select {{ section.name }}">
+            <span class="app-experiment-nav__label-wrapper" data-nav-label-wrapper>
+              <a class="govuk-link app-experiment-nav__link" href="#{{ section.id }}" data-highlight-trigger data-target-section="{{ section.id }}">{{ section.name }}</a>
+            </span>
+            <div class="app-experiment-nav__move-buttons">
+              <button type="button" class="app-experiment-nav__move-button" data-move-up aria-label="Move {{ section.name }} up"{% if loop.first %} disabled{% endif %}>
+                <svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M3 10l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+              </button>
+              <button type="button" class="app-experiment-nav__move-button" data-move-down aria-label="Move {{ section.name }} down"{% if loop.last %} disabled{% endif %}>
+                <svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+    {#
+      "Add new content": a link, not a button, matching
+      .app-experiment-hide-link's existing "looks like a link" reset —
+      clicking it hides itself and reveals the input+Add row below
+      permanently for the rest of the page's life (same reveal-and-stay
+      pattern this page already used for a threaded comment's Reply
+      control before that was made always-open — see the Comments panel
+      further down), rather than the input hiding itself again after each
+      submission, so adding several new headings in a row doesn't need
+      re-clicking "Add new content" each time.
+    #}
+    <button type="button" class="app-experiment-add-content-link" data-show-add-content>Add new content</button>
+
+    <div class="app-experiment-add-content-form" data-add-content-form hidden>
+      <div class="app-experiment-add-comment">
+        {{ govukInput({
+          id: "new-content-heading",
+          name: "newContentHeading",
+          label: { text: "New content heading", classes: "govuk-visually-hidden" },
+          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__input",
+          attributes: { "data-add-content-input": true }
+        }) }}
+        {{ govukButton({
+          text: "Add",
+          type: "button",
+          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__button",
+          attributes: { "data-add-content-button": true }
+        }) }}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="govuk-grid-column-three-quarters">
+
+    {#
+      "Guidance title" is a plain govuk-caption-m label sitting above the
+      heading, GDS' own convention for pairing a small muted caption with
+      the heading scale directly below it (govuk-heading-m here — sized
+      down from govuk-heading-l, which read too large for what is really
+      a document title, not a page-level H1 in the usual GDS sense).
+      Static text, not tied to pageName in any way — renaming the
+      document (below) only ever changes the heading itself.
+
+      Renaming here is entirely client-side (beginTitleRename/
+      finishTitleRename, pageScripts) — it updates this page's own H1 (and
+      document.title) the same way a Content nav card's own rename updates
+      just that card's label, and is lost on reload the same way that is
+      too: nothing here is session-persisted, consistent with how every
+      other "rename" on this page already works, not a new exception.
+    #}
+    <span class="govuk-caption-m">Guidance title</span>
+    <div class="app-experiment-title-wrapper" data-title-wrapper>
+      <h1 class="govuk-heading-m" data-page-title>{{ pageName }}</h1>
+      <button type="button" class="app-experiment-title-rename" data-title-rename>Rename</button>
+    </div>
+
+    {#
+      Styled to match Tiptap's own Simple Editor template
+      (template.tiptap.dev/preview/templates/simple) — grouping, icon set
+      and dropdown pattern, not their component library (no dependency
+      pulled in, every icon here is a hand-drawn SVG via the ttIcon macro
+      above). Visual/styling only: see wireTiptapToolbar() in pageScripts
+      for exactly what each button does (a CSS toggle at most) and does
+      not do (nothing here reads or writes the contenteditable region's
+      actual content or formatting — no document.execCommand wiring
+      underneath any of it). Icon set: a single heading-level dropdown
+      (Heading 1/2/3, Paragraph — replacing an earlier Font family + Font
+      size dropdown pair, and before that a fuller heading dropdown that
+      pair itself had replaced), Bold/Italic/Underline, Bullet list and
+      Link — a combined text/highlight colour swatch, Align left/centre
+      and Image have all since been removed, per the specific set asked
+      for each time this list was revised. The heading dropdown reuses
+      the exact same data-tt-dropdown/-trigger/-menu/-label/-option
+      markup and generic wireTiptapToolbar() wiring every dropdown this
+      toolbar has ever had already used, so it opens, closes and updates
+      its own label with no new JS needed.
+
+      A separate card above .app-experiment-box again, not fused into
+      .app-experiment-editor — its own border/radius/background and
+      margin-bottom (matching .app-experiment-editor's own radius below
+      it) are what give it the "visually separated, own distinct area"
+      look asked for: two clearly separate blocks with a gap between
+      them, not one merged box with an internal divider line (a brief
+      merge-them-together version of this existed in between; this
+      restores the separated version, everything else from that update —
+      .app-experiment-editor/.app-experiment-changes as two independently
+      scrolling panes, comment ordering — is unchanged). No position:
+      sticky/min-height of its own: both existed only to keep this
+      pinned within a shared scroll while it lived inside
+      .app-experiment-editor; now that it is outside that box entirely,
+      in normal (non-scrolling) page flow above it, neither is needed —
+      it simply stays on screen because it is never part of any
+      scrolling area to begin with.
+
+      GOV.UK Design System deviation, flagged rather than treated as
+      compliant: this whole toolbar — icon-only buttons with no text
+      labels, rounded corners, dropdown menus — has no GDS equivalent and
+      isn't trying to be one; it exists to preview a Tiptap-styled editor
+      chrome for a research prototype, not to ship as a real service
+      pattern. tiptap-toolbar__button still keeps the standard GOV.UK
+      yellow :focus outline (not Tiptap's own) rather than compromising
+      keyboard-focus visibility for the sake of a closer visual match.
+    #}
+    <div class="tiptap-toolbar" role="toolbar" aria-label="Formatting" data-tt-toolbar>
+
+      <div class="tiptap-toolbar__group">
+        <div class="tiptap-toolbar__dropdown" data-tt-dropdown>
+          <button type="button" class="tiptap-toolbar__button tiptap-toolbar__button--wide" data-tt-dropdown-trigger aria-haspopup="true" aria-expanded="false">
+            <span data-tt-dropdown-label>Heading 1</span>
+            {{ ttIcon("chevron-down") }}
+          </button>
+          <ul class="tiptap-toolbar__menu" data-tt-dropdown-menu hidden>
+            <li><button type="button" data-tt-dropdown-option>Heading 1</button></li>
+            <li><button type="button" data-tt-dropdown-option>Heading 2</button></li>
+            <li><button type="button" data-tt-dropdown-option>Heading 3</button></li>
+            <li><button type="button" data-tt-dropdown-option>Paragraph</button></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tiptap-toolbar__divider"></div>
+
+      <div class="tiptap-toolbar__group">
+        <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Bold" aria-pressed="false">{{ ttIcon("bold") }}</button>
+        <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Italic" aria-pressed="false">{{ ttIcon("italic") }}</button>
+        <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Underline" aria-pressed="false">{{ ttIcon("underline") }}</button>
+      </div>
+
+      <div class="tiptap-toolbar__divider"></div>
+
+      <div class="tiptap-toolbar__group">
+        <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Bullet list" aria-pressed="false">{{ ttIcon("bullet-list") }}</button>
+      </div>
+
+      <div class="tiptap-toolbar__divider"></div>
+
+      <div class="tiptap-toolbar__group">
+        <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Link" aria-pressed="false">{{ ttIcon("link") }}</button>
+      </div>
+
+    </div>
+
+    <div class="app-experiment-box" data-experiment-box>
+
+      <div class="app-experiment-editor" data-editor-pane>
+
+        <div class="app-experiment-content" contenteditable="true" data-editor-content>
+
+          {% if restoredEditorHtml %}
+            {#
+              Set by routes.js only when arriving back from "Back to editor"
+              on saved-document-view.html's preview flow, and only when the
+              stored preview's id still matches this page's own ?id= (or
+              lack of one) — see /v6/editor-experiment there. This is an
+              exact copy of [data-editor-content]'s own innerHTML captured
+              client-side just before Preview navigated away (its "html"
+              field — see the Preview button's click handler in pageScripts
+              below), so it already contains the same section-N ids,
+              app-editor-anchor spans and app-experiment-boundary markers
+              as whichever of the two branches below would otherwise have
+              rendered — every existing pageScripts selector keeps working
+              against it unchanged.
+            #}
+            {{ restoredEditorHtml | safe }}
+          {% elif editorSections %}
+            {#
+              One section per editorSections entry (app/routes.js) —
+              already flattened to whichever of the three content shapes
+              this document actually has (flat steps, nested sections>parts
+              — one per part, not per top-level section — or the generic
+              3-phase placeholder), so this loop does not need to know
+              which one it is looking at. Body rendering matches
+              saved-document-view.html's own: a string is a paragraph
+              (through renderLinkMarkers, so any {{LINK:...}} marker
+              becomes the same non-navigating placeholder link it does
+              there), an array is a bullet list, and the literal string
+              "CASE_NOTE_BLOCK" — present in exactly one flat-steps
+              document's last step — renders nothing here rather than that
+              page's fixed case-note markup, since there is nothing
+              editor-specific to show in its place. Each section gets the
+              same app-experiment-boundary marker as the fixed sample
+              content below — see the comment on that block there.
+            #}
+            {% for section in editorSections %}
+              <div class="app-experiment-boundary" data-boundary>
+                <span class="app-experiment-boundary__label">Start of {{ section.name }}</span>
+                <div class="app-experiment-boundary__line"></div>
+                <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+              </div>
+              <div id="{{ section.id }}">
+                <h2 class="govuk-heading-m">
+                  {% if section.anchorId %}
+                    {#
+                      Real-document equivalent of the fixed sample's
+                      hand-placed app-editor-anchor spans below — see
+                      EDITOR_HEADING_ANCHORS/applyEditorHeadingAnchors in
+                      app/routes.js. Anchored to the whole heading here
+                      rather than a body sentence (unlike the fixed
+                      sample), since that is what these comments are
+                      actually reviewed against in practice.
+                    #}
+                    <span class="app-editor-anchor" data-anchor-id="{{ section.anchorId }}">{{ section.heading }}</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="{{ section.anchorId }}" aria-label="View {{ section.anchorAuthor }}'s comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button>
+                  {% else %}
+                    {{ section.heading }}
+                  {% endif %}
+                </h2>
+                {% for entry in section.body %}
+                  {% if entry == "CASE_NOTE_BLOCK" %}
+                  {% elif entry is string %}
+                    <p class="govuk-body">{{ entry | renderLinkMarkers }}</p>
+                  {% else %}
+                    <ul class="govuk-list govuk-list--bullet">
+                      {% for item in entry %}
+                        <li>{{ item | renderLinkMarkers }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endfor %}
+          {% else %}
+
+            {#
+              app-editor-anchor spans below are the fixed sample's only
+              inline anchors — hand-placed to match
+              EDITOR_EXPERIMENT_COMMENTS' anchorId fields (app/routes.js)
+              exactly, since there is nowhere generic to derive "the text
+              a comment refers to" from for a hardcoded sample like this
+              one. A real document loaded via ?id= (the branch above) has
+              no equivalent spans — comments still show, they just have
+              nothing to scroll to on an icon click there.
+
+              app-experiment-boundary markers (one per section) are the
+              second thing hand-added here — see wireBoundaryHandle in
+              pageScripts for what dragging (or arrow-keying) its handle
+              actually does: reassigns which of the two adjacent
+              section-N divs each paragraph either side of it belongs to,
+              snapped to paragraph boundaries.
+            #}
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Overview</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-1">
+              <h2 class="govuk-heading-m">Overview</h2>
+              <p class="govuk-body"><span class="app-editor-anchor" data-anchor-id="anchor-1">This guidance explains the Sustainable Farming Incentive (SFI) 2023 offer, including who can apply, what actions are available, and how payments are calculated.</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-1" aria-label="View Jane Smith's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button></p>
+              <p class="govuk-body">It's aimed at farmers who manage land in England and want to understand how the scheme fits alongside other funding they may already receive.</p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Eligibility criteria</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-2">
+              <h2 class="govuk-heading-m">Eligibility criteria</h2>
+              <h3 class="govuk-heading-s">Land eligibility</h3>
+              <p class="govuk-body">You can apply if you have management control of the land and it is registered on the Rural Payments service.</p>
+              <h3 class="govuk-heading-s">Business eligibility</h3>
+              <p class="govuk-body"><span class="app-editor-anchor" data-anchor-id="anchor-2">Applicants must have a valid Single Business Identifier and be actively farming the land included in the application.</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-2" aria-label="View Tom Reeves' comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button></p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Payment rates</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-3">
+              <h2 class="govuk-heading-m">Payment rates</h2>
+              <p class="govuk-body">Payment rates are published annually and reviewed each scheme year. <span class="text-highlight-active">The current baseline payment is £22 per hectare for the standard soil management action.</span></p>
+              <p class="govuk-body"><span class="app-editor-anchor" data-anchor-id="anchor-3">Rates can vary depending on which actions are combined and the total area entered into the scheme.</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-3" aria-label="View Priya Shah's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button></p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Application process</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-4">
+              <h2 class="govuk-heading-m">Application process</h2>
+              <p class="govuk-body">Applications are submitted through the Rural Payments service and <span class="app-editor-anchor" data-anchor-id="anchor-4">assessed in the order they are received</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-4" aria-label="View Sam Whitfield's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button>.</p>
+              <p class="govuk-body">You'll need to <span class="app-editor-anchor" data-anchor-id="anchor-5">confirm your land parcels</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-5" aria-label="View Priya Shah's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button> and select the actions you want to include before submitting.</p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Supporting evidence</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-5">
+              <h2 class="govuk-heading-m">Supporting evidence</h2>
+              <p class="govuk-body">Keep records of any actions carried out, including <span class="app-editor-anchor" data-anchor-id="anchor-6">dates and photographs where relevant</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-6" aria-label="View Jane Smith's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button>.</p>
+              <p class="govuk-body">Evidence should be <span class="app-editor-anchor" data-anchor-id="anchor-7">retained for the duration of the agreement</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-7" aria-label="View Tom Reeves' comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button> in case it is requested during an inspection.</p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Review dates</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-6">
+              <h2 class="govuk-heading-m">Review dates</h2>
+              <p class="govuk-body">This guidance is reviewed annually alongside the wider scheme update.</p>
+              <p class="govuk-body">The next scheduled review is <span class="app-editor-anchor" data-anchor-id="anchor-8">due in the spring</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-8" aria-label="View Sam Whitfield's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button>, ahead of the following scheme year's application window.</p>
+            </div>
+
+          {% endif %}
+
+        </div>
+
+      </div>
+
+      <div class="app-experiment-changes" data-changes-pane>
+
+        <div class="app-experiment-changes__fixed">
+
+          <div class="app-experiment-changes__header">
+            <button type="button" class="govuk-link app-experiment-hide-link" data-hide-changes>Hide</button>
+          </div>
+
+          <h2 class="govuk-heading-m">Changes</h2>
+
+          {#
+            Counts in parentheses — comments.length (top-level comments
+            only: buildEditorExperimentComments, app/routes.js, already
+            merges each thread's replies into its parent rather than
+            listing them separately) and checks.length, both server-
+            rendered here for the initial count so it is correct before
+            any JS runs, same as everything else on this page; updateTabCounts
+            (pageScripts) keeps it live afterwards — after a comment is
+            deleted, or a draft comment becomes a real one — by recounting
+            .app-experiment-comment cards in the DOM rather than tracking a
+            separate number, so it can never drift out of sync with what is
+            actually showing.
+          #}
+          <div class="app-experiment-tabs" role="tablist">
+            <button type="button" class="app-experiment-tab app-experiment-tab--active" data-tab-button="comments" role="tab" aria-selected="true">Comments ({{ comments.length }})</button>
+            <button type="button" class="app-experiment-tab" data-tab-button="checks" role="tab" aria-selected="false">Checks ({{ checks.length }})</button>
+          </div>
+
+        </div>
+
+        <div class="app-experiment-changes__scroll">
+
+          {#
+            A normal, top-to-bottom stacked list, not pixel-matched to
+            each comment's anchor position any more (that whole system —
+            computeFloatingPositions/floatingCards/insertFloatingCard, an
+            earlier version of this page — is gone; see
+            sortCommentsByAnchorOrder/insertCommentInOrder in pageScripts
+            for what replaced it). Sort order is DOCUMENT order of each
+            comment's own anchor span, not render/creation order: on load,
+            sortCommentsByAnchorOrder re-appends every card here to match
+            the order .app-editor-anchor spans actually appear in
+            [data-editor-content] (querySelectorAll always returns
+            elements in that order, which is what this reads rather than
+            trusting comments, app/routes.js, to already be in that
+            order); a comment created live afterwards (text selection) is
+            inserted at the matching index via insertCommentInOrder, not
+            appended to the end. Ordinary CSS margin (each card's own
+            margin-bottom, .app-editor-experiment.scss) is the only
+            spacing between cards — no artificial gap simulating document
+            distance the way margin-top once did here.
+
+            Every comment's own thread (its replies list) is always shown
+            — there is no collapse/expand step for that — but the reply
+            input + Add button underneath stay hidden behind a "Reply"
+            link until clicked (data-show-reply-form/data-reply-form, see
+            wireCommentReply in pageScripts): an always-open input there
+            was tried and reverted, since it felt too heavy with several
+            comments on screen at once.
+          #}
+          <div data-tab-panel="comments">
+
+            <div class="app-experiment-comments-list" data-comments-list>
+              {% for comment in comments %}
+                <div class="app-experiment-comment"
+                     data-comment-id="{{ comment.id }}"
+                     data-comment-author="{{ comment.author }}"
+                     data-comment-timestamp="{{ comment.timestamp }}"
+                     data-comment-text="{{ comment.text }}"
+                     data-target-section="{{ comment.section }}"
+                     {% if comment.anchorId %}data-anchor-id="{{ comment.anchorId }}"{% endif %}>
+
+                  <div class="app-experiment-comment__header" data-highlight-trigger data-target-section="{{ comment.section }}" tabindex="0" role="button">
+                    <div class="app-experiment-comment__row">
+                      <p class="govuk-body-s app-experiment-comment__meta">{{ comment.author }} &middot; {{ comment.timestamp }}</p>
+                      <button type="button" class="app-experiment-comment__delete" data-delete-comment>Delete</button>
+                    </div>
+                    <p class="govuk-body app-experiment-comment__text">{{ comment.text }}</p>
+                  </div>
+
+                  <div class="app-experiment-comment__thread" data-thread-body>
+                    <ul class="app-experiment-comment__replies" data-replies-list>
+                      {% for reply in comment.replies %}
+                        <li class="app-experiment-comment__reply">
+                          <p class="govuk-body-s app-experiment-comment__meta">{{ reply.author }} &middot; {{ reply.timestamp }}</p>
+                          <p class="govuk-body app-experiment-comment__text">{{ reply.text }}</p>
+                        </li>
+                      {% endfor %}
+                    </ul>
+
+                    <button type="button" class="app-experiment-comment__reply-link" data-show-reply-form>Reply</button>
+
+                    <div class="app-experiment-reply-form" data-reply-form hidden>
+                      <div class="app-experiment-add-comment">
+                        {{ govukInput({
+                          id: "reply-input-" + comment.id,
+                          name: "reply-" + comment.id,
+                          label: { text: "Reply", classes: "govuk-visually-hidden" },
+                          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__input",
+                          attributes: { "data-reply-input": true }
+                        }) }}
+                        {{ govukButton({
+                          text: "Add",
+                          type: "button",
+                          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__button",
+                          attributes: { "data-add-reply": true }
+                        }) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
+          </div>
+
+          <div data-tab-panel="checks" hidden>
+
+            <ul class="app-experiment-checks">
+              {% for check in checks %}
+                <li class="app-experiment-check" data-highlight-trigger data-target-section="{{ check.section }}" tabindex="0" role="button">
+                  {{ govukTag(severityTags[check.severity]) }}
+                  <span class="app-experiment-check__text">{{ check.text }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+{#
+  GOV.UK Design System deviation, flagged rather than treated as
+  compliant: a fixed, full-width footer action bar has no GDS equivalent
+  — the Design System's own pattern keeps Save/Continue-style buttons in
+  normal document flow at the natural end of the page content, not
+  pinned to the viewport. Matches how .app-experiment-show-changes above
+  is already flagged the same way for the same reason (position: fixed).
+
+  Replaces the Save/Preview/Send for approval buttons (and the "Once
+  sent for approval..." hint, no longer needed once they are not the
+  last thing in the sidebar) that used to sit at the bottom of the
+  Content nav column — same three buttons, same order, same
+  secondary/secondary/primary styling (govuk-button--secondary on
+  Save/Preview, default green on Send for approval), just laid out in a
+  row here rather than stacked full-width in a narrow column, since a
+  horizontal bar is what they are in now. data-preview-button is
+  unchanged, so the existing Preview click handler (pageScripts) keeps
+  working with no changes there — it looks this up by attribute, not by
+  where it happens to sit in the page.
+
+  z-index: 4 — one above .app-experiment-show-changes' own z-index: 3 (so
+  this bar always paints on top of that button on the rare occasion the
+  two might overlap, e.g. very narrow/short viewports) and well above
+  .app-experiment-changes__fixed's z-index: 1 (the Changes panel's own
+  sticky "Changes"/tabs header, scoped to that panel's own internal
+  scroll, not the viewport, so it could never itself paint over a
+  position: fixed element regardless of z-index — kept higher anyway so
+  the stacking order stays unambiguous). The editor's own toolbar
+  (.tiptap-toolbar) is not position: sticky/fixed at all any more (see
+  its own comment in _app-editor-experiment.scss), so there is nothing
+  there to conflict with either. Height (see .app-experiment-footer-bar's
+  own comment) is accounted for in .app-experiment-nav/.app-experiment-
+  editor/.app-experiment-changes' own max-height estimates and
+  .app-experiment-page's own padding-bottom, so this bar never overlaps
+  or hides content at the bottom of any of those as the page (or their
+  own internal scroll) reaches its end.
+#}
+<div class="app-experiment-footer-bar">
+  {{ govukButton({
+    text: "Save",
+    classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+  }) }}
+  {{ govukButton({
+    text: "Preview",
+    type: "button",
+    classes: "govuk-button--secondary govuk-!-margin-bottom-0",
+    attributes: { "data-preview-button": true }
+  }) }}
+  {{ govukButton({
+    text: "Send for approval",
+    classes: "govuk-!-margin-bottom-0"
+  }) }}
+</div>
+
+
+{% endblock %}
+
+{% block pageScripts %}
+  {#
+    {anchorId, sectionId, selectedText} for every comment created live via
+    a text selection and still around (app/routes.js —
+    buildAddedCommentAnchors) — restoreAddedCommentAnchors() below reads
+    this once, on load, to re-wrap each selectedText inside section
+    sectionId in a fresh app-editor-anchor span before
+    sortCommentsByAnchorOrder (further down) reads every anchor's own
+    document position, since the card itself is already server-rendered
+    (via the ordinary comments loop above) but its anchor span in the
+    editor content is not — nothing server-side injects HTML into the
+    editor content, only this.
+  #}
+  <script type="application/json" data-added-comment-anchors>{{ addedCommentAnchorsJson | default("[]") | safe }}</script>
+  <script>
+    (function () {
+      var editorContent = document.querySelector('[data-editor-content]')
+
+      // Tiptap-styled toolbar — purely visual, same scope as ever:
+      // nothing in here reads or writes editorContent at all (no
+      // document.execCommand wiring underneath any of it). Two
+      // behaviours currently have a matching element in the markup below
+      // (a third, data-tt-align, is still wired here too but has no
+      // current instance to apply to — see that bullet point), each just
+      // a CSS/attribute toggle:
+      //
+      //  - data-tt-toggle buttons (Bold, Italic, Underline, Bullet list,
+      //    Link) simply flip their own aria-pressed on each click.
+      //
+      //  - data-tt-dropdown (the heading-level dropdown — Heading 1/2/3/
+      //    Paragraph, replacing an earlier Font family + Font size pair)
+      //    toggles a small menu open/closed; picking an option closes it
+      //    and updates that dropdown's own label to match, matching
+      //    Tiptap's own behaviour of showing the current choice there. A
+      //    click anywhere outside an open dropdown closes it, same as
+      //    any standard menu.
+      //
+      //  - data-tt-align buttons would behave like a radio group scoped
+      //    to their shared [data-tt-align-group] parent — clicking one
+      //    sets it pressed and clears the other — but no such group
+      //    exists in the current icon set below any more (Align left/
+      //    Align center were both removed); this wiring is left in place
+      //    rather than deleted, since it is generic and harmless with
+      //    nothing to match (the querySelectorAll below simply iterates
+      //    zero times), in case a future toolbar revision brings an
+      //    align control back.
+      function wireTiptapToolbar () {
+        var toolbar = document.querySelector('[data-tt-toolbar]')
+        if (!toolbar) return
+
+        toolbar.querySelectorAll('[data-tt-toggle]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            var pressed = button.getAttribute('aria-pressed') === 'true'
+            button.setAttribute('aria-pressed', String(!pressed))
+          })
+        })
+
+        toolbar.querySelectorAll('[data-tt-align-group]').forEach(function (group) {
+          var alignButtons = group.querySelectorAll('[data-tt-align]')
+          alignButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+              alignButtons.forEach(function (candidate) {
+                candidate.setAttribute('aria-pressed', String(candidate === button))
+              })
+            })
+          })
+        })
+
+        var dropdowns = toolbar.querySelectorAll('[data-tt-dropdown]')
+
+        function closeAllDropdowns (exceptDropdown) {
+          dropdowns.forEach(function (dropdown) {
+            if (dropdown === exceptDropdown) return
+            var trigger = dropdown.querySelector('[data-tt-dropdown-trigger]')
+            var menu = dropdown.querySelector('[data-tt-dropdown-menu]')
+            if (trigger) trigger.setAttribute('aria-expanded', 'false')
+            if (menu) menu.hidden = true
+          })
+        }
+
+        dropdowns.forEach(function (dropdown) {
+          var trigger = dropdown.querySelector('[data-tt-dropdown-trigger]')
+          var menu = dropdown.querySelector('[data-tt-dropdown-menu]')
+          var label = dropdown.querySelector('[data-tt-dropdown-label]')
+          if (!trigger || !menu) return
+
+          trigger.addEventListener('click', function (event) {
+            event.stopPropagation()
+            var opening = menu.hidden
+            closeAllDropdowns(dropdown)
+            menu.hidden = !opening
+            trigger.setAttribute('aria-expanded', String(opening))
+          })
+
+          menu.querySelectorAll('[data-tt-dropdown-option]').forEach(function (option) {
+            option.addEventListener('click', function () {
+              if (label) label.textContent = option.textContent.trim()
+              menu.hidden = true
+              trigger.setAttribute('aria-expanded', 'false')
+            })
+          })
+        })
+
+        document.addEventListener('click', function (event) {
+          if (!event.target.closest('[data-tt-dropdown]')) closeAllDropdowns(null)
+        })
+      }
+
+      wireTiptapToolbar()
+
+      // Page title rename — the same pattern as a Content nav card's own
+      // rename further down (beginNavRename/finishNavRename): "Rename"
+      // swaps the H1 for a pre-filled text input + Save button, Enter or
+      // Save confirms, Escape cancels, and confirming updates the H1's
+      // own text (and, so the browser tab/window title agrees with what
+      // is now on screen, document.title too). Entirely client-side and
+      // lost on reload, exactly like a nav card's own rename already is —
+      // not a new exception, the same "session-local, not persisted"
+      // rule every rename on this page already follows.
+      var titleWrapper = document.querySelector('[data-title-wrapper]')
+      var titleRenameButton = document.querySelector('[data-title-rename]')
+
+      function beginTitleRename () {
+        if (!titleWrapper) return
+        var titleEl = titleWrapper.querySelector('[data-page-title]')
+        if (!titleEl) return
+
+        var currentTitle = titleEl.textContent.trim()
+
+        titleWrapper.innerHTML =
+          '<input type="text" class="govuk-input app-experiment-title-rename-input" data-title-rename-input value="' + escapeHtml(currentTitle) + '" aria-label="Rename the document title">' +
+          '<button type="button" class="govuk-button govuk-!-margin-bottom-0 app-experiment-title-rename-save" data-title-rename-save>Save</button>'
+
+        var input = titleWrapper.querySelector('[data-title-rename-input]')
+        var saveButton = titleWrapper.querySelector('[data-title-rename-save]')
+
+        function confirmTitleRename () {
+          var newTitle = input.value.trim() || currentTitle
+          finishTitleRename(newTitle)
+        }
+
+        function cancelTitleRename () {
+          finishTitleRename(currentTitle)
+        }
+
+        input.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            confirmTitleRename()
+          } else if (event.key === 'Escape') {
+            event.preventDefault()
+            cancelTitleRename()
+          }
+        })
+
+        saveButton.addEventListener('click', confirmTitleRename)
+
+        input.focus()
+        input.select()
+      }
+
+      function finishTitleRename (title) {
+        titleWrapper.innerHTML =
+          '<h1 class="govuk-heading-m" data-page-title>' + escapeHtml(title) + '</h1>' +
+          '<button type="button" class="app-experiment-title-rename" data-title-rename>Rename</button>'
+        document.title = title
+        titleWrapper.querySelector('[data-title-rename]').addEventListener('click', beginTitleRename)
+      }
+
+      if (titleRenameButton) titleRenameButton.addEventListener('click', beginTitleRename)
+
+      // Comments / Checks tabs.
+      var tabButtons = document.querySelectorAll('[data-tab-button]')
+      tabButtons.forEach(function (tabButton) {
+        tabButton.addEventListener('click', function () {
+          tabButtons.forEach(function (button) {
+            var active = button === tabButton
+            button.classList.toggle('app-experiment-tab--active', active)
+            button.setAttribute('aria-selected', String(active))
+
+            var panel = document.querySelector('[data-tab-panel="' + button.dataset.tabButton + '"]')
+            if (panel) panel.hidden = !active
+          })
+        })
+      })
+
+      // Keeps each tab's "(n)" count (server-rendered initially from
+      // comments.length/checks.length above, so it is correct before any
+      // JS runs) in sync after something changes it: a comment is deleted
+      // (wireCommentDelete) or a draft comment becomes a real one
+      // (wireDraftCommentCard). Recounts .app-experiment-comment cards in
+      // the DOM each time rather than tracking a running number
+      // separately, so it can never drift out of sync with what is
+      // actually showing; an in-progress (not yet submitted) draft card —
+      // still just a textarea+Add button, no [data-draft-input] once
+      // submitted — is deliberately excluded, since it is not yet a
+      // comment. Checks
+      // never change after load (no add/delete UI for them), so this
+      // only needs calling for the Comments side in practice, but both
+      // are recomputed together for simplicity.
+      var commentsTabButton = document.querySelector('[data-tab-button="comments"]')
+      var checksTabButton = document.querySelector('[data-tab-button="checks"]')
+
+      function updateTabCounts () {
+        if (commentsTabButton) {
+          var commentCount = Array.prototype.filter.call(
+            document.querySelectorAll('.app-experiment-comment'),
+            function (card) { return !card.querySelector('[data-draft-input]') }
+          ).length
+          commentsTabButton.textContent = 'Comments (' + commentCount + ')'
+        }
+        if (checksTabButton) {
+          checksTabButton.textContent = 'Checks (' + document.querySelectorAll('.app-experiment-check').length + ')'
+        }
+      }
+
+      // Flash-and-fade highlight, shared by every "clicking X highlights Y"
+      // interaction on this page (Content nav links, comment/check
+      // triggers below, and the anchor-icon click further down) — briefly
+      // confirms "this is what you clicked", then fades back to normal
+      // rather than staying highlighted indefinitely. Clears any highlight
+      // already in progress first (including its own pending fade-out
+      // timeout, so a rapid second click doesn't leave an orphaned timer
+      // that clears the wrong, newer highlight early) so there is still
+      // only ever one flash active at a time, same as before. Any number
+      // of elements can be flashed together as one single flash (e.g. a
+      // comment's own section AND its card at once) so they read as a
+      // single moment rather than two separately-timed ones.
+      var FLASH_HOLD_MS = 1500
+      var activeFlashTimeout = null
+
+      function flashHighlight () {
+        var targets = Array.prototype.filter.call(arguments, Boolean)
+        if (!targets.length) return
+
+        window.clearTimeout(activeFlashTimeout)
+        document.querySelectorAll('.text-highlight-active').forEach(function (el) {
+          el.classList.remove('text-highlight-active')
+        })
+
+        targets.forEach(function (el) { el.classList.add('text-highlight-active') })
+        activeFlashTimeout = window.setTimeout(function () {
+          targets.forEach(function (el) { el.classList.remove('text-highlight-active') })
+        }, FLASH_HOLD_MS)
+      }
+
+      // Moves the blue "active section" tint (border-color/background-
+      // color on app-experiment-nav__item--active — see
+      // _app-editor-experiment.scss) to activeItem, clearing it from
+      // whichever <li> had it before, exactly one at a time. Server-
+      // rendered markup only ever set this class once, on the first
+      // Content nav item (this template's own loop.first check further
+      // up), and nothing afterwards ever removed or re-added it on click —
+      // that hardcoded first-load state is the entire reason this was
+      // stuck on "Introduction" regardless of what got clicked, not some
+      // conditional failing to fire. wireHighlightTrigger below is what
+      // now calls this, for a Content nav link's own click specifically.
+      // Independent of a card's own checkbox (wireNavItemSelection further
+      // down, drives the separate Rename/Delete actions bar) — a
+      // completely different class, on a completely different element
+      // (this one on the <li>, that one on its own <input>), that this
+      // function never reads or writes.
+      function setActiveNavItem (activeItem) {
+        document.querySelectorAll('[data-content-nav-list] > li').forEach(function (li) {
+          li.classList.toggle('app-experiment-nav__item--active', li === activeItem)
+        })
+      }
+
+      // Clicking a Content nav link, a comment or a check flashes the
+      // section it is linked to and scrolls it into view. Every comment
+      // card always has a real data-target-section now (its own anchor's
+      // section, whichever of the three sources built it — see
+      // wrapRangeInAnchor below), but the "look it up, do nothing if it's
+      // not there" fallback stays regardless, same as a target id that
+      // doesn't resolve to anything for any other reason. A trigger that
+      // sits inside its own comment card (a comment's header — checks and
+      // Content nav links don't) flashes that card too, alongside its
+      // section, so both read as confirmed together — see the
+      // .app-experiment-comment styling in _app-editor-experiment.scss for
+      // why it, not just editor text, can carry this highlight.
+      // event.preventDefault() matters specifically for a Content nav
+      // link (a real <a href="#section-id">, unlike the div/li role="button"
+      // triggers): without it, the browser's own instant anchor-jump would
+      // fire alongside this smooth one and the two would fight.
+      //
+      // Pulled out into its own function, rather than one querySelectorAll
+      // + forEach run once at page load, since a comment added later needs
+      // exactly the same click/keydown behaviour wired up as the fixed
+      // sample ones already have.
+      function wireHighlightTrigger (trigger) {
+        trigger.addEventListener('click', function (event) {
+          var target = document.getElementById(trigger.dataset.targetSection)
+          if (!target) return
+
+          event.preventDefault()
+          flashHighlight(target, trigger.closest('.app-experiment-comment'))
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+          // The blue "active section" tint on the Content nav card itself
+          // (app-experiment-nav__item--active, distinct from
+          // text-highlight-active's flash above and from a card's own
+          // checkbox-selected state — see setActiveNavItem) only ever
+          // moves in response to a Content nav link's own click, not a
+          // Check's or a comment's — clicking a Check/comment still flashes
+          // and scrolls to its section (unchanged), it just does not also
+          // claim to be "the" active section in the sidebar the way
+          // actually navigating there via the sidebar itself does.
+          if (trigger.classList.contains('app-experiment-nav__link')) {
+            setActiveNavItem(trigger.closest('li'))
+          }
+        })
+
+        // role="button" on a <div>/<li> needs its own keyboard activation —
+        // a real <button> (or, for a Content nav link, <a>) would get this
+        // for free, but this is harmless to also attach there.
+        trigger.addEventListener('keydown', function (event) {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          trigger.click()
+        })
+      }
+
+      document.querySelectorAll('[data-highlight-trigger]').forEach(wireHighlightTrigger)
+
+      function escapeHtml (value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+      }
+
+      // The SVG used for every app-editor-anchor__icon, whether hand-
+      // written into the fixed sample's own markup, or (both cases
+      // below) built here in JS — identical either way, so a comment
+      // created live looks no different from one that was always there.
+      var ANCHOR_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>'
+
+      function buildAnchorIconHTML (anchorId, author) {
+        return '<button type="button" class="app-editor-anchor__icon" data-anchor-icon="' + anchorId + '" aria-label="View ' + escapeHtml(author) + '’s comment">' + ANCHOR_ICON_SVG + '</button>'
+      }
+
+      // Wraps range in a new app-editor-anchor span + trailing icon —
+      // the exact same pair the fixed sample's own three anchors already
+      // are (see that markup) and EDITOR_HEADING_ANCHORS wraps a real
+      // document's section heading in (app/routes.js) — this is the
+      // third source of the same two elements, not a parallel mechanism.
+      // Returns the new span, or null if range can't be wrapped as a
+      // single element (surroundContents throws if it crosses element
+      // boundaries, e.g. a selection spanning two paragraphs) — same
+      // failure mode and same "just don't create it" handling this
+      // page's very first selection-wrapping code already established.
+      function wrapRangeInAnchor (range, anchorId, author) {
+        var span = document.createElement('span')
+        span.className = 'app-editor-anchor'
+        span.setAttribute('data-anchor-id', anchorId)
+
+        try {
+          range.surroundContents(span)
+        } catch (error) {
+          return null
+        }
+
+        span.insertAdjacentHTML('afterend', ' ' + buildAnchorIconHTML(anchorId, author))
+        return span
+      }
+
+      // Finds the first occurrence of text inside section sectionId and
+      // returns a Range spanning it, or null if that section or that
+      // exact text isn't there (editor content changed since, or the
+      // text happened to cross more than one text node — same
+      // constraint wrapRangeInAnchor's own surroundContents already
+      // has). Used only to restore an anchor already created in an
+      // earlier visit (restoreAddedCommentAnchors below) — a live
+      // selection never needs this, it already has a real Range from
+      // window.getSelection() directly.
+      function findTextRangeInSection (sectionId, text) {
+        var section = sectionId && document.getElementById(sectionId)
+        if (!section || !text) return null
+
+        var walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT)
+        var node
+        while ((node = walker.nextNode())) {
+          var index = node.nodeValue.indexOf(text)
+          if (index !== -1) {
+            var range = document.createRange()
+            range.setStart(node, index)
+            range.setEnd(node, index + text.length)
+            return range
+          }
+        }
+        return null
+      }
+
+      // Re-wraps every comment created live in an earlier visit (still
+      // around after Delete/session expiry — see
+      // buildAddedCommentAnchors, app/routes.js) inside a fresh
+      // app-editor-anchor span, before sortCommentsByAnchorOrder (further
+      // down) reads every anchor's own document position to place comment
+      // cards against — the card itself is already server-rendered
+      // (comments loop above, same as any other comment), only its anchor
+      // span in the editor content needs restoring here. A comment whose
+      // text isn't found any more (e.g. a real document's content
+      // changed) is simply left without a working anchor — its card still
+      // shows, just wherever sortCommentsByAnchorOrder's own "not found"
+      // fallback leaves it, rather than this throwing.
+      function restoreAddedCommentAnchors () {
+        var dataScript = document.querySelector('[data-added-comment-anchors]')
+        if (!dataScript) return
+
+        var anchors
+        try {
+          anchors = JSON.parse(dataScript.textContent)
+        } catch (error) {
+          return
+        }
+
+        anchors.forEach(function (entry) {
+          var card = document.querySelector('.app-experiment-comment[data-anchor-id="' + entry.anchorId + '"]')
+          var author = card ? card.dataset.commentAuthor : ''
+          var range = findTextRangeInSection(entry.sectionId, entry.selectedText)
+          if (range) wrapRangeInAnchor(range, entry.anchorId, author)
+        })
+      }
+
+      restoreAddedCommentAnchors()
+
+      // Selecting text now creates the pending comment directly — no
+      // intermediate "click a floating icon" step any more (that whole
+      // step, including app-editor-selection-trigger/pendingSelectionRange/
+      // hideSelectionTrigger, is gone; buildDraftCommentCardHTML/
+      // wireDraftCommentCard/insertCommentInOrder below and further down
+      // are unchanged in what they do, just called straight from mouseup
+      // instead of from a trigger's own click). Each draft this creates is
+      // tracked purely by being its own DOM node plus its own
+      // closure-captured `meta` (passed to wireDraftCommentCard, one call
+      // per draft, further down) — there is no shared "current pending"
+      // variable left anywhere in this file for a later selection to
+      // clobber, which is what lets any number of drafts stay open at
+      // once, each anchored to its own selection, regardless of what else
+      // gets selected afterwards.
+      var addedCommentCounter = 0
+
+      if (editorContent) {
+        editorContent.addEventListener('mouseup', function () {
+          // A tick after mouseup, not on it directly — the browser hasn't
+          // always finished updating window.getSelection() by the time
+          // this event itself fires.
+          window.setTimeout(function () {
+            var selection = window.getSelection()
+            if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode ||
+                !editorContent.contains(selection.anchorNode) || !editorContent.contains(selection.focusNode)) {
+              return
+            }
+
+            var text = selection.toString().trim()
+            if (!text) return
+
+            var range = selection.getRangeAt(0).cloneRange()
+            // Clears the browser's own native (blue) selection highlight
+            // now that wrapRangeInAnchor below is about to mark the same
+            // text its own way (grey shading + icon) — without this the
+            // two would sit visibly on top of each other until whatever
+            // next click happened to clear the native one anyway.
+            selection.removeAllRanges()
+
+            addedCommentCounter += 1
+            var anchorId = 'anchor-live-' + addedCommentCounter
+            var commentId = 'live-comment-' + addedCommentCounter
+
+            var span = wrapRangeInAnchor(range, anchorId, 'You')
+            if (!span) return
+
+            var sectionEl = span.closest('[id^="section-"]')
+            var sectionId = sectionEl ? sectionEl.id : ''
+            var selectedText = span.textContent
+
+            var wrapper = document.createElement('div')
+            wrapper.innerHTML =
+              '<div class="app-experiment-comment" data-comment-id="' + commentId + '" data-anchor-id="' + anchorId + '" data-target-section="' + escapeHtml(sectionId) + '">' +
+                buildDraftCommentCardHTML(commentId) +
+              '</div>'
+            var card = wrapper.firstElementChild
+
+            insertCommentInOrder(card, anchorId)
+            wireDraftCommentCard(card, { anchorId: anchorId, sectionId: sectionId, selectedText: selectedText })
+
+            var draftInput = card.querySelector('[data-draft-input]')
+            if (draftInput) draftInput.focus()
+          }, 0)
+        })
+      }
+
+      // Undoes wrapRangeInAnchor completely — the span's own text goes
+      // back to being a plain text node (parent.normalize() merges it
+      // back into whichever text nodes now sit either side of it, rather
+      // than leaving the DOM more fragmented than it was before the
+      // selection), and the icon plus the single space wrapRangeInAnchor
+      // inserted between the span and it (its own insertAdjacentHTML
+      // call) are both removed too. Used only by a draft's own Cancel
+      // button below — a draft is never sent to the server until Add is
+      // clicked (wireDraftCommentCard), so cancelling one has nothing
+      // server-side to undo, just this.
+      function unwrapAnchorSpan (anchorId) {
+        var span = document.querySelector('.app-editor-anchor[data-anchor-id="' + anchorId + '"]')
+        if (!span) return
+        var parent = span.parentNode
+        if (!parent) return
+
+        var icon = document.querySelector('.app-editor-anchor__icon[data-anchor-icon="' + anchorId + '"]')
+        if (icon) {
+          var spacer = icon.previousSibling
+          if (spacer && spacer.nodeType === Node.TEXT_NODE && spacer.nodeValue === ' ') spacer.remove()
+          icon.remove()
+        }
+
+        parent.replaceChild(document.createTextNode(span.textContent), span)
+        parent.normalize()
+      }
+
+      // Grows a draft's own textarea to fit whatever has been typed into
+      // it so far, instead of staying a fixed single-line height —
+      // resize:none/overflow:hidden (its own CSS) mean the element's
+      // rendered height only ever changes here, in response to its own
+      // content, never by the user dragging a resize handle or a native
+      // scrollbar appearing. Resetting height to auto first, before
+      // reading scrollHeight, is required, not defensive: without it a
+      // textarea that has grown tall and then had text deleted from it
+      // would never shrink back down, since scrollHeight of an
+      // already-tall box just reports that same tall height straight
+      // back.
+      function autoGrowTextarea (textarea) {
+        function resize () {
+          textarea.style.height = 'auto'
+          textarea.style.height = textarea.scrollHeight + 'px'
+        }
+        textarea.addEventListener('input', resize)
+        resize()
+      }
+
+      // The reply/comments panel body every card's own header +
+      // (empty, until a real reply exists) replies list + Delete would
+      // normally have — built as one HTML string here since the exact
+      // same shape is needed for both a brand new comment (below) and,
+      // previously, one added through the box this feature replaced.
+      function buildCommentCardInnerHTML (id, author, timestamp, text, sectionId) {
+        return (
+          '<div class="app-experiment-comment__header" data-highlight-trigger data-target-section="' + escapeHtml(sectionId || '') + '" tabindex="0" role="button">' +
+            '<div class="app-experiment-comment__row">' +
+              '<p class="govuk-body-s app-experiment-comment__meta">' + escapeHtml(author) + ' &middot; ' + escapeHtml(timestamp) + '</p>' +
+              '<button type="button" class="app-experiment-comment__delete" data-delete-comment>Delete</button>' +
+            '</div>' +
+            '<p class="govuk-body app-experiment-comment__text">' + escapeHtml(text) + '</p>' +
+          '</div>' +
+          '<div class="app-experiment-comment__thread" data-thread-body>' +
+            '<ul class="app-experiment-comment__replies" data-replies-list></ul>' +
+            '<button type="button" class="app-experiment-comment__reply-link" data-show-reply-form>Reply</button>' +
+            '<div class="app-experiment-reply-form" data-reply-form hidden>' +
+              '<div class="app-experiment-add-comment">' +
+                '<div class="govuk-form-group govuk-!-margin-bottom-0 app-experiment-add-comment__input">' +
+                  '<label class="govuk-label govuk-visually-hidden" for="reply-input-' + id + '">Reply</label>' +
+                  '<input class="govuk-input" id="reply-input-' + id + '" name="reply-' + id + '" type="text" data-reply-input>' +
+                '</div>' +
+                '<button type="button" class="govuk-button govuk-!-margin-bottom-0 app-experiment-add-comment__button" data-add-reply>Add</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>'
+        )
+      }
+
+      // What a brand new anchored card looks like before it has any text
+      // of its own — a small Cancel control (data-draft-cancel, discards
+      // this draft entirely — see unwrapAnchorSpan above and its own
+      // wiring in wireDraftCommentCard below) above an auto-growing
+      // textarea + Add, in the same padded slot the header will occupy
+      // once submitted (app-experiment-comment__header reused purely for
+      // its padding, not its usual meta/text content). rows="1" gives it
+      // the same starting single-line height every other input on this page
+      // has; autoGrowTextarea (wireDraftCommentCard below) is what grows
+      // it from there as the user types.
+      function buildDraftCommentCardHTML (id) {
+        return (
+          '<div class="app-experiment-comment__header">' +
+            '<div class="app-experiment-draft-header">' +
+              '<button type="button" class="app-experiment-draft-cancel" data-draft-cancel>Cancel</button>' +
+            '</div>' +
+            '<div class="app-experiment-add-comment">' +
+              '<div class="govuk-form-group govuk-!-margin-bottom-0 app-experiment-add-comment__input">' +
+                '<label class="govuk-label govuk-visually-hidden" for="draft-input-' + id + '">Comment</label>' +
+                '<textarea class="govuk-textarea app-experiment-draft-textarea" id="draft-input-' + id + '" name="draft-' + id + '" rows="1" data-draft-input></textarea>' +
+              '</div>' +
+              '<button type="button" class="govuk-button govuk-!-margin-bottom-0 app-experiment-add-comment__button" data-draft-add>Add</button>' +
+            '</div>' +
+          '</div>'
+        )
+      }
+
+      // Submitting the draft turns it into a real card in place (same
+      // element, new innerHTML) rather than replacing it with a
+      // different one, so it keeps its spot in the list without needing
+      // to re-pair it with its anchor span. wireCommentCard and
+      // wireHighlightTrigger are reused completely unchanged — a card
+      // built this way is functionally identical to one the server
+      // rendered, Reply/Delete included; its position in the list is
+      // already correct from insertCommentInOrder when it was first
+      // created as a draft, so submitting does not need to move it again.
+      // Cancel (data-draft-cancel) is the other way out — discards the
+      // draft entirely rather than submitting it, via unwrapAnchorSpan
+      // above (removes the grey shading + icon from the editor text too,
+      // not just this card).
+      function wireDraftCommentCard (card, meta) {
+        var textarea = card.querySelector('[data-draft-input]')
+        var addButton = card.querySelector('[data-draft-add]')
+        var cancelButton = card.querySelector('[data-draft-cancel]')
+        if (!textarea || !addButton) return
+
+        autoGrowTextarea(textarea)
+
+        addButton.addEventListener('click', function (event) {
+          event.stopPropagation()
+          var text = textarea.value.trim()
+          if (!text) return
+
+          card.innerHTML = buildCommentCardInnerHTML(card.dataset.commentId, 'You', 'Just now', text, meta.sectionId)
+          card.setAttribute('data-comment-author', 'You')
+          card.setAttribute('data-comment-timestamp', 'Just now')
+          card.setAttribute('data-comment-text', text)
+          card.setAttribute('data-target-section', meta.sectionId || '')
+
+          wireCommentCard(card)
+          wireHighlightTrigger(card.querySelector('[data-highlight-trigger]'))
+          updateTabCounts()
+
+          if (window.fetch) {
+            fetch('/v6/editor-experiment/add-comment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                commentId: card.dataset.commentId,
+                anchorId: meta.anchorId,
+                sectionId: meta.sectionId,
+                text: text,
+                selectedText: meta.selectedText
+              })
+            }).catch(function () {})
+          }
+        })
+
+        if (cancelButton) {
+          cancelButton.addEventListener('click', function (event) {
+            event.stopPropagation()
+            unwrapAnchorSpan(meta.anchorId)
+            card.remove()
+          })
+        }
+      }
+
+      // Comment cards — server-rendered or turned from a draft into a
+      // real one live (wireDraftCommentCard above) — share one wiring
+      // pass: reply ("Reply" reveals the input; submitting appends to
+      // the card's own replies list) and delete. data-highlight-trigger
+      // is deliberately NOT wired in
+      // here — it is covered separately by the
+      // document.querySelectorAll('[data-highlight-trigger]') pass above
+      // for every card already on the page at load, and explicitly by
+      // name for each one added afterwards (wireDraftCommentCard above),
+      // so it is never bound twice on the same header.
+      function wireCommentCard (card) {
+        wireCommentReply(card)
+        wireCommentDelete(card)
+      }
+
+      // "Reply" is a hyperlink-style button that reveals the input + Add
+      // button beneath it on click, then hides itself — an earlier
+      // version had that input+button always open instead, which turned
+      // out to feel too heavy with several comments on screen at once,
+      // so this reverts to the reveal-on-click version. Submitting
+      // appends the reply to the card's own data-replies-list (reusing
+      // escapeHtml() from above) and fires a background POST to persist
+      // it into req.session.data.editorExperimentReplies (app/routes.js),
+      // so it is still there after a reload — same fire-and-forget
+      // pattern as "Save to search" on document-overview.html.
+      function wireCommentReply (card) {
+        var showReplyLink = card.querySelector('[data-show-reply-form]')
+        var replyForm = card.querySelector('[data-reply-form]')
+        var addReplyButton = card.querySelector('[data-add-reply]')
+        var replyInput = card.querySelector('[data-reply-input]')
+        var repliesList = card.querySelector('[data-replies-list]')
+
+        if (showReplyLink && replyForm) {
+          showReplyLink.addEventListener('click', function (event) {
+            event.stopPropagation()
+            replyForm.hidden = false
+            showReplyLink.hidden = true
+            if (replyInput) replyInput.focus()
+          })
+        }
+
+        if (!addReplyButton || !replyInput || !repliesList) return
+
+        addReplyButton.addEventListener('click', function (event) {
+          event.stopPropagation()
+          var text = replyInput.value.trim()
+          if (!text) return
+
+          var item = document.createElement('li')
+          item.className = 'app-experiment-comment__reply'
+          item.innerHTML =
+            '<p class="govuk-body-s app-experiment-comment__meta">You &middot; Just now</p>' +
+            '<p class="govuk-body app-experiment-comment__text">' + escapeHtml(text) + '</p>'
+          repliesList.appendChild(item)
+
+          replyInput.value = ''
+
+          var commentId = card.dataset.commentId
+          if (commentId && window.fetch) {
+            fetch('/v6/editor-experiment/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ commentId: commentId, text: text })
+            }).catch(function () {})
+          }
+        })
+      }
+
+      // Removes the whole card (and its full thread — a reply only ever
+      // exists nested inside its own parent's data-replies-list, there is
+      // nothing else pointing at it to clean up) from the panel instantly,
+      // and fires a background POST so it stays gone after a reload — see
+      // getEditorExperimentDeletedCommentIds/buildEditorExperimentComments
+      // and POST /v6/editor-experiment/delete in app/routes.js.
+      // event.stopPropagation() keeps this click from also reaching the
+      // header's own highlight listener (Delete sits inside that same
+      // header, on the meta row) — deleting a comment should not also
+      // scroll the editor away first.
+      function wireCommentDelete (card) {
+        var deleteButton = card.querySelector('[data-delete-comment]')
+        if (!deleteButton) return
+
+        deleteButton.addEventListener('click', function (event) {
+          event.stopPropagation()
+          var commentId = card.dataset.commentId
+          card.remove()
+
+          updateTabCounts()
+
+          if (commentId && window.fetch) {
+            fetch('/v6/editor-experiment/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ commentId: commentId })
+            }).catch(function () {})
+          }
+        })
+      }
+
+      document.querySelectorAll('.app-experiment-comment').forEach(wireCommentCard)
+
+      // Comments render as a normal, top-to-bottom stacked list now — no
+      // pixel/scroll-position matching against each anchor's own
+      // getBoundingClientRect() any more (an earlier version of this page
+      // did exactly that: computeFloatingPositions/floatingCards/
+      // insertFloatingCard, all removed). What every one of those existed
+      // to keep true — that a comment ends up in the same relative order
+      // as its anchor in the editor text — is now just DOM order,
+      // determined once via getAnchorOrder() below rather than
+      // recalculated continuously: querySelectorAll always returns
+      // elements in real document order, so reading every .app-editor-
+      // anchor span that way and mapping this card's own data-anchor-id
+      // against that list's index is a complete, correct answer with no
+      // geometry involved at all, and — unlike a pixel position — it does
+      // not go stale the moment either pane scrolls independently of the
+      // other, which is exactly what this page needed once
+      // .app-experiment-editor and .app-experiment-changes stopped
+      // sharing one scroll area (see .app-experiment-changes' own comment
+      // in _app-editor-experiment.scss). Ordinary CSS margin-bottom
+      // (.app-experiment-comment, same file) is the only spacing between
+      // cards — nothing here ever sets a card's own margin-top.
+      function findAnchorSpan (anchorId) {
+        return document.querySelector('.app-editor-anchor[data-anchor-id="' + anchorId + '"]')
+      }
+
+      function getAnchorOrder () {
+        return Array.prototype.map.call(
+          document.querySelectorAll('.app-editor-anchor[data-anchor-id]'),
+          function (span) { return span.dataset.anchorId }
+        )
+      }
+
+      // Re-appends every existing card in [data-comments-list], in place,
+      // to match getAnchorOrder()'s order — appendChild on a node already
+      // in the DOM moves it rather than cloning it, so calling this once
+      // per card in the target order is enough to reorder the whole list
+      // in one pass, without needing insertBefore/index bookkeeping the
+      // way insertCommentInOrder below does for a single new arrival. Run
+      // once, at load, after restoreAddedCommentAnchors above has put
+      // every anchor span back in the editor — comments, app/routes.js,
+      // happens to already list the fixed sample's eight in anchor order,
+      // but this does not rely on that being true (a real document's
+      // comments, or session-restored replies, are not guaranteed to be).
+      // A card whose own anchor span cannot be found (dangling
+      // data-anchor-id — same defensive stance the rest of this file
+      // already takes for a target id that does not resolve) is left
+      // wherever it already was rather than moved, same as
+      // insertCommentInOrder's own fallback below.
+      function sortCommentsByAnchorOrder () {
+        var list = document.querySelector('[data-comments-list]')
+        if (!list) return
+
+        var order = getAnchorOrder()
+        var cards = Array.prototype.slice.call(document.querySelectorAll('[data-comments-list] > .app-experiment-comment'))
+
+        cards.sort(function (a, b) {
+          var aIndex = order.indexOf(a.dataset.anchorId)
+          var bIndex = order.indexOf(b.dataset.anchorId)
+          if (aIndex === -1) aIndex = order.length
+          if (bIndex === -1) bIndex = order.length
+          return aIndex - bIndex
+        })
+
+        cards.forEach(function (card) { list.appendChild(card) })
+      }
+
+      sortCommentsByAnchorOrder()
+
+      // Inserts a newly created card into [data-comments-list] at the
+      // index matching where anchorId falls among every anchor currently
+      // in the editor, in real document order — not appended to the end.
+      // Used by the mouseup-creates-a-draft handler above, the only place
+      // a new comment is ever added after load. A card whose anchorId
+      // cannot be found in getAnchorOrder() (should not happen — the span
+      // was just created moments before this runs) is appended at the end
+      // rather than left off the page entirely, same defensive fallback
+      // sortCommentsByAnchorOrder above takes.
+      function insertCommentInOrder (card, anchorId) {
+        var list = document.querySelector('[data-comments-list]')
+        if (!list) return
+
+        var order = getAnchorOrder()
+        var myIndex = order.indexOf(anchorId)
+        if (myIndex === -1) {
+          list.appendChild(card)
+          return
+        }
+
+        var existingCards = document.querySelectorAll('[data-comments-list] > .app-experiment-comment')
+        var referenceCard = null
+        for (var i = 0; i < existingCards.length; i++) {
+          var otherIndex = order.indexOf(existingCards[i].dataset.anchorId)
+          if (otherIndex !== -1 && otherIndex > myIndex) {
+            referenceCard = existingCards[i]
+            break
+          }
+        }
+
+        if (referenceCard) {
+          list.insertBefore(card, referenceCard)
+        } else {
+          list.appendChild(card)
+        }
+      }
+
+      // Clicking an anchor's icon scrolls the editor pane so that exact
+      // text is back on screen — which, via the scroll listener just
+      // above, naturally brings its floating comment card back into view
+      // too, smoothly, with no separate "flag this card" step needed (the
+      // previous IntersectionObserver-driven highlight/flagging this
+      // replaced worked independently of position; position now carries
+      // that meaning by itself). It also flashes the anchor span itself
+      // (the specific sentence the comment refers to — more precise than
+      // wireHighlightTrigger's whole-section flash above, matching how
+      // this already scrolls to the anchor itself, not its section) and,
+      // if it can find one, that anchor's own comment card, using
+      // flashHighlight above — same as clicking the card itself would.
+      document.querySelectorAll('[data-anchor-icon]').forEach(function (icon) {
+        icon.addEventListener('click', function () {
+          var anchor = findAnchorSpan(icon.dataset.anchorIcon)
+          var card = document.querySelector('.app-experiment-comment[data-anchor-id="' + icon.dataset.anchorIcon + '"]')
+
+          flashHighlight(anchor, card)
+          if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        })
+      })
+
+      // "Add new content": reveals the input+Add row below "Add new
+      // content" itself (which hides, same reveal-and-stay pattern as
+      // above) — submitting appends a new item to the Content nav list
+      // and a matching new, empty heading (a boundary marker included, so
+      // it looks exactly like every other section) to the very end of the
+      // editor content. Both the nav link and the new heading use the
+      // entered text verbatim; ids are generated locally
+      // ('section-new-N') and never collide with the fixed sample's own
+      // section-1..6 or a real document's editorSections ids, which are
+      // never named that way (see buildEditorSections, app/routes.js).
+      var addContentLink = document.querySelector('[data-show-add-content]')
+      var addContentForm = document.querySelector('[data-add-content-form]')
+      var addContentInput = document.querySelector('[data-add-content-input]')
+      var addContentButton = document.querySelector('[data-add-content-button]')
+      var contentNavList = document.querySelector('[data-content-nav-list]')
+      var localSectionCounter = 0
+
+      if (addContentLink && addContentForm) {
+        addContentLink.addEventListener('click', function () {
+          addContentForm.hidden = false
+          addContentLink.hidden = true
+          if (addContentInput) addContentInput.focus()
+        })
+      }
+
+      if (addContentButton && addContentInput && contentNavList && editorContent) {
+        addContentButton.addEventListener('click', function () {
+          var label = addContentInput.value.trim()
+          if (!label) return
+
+          var id = 'section-new-' + (localSectionCounter += 1)
+
+          var li = document.createElement('li')
+          li.className = 'app-experiment-nav__item'
+          li.innerHTML =
+            '<input type="checkbox" class="app-experiment-nav__checkbox" data-nav-select aria-label="Select ' + escapeHtml(label) + '">' +
+            '<span class="app-experiment-nav__label-wrapper" data-nav-label-wrapper>' +
+              buildNavLinkHTML(id, label) +
+            '</span>' +
+            '<div class="app-experiment-nav__move-buttons">' +
+              '<button type="button" class="app-experiment-nav__move-button" data-move-up aria-label="Move ' + escapeHtml(label) + ' up">' +
+                '<svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M3 10l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>' +
+              '</button>' +
+              '<button type="button" class="app-experiment-nav__move-button" data-move-down aria-label="Move ' + escapeHtml(label) + ' down">' +
+                '<svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>' +
+              '</button>' +
+            '</div>'
+          contentNavList.appendChild(li)
+          wireHighlightTrigger(li.querySelector('[data-highlight-trigger]'))
+          wireNavItemMoveButtons(li)
+          wireNavItemSelection(li)
+          updateNavMoveButtonStates()
+
+          var boundary = document.createElement('div')
+          boundary.className = 'app-experiment-boundary'
+          boundary.setAttribute('data-boundary', '')
+          boundary.innerHTML =
+            '<span class="app-experiment-boundary__label">Start of ' + escapeHtml(label) + '</span>' +
+            '<div class="app-experiment-boundary__line"></div>' +
+            '<button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>'
+          editorContent.appendChild(boundary)
+          wireBoundaryHandle(boundary.querySelector('[data-boundary-handle]'))
+
+          var section = document.createElement('div')
+          section.id = id
+          section.innerHTML = '<h2 class="govuk-heading-m">' + escapeHtml(label) + '</h2>'
+          editorContent.appendChild(section)
+
+          addContentInput.value = ''
+        })
+      }
+
+      // Content nav Move up/Move down — visual/list-order only, same scope
+      // limit as the boundary markers above: moving a card here moves its
+      // <li> within this <ul> and nothing else. It never touches
+      // editorContent, so the actual section-N divs (and the order they're
+      // written in) are completely unaffected — reordering the list does
+      // NOT reorder the document. This is deliberately decoupled for this
+      // iteration, not a step toward a full implementation.
+      //
+      // Replaces an earlier native-HTML5-drag-and-drop version entirely
+      // (removed, not kept alongside this) — that had no keyboard
+      // equivalent at all (its handle was tabindex="-1"/aria-hidden,
+      // deliberately unreachable by keyboard), a real accessibility gap
+      // flagged at the time. Real, individually-labelled <button>s here
+      // instead: reachable and operable by keyboard exactly like any other
+      // button, and each one's own aria-label ("Move Land checks up") says
+      // which card and which direction without relying on surrounding
+      // visual context the way an unlabelled drag handle would have.
+      //
+      // updateNavMoveButtonStates() re-checks every item's position after
+      // every move (not just the two involved) and disables Move up on
+      // whichever is now first / Move down on whichever is now last —
+      // needed because a move at either end of the list changes which
+      // item that now is; also called after "Add new content" above adds
+      // a new (always last) item, since that changes the previous last
+      // item's own Move down state too.
+      function updateNavMoveButtonStates () {
+        var items = document.querySelectorAll('[data-content-nav-list] > li')
+        items.forEach(function (item, index) {
+          var upButton = item.querySelector('[data-move-up]')
+          var downButton = item.querySelector('[data-move-down]')
+          if (upButton) upButton.disabled = index === 0
+          if (downButton) downButton.disabled = index === items.length - 1
+        })
+      }
+
+      function wireNavItemMoveButtons (item) {
+        var upButton = item.querySelector('[data-move-up]')
+        var downButton = item.querySelector('[data-move-down]')
+
+        if (upButton) {
+          upButton.addEventListener('click', function () {
+            var previous = item.previousElementSibling
+            if (!previous) return
+            item.parentNode.insertBefore(item, previous)
+            updateNavMoveButtonStates()
+            upButton.focus()
+          })
+        }
+
+        if (downButton) {
+          downButton.addEventListener('click', function () {
+            var next = item.nextElementSibling
+            if (!next) return
+            item.parentNode.insertBefore(next, item)
+            updateNavMoveButtonStates()
+            downButton.focus()
+          })
+        }
+      }
+
+      document.querySelectorAll('[data-content-nav-list] > li').forEach(wireNavItemMoveButtons)
+
+      // Rebuilds the exact markup a Content nav card's own link (inside
+      // [data-nav-label-wrapper]) always has — used both for the initial
+      // "Add new content" render and to restore it after a rename
+      // (confirmed or cancelled) replaces it with an input+Save button
+      // temporarily. Keeping this in one place means the two can never
+      // drift apart into two slightly different versions of "what a nav
+      // link looks like".
+      function buildNavLinkHTML (sectionId, label) {
+        return '<a class="govuk-link app-experiment-nav__link" href="#' + sectionId + '" data-highlight-trigger data-target-section="' + sectionId + '">' + escapeHtml(label) + '</a>'
+      }
+
+      // Content nav checkbox selection — single-select: checking one box
+      // always unchecks whichever other was checked (real <input
+      // type="checkbox"> elements, not type="radio", per the brief this
+      // was built from; the mutual exclusivity is enforced here in JS
+      // instead), and reveals the Rename/Delete actions bar above the
+      // list. Selection is purely which checkbox is checked — it neither
+      // reads nor writes data-highlight-trigger's own click-to-navigate
+      // behaviour on the card's link, which keeps working completely
+      // unchanged and unrelated to this.
+      var navActionsBar = document.querySelector('[data-nav-actions]')
+      var navRenameButton = document.querySelector('[data-nav-rename]')
+      var navDeleteButton = document.querySelector('[data-nav-delete]')
+      var selectedNavItem = null
+
+      function wireNavItemSelection (item) {
+        var checkbox = item.querySelector('[data-nav-select]')
+        if (!checkbox) return
+
+        checkbox.addEventListener('change', function () {
+          if (checkbox.checked) {
+            document.querySelectorAll('[data-content-nav-list] [data-nav-select]').forEach(function (other) {
+              if (other !== checkbox) other.checked = false
+            })
+            selectedNavItem = item
+            if (navActionsBar) navActionsBar.hidden = false
+          } else if (selectedNavItem === item) {
+            selectedNavItem = null
+            if (navActionsBar) navActionsBar.hidden = true
+          }
+        })
+      }
+
+      document.querySelectorAll('[data-content-nav-list] > li').forEach(wireNavItemSelection)
+
+      // Rename — turns the selected card's link into an editable text
+      // input (pre-filled with its current label) plus a small Save
+      // button; Enter or Save confirms, Escape cancels, either way
+      // finishNavRename below puts a real link back in
+      // [data-nav-label-wrapper] afterwards (via buildNavLinkHTML, same
+      // markup "Add new content" itself builds) and re-wires
+      // wireHighlightTrigger on it, since replacing innerHTML drops
+      // whatever listener the previous link element had. Label-only: this
+      // updates the Content nav's own text, not the matching heading
+      // inside the editor content itself — see the top-of-file comment on
+      // buildEditorSections for why a section's sidebar name and its own
+      // <h2> heading are already treated as independently editable
+      // elsewhere on this page (a real document's sectionName/heading can
+      // already differ), so this is consistent with that, not a new
+      // exception to it.
+      function beginNavRename (item) {
+        var wrapper = item.querySelector('[data-nav-label-wrapper]')
+        var link = wrapper.querySelector('.app-experiment-nav__link')
+        if (!wrapper || !link) return
+
+        var sectionId = link.getAttribute('href').slice(1)
+        var currentLabel = link.textContent.trim()
+
+        wrapper.innerHTML =
+          '<input type="text" class="govuk-input app-experiment-nav__rename-input" data-rename-input value="' + escapeHtml(currentLabel) + '" aria-label="Rename ' + escapeHtml(currentLabel) + '">' +
+          '<button type="button" class="govuk-button govuk-!-margin-bottom-0 app-experiment-nav__rename-save" data-rename-save>Save</button>'
+
+        var input = wrapper.querySelector('[data-rename-input]')
+        var saveButton = wrapper.querySelector('[data-rename-save]')
+
+        // Named confirmRename/cancelRename rather than confirm/cancel —
+        // window.confirm (used by deleteNavItem below) is a real global,
+        // and shadowing its name here with an unrelated local function,
+        // even harmlessly, is the kind of thing that bites later.
+        function confirmRename () {
+          var newLabel = input.value.trim() || currentLabel
+          finishNavRename(item, wrapper, sectionId, newLabel)
+        }
+
+        function cancelRename () {
+          finishNavRename(item, wrapper, sectionId, currentLabel)
+        }
+
+        input.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            confirmRename()
+          } else if (event.key === 'Escape') {
+            event.preventDefault()
+            cancelRename()
+          }
+        })
+
+        saveButton.addEventListener('click', confirmRename)
+
+        input.focus()
+        input.select()
+      }
+
+      function finishNavRename (item, wrapper, sectionId, label) {
+        wrapper.innerHTML = buildNavLinkHTML(sectionId, label)
+        wireHighlightTrigger(wrapper.querySelector('.app-experiment-nav__link'))
+
+        // Both buttons' own aria-labels name the section ("Move X up") —
+        // keep them in sync with a rename rather than leaving a stale name
+        // in either.
+        var upButton = item.querySelector('[data-move-up]')
+        var downButton = item.querySelector('[data-move-down]')
+        if (upButton) upButton.setAttribute('aria-label', 'Move ' + label + ' up')
+        if (downButton) downButton.setAttribute('aria-label', 'Move ' + label + ' down')
+
+        var checkbox = item.querySelector('[data-nav-select]')
+        if (checkbox) checkbox.setAttribute('aria-label', 'Select ' + label)
+      }
+
+      if (navRenameButton) {
+        navRenameButton.addEventListener('click', function () {
+          if (selectedNavItem) beginNavRename(selectedNavItem)
+        })
+      }
+
+      // Delete — removes the card from the Content nav AND its matching
+      // section-N div (heading + body) from the editor content, the
+      // mirror image of "Add new content" above creating both together.
+      // The boundary marker immediately before that section-N div (see
+      // the fixed sample/editorSections loop above for why it's always
+      // that div's own previous sibling) is removed with it, for the same
+      // reason "Add new content" creates one alongside its new section —
+      // leaving an orphaned "Start of X" marker with nothing following it
+      // would be worse than removing it. window.confirm rather than a
+      // custom inline confirmation UI, matching how confirming a
+      // destructive action is handled everywhere else already reachable
+      // from this prototype (delete-search-confirm.html,
+      // manage-guidance/remove-confirm.html) without building a third,
+      // inline-specific version of the same idea.
+      //
+      // Anything elsewhere on the page that refers to the deleted
+      // section by id (a comment's data-target-section, or a floating
+      // card whose anchor happened to be inside the removed content) is
+      // deliberately not specially cleaned up here — wireHighlightTrigger
+      // already tolerates a target id that no longer resolves to
+      // anything (see its own comment above), the same graceful handling
+      // this relies on rather than duplicating.
+      function deleteNavItem (item) {
+        var link = item.querySelector('.app-experiment-nav__link')
+        var label = link ? link.textContent.trim() : 'this section'
+        var sectionId = link ? link.getAttribute('href').slice(1) : null
+
+        var confirmed = window.confirm('Are you sure you want to delete ‘' + label + '’? This cannot be undone.')
+        if (!confirmed) return
+
+        var section = sectionId ? document.getElementById(sectionId) : null
+        if (section) {
+          var boundary = section.previousElementSibling
+          if (boundary && boundary.hasAttribute('data-boundary')) boundary.remove()
+          section.remove()
+        }
+
+        item.remove()
+        selectedNavItem = null
+        if (navActionsBar) navActionsBar.hidden = true
+        updateNavMoveButtonStates()
+      }
+
+      if (navDeleteButton) {
+        navDeleteButton.addEventListener('click', function () {
+          if (selectedNavItem) deleteNavItem(selectedNavItem)
+        })
+      }
+
+      // A section-N div's own heading is always its first child (every
+      // render path — the fixed sample, the editorSections loop,
+      // restoredEditorHtml and "Add new content" above — writes it that
+      // way) so "everything after the heading" is exactly that section's
+      // body content: shared by the boundary-drag reassignment below and
+      // buildCustomStepsFromEditor's own body-extraction, so both agree on
+      // what counts as one movable "paragraph" without maintaining two
+      // separate definitions of it.
+      function getSectionBodyNodes (sectionEl) {
+        return Array.prototype.slice.call(sectionEl.children, 1)
+      }
+
+      // A single shared, screen-reader-only status region (created once,
+      // lazily) announcing a successful drag/keyboard reassignment below —
+      // there is no visible toast for this: the moved paragraph physically
+      // relocating between sections on screen already is the visible
+      // confirmation, this just gives an equivalent confirmation to anyone
+      // not watching the screen, the same role="status" pattern
+      // saved-document-view.html's own "Your place has been saved" uses.
+      var boundaryStatus = null
+
+      function announceBoundaryMove (movedCount, fromHeading, toHeading) {
+        if (!boundaryStatus) {
+          boundaryStatus = document.createElement('div')
+          boundaryStatus.className = 'govuk-visually-hidden'
+          boundaryStatus.setAttribute('role', 'status')
+          editorContent.parentNode.insertBefore(boundaryStatus, editorContent)
+        }
+        boundaryStatus.textContent =
+          'Moved ' + movedCount + (movedCount === 1 ? ' paragraph' : ' paragraphs') +
+          ' from ' + fromHeading + ' to ' + toHeading + '.'
+      }
+
+      // Functional section boundaries — GOV.UK Design System has no
+      // equivalent component for this (a divider you drag to reassign
+      // document content between two sections); flagged here the same way
+      // the Tiptap-styled toolbar's own deviations were, and still true now
+      // this is no longer just a visual demo of the interaction.
+      //
+      // A boundary only ever exchanges paragraphs between the TWO sections
+      // it sits directly between (previousElementSibling/nextElementSibling
+      // — boundary markers and section-N divs strictly alternate in the
+      // DOM) — headings never move, only body nodes (getSectionBodyNodes
+      // above) do, and only ever across this one boundary, never further.
+      // There is no separate JS model of "which section a paragraph
+      // belongs to" anywhere on this page: it is simply which section-N
+      // div a paragraph is a DOM child of, the same way Content-nav's own
+      // Move up/down buttons and "Add new content" already treat the DOM
+      // itself as the source of truth — so reassignment here IS just moving the
+      // real nodes (appendChild), not a visual-only stand-in for it, and
+      // buildCustomStepsFromEditor (reading the DOM fresh on every Preview
+      // click) automatically reflects the result with no extra syncing.
+      //
+      // Valid drop points ("gaps") are computed fresh on every mousedown/
+      // keydown — not cached — since an earlier drag on this or another
+      // boundary may already have changed either section's paragraph
+      // count. A gap can only sit strictly between two paragraphs (drawn
+      // from the combined, in-order list of the section above's body nodes
+      // followed by the section below's), one boundary position per pair
+      // of adjacent paragraphs and never mid-paragraph — the two outermost
+      // possible positions (before the very first combined paragraph, or
+      // after the very last) are deliberately never included, since either
+      // would leave one of the two sections with zero paragraphs; if that
+      // leaves no candidate gaps at all (each side already down to exactly
+      // one paragraph — or the very first boundary in the document, which
+      // has no section above it to exchange with at all) the drag/keypress
+      // is simply blocked, same as any other out-of-range attempt below.
+      function wireBoundaryHandle (handle) {
+        if (!handle) return
+        var boundary = handle.closest('[data-boundary]')
+        if (!boundary) return
+
+        var sectionAbove = boundary.previousElementSibling
+        var sectionBelow = boundary.nextElementSibling
+        var dragging = false
+        var gaps = []
+        var combinedNodes = []
+        var originalKeepAboveCount = 0
+        var activeGap = null
+
+        function computeGaps () {
+          gaps = []
+          combinedNodes = []
+          if (!sectionAbove || !sectionBelow) return
+
+          var aboveNodes = getSectionBodyNodes(sectionAbove)
+          var belowNodes = getSectionBodyNodes(sectionBelow)
+          combinedNodes = aboveNodes.concat(belowNodes)
+          originalKeepAboveCount = aboveNodes.length
+
+          for (var keepAboveCount = 1; keepAboveCount < combinedNodes.length; keepAboveCount++) {
+            var beforeRect = combinedNodes[keepAboveCount - 1].getBoundingClientRect()
+            var afterRect = combinedNodes[keepAboveCount].getBoundingClientRect()
+            gaps.push({ keepAboveCount: keepAboveCount, y: (beforeRect.bottom + afterRect.top) / 2 })
+          }
+        }
+
+        function nearestGap (y) {
+          var nearest = null
+          var nearestDistance = Infinity
+          gaps.forEach(function (gap) {
+            var distance = Math.abs(gap.y - y)
+            if (distance < nearestDistance) {
+              nearestDistance = distance
+              nearest = gap
+            }
+          })
+          return nearest
+        }
+
+        function previewGap (gap) {
+          if (!gap) {
+            boundary.style.transform = ''
+            return
+          }
+          var boundaryRect = boundary.getBoundingClientRect()
+          var boundaryMid = (boundaryRect.top + boundaryRect.bottom) / 2
+          boundary.style.transform = 'translateY(' + (gap.y - boundaryMid) + 'px)'
+        }
+
+        // The only step that actually rewrites section membership — every
+        // other function here (computeGaps/nearestGap/previewGap) just
+        // works out where a drop WOULD land and previews it visually.
+        function commitGap (gap) {
+          boundary.style.transform = ''
+          if (!gap || !combinedNodes.length || gap.keepAboveCount === originalKeepAboveCount) return
+
+          var movedCount = Math.abs(gap.keepAboveCount - originalKeepAboveCount)
+          var direction = gap.keepAboveCount > originalKeepAboveCount ? 'down-to-up' : 'up-to-down'
+
+          combinedNodes.forEach(function (node) { node.parentNode.removeChild(node) })
+          combinedNodes.slice(0, gap.keepAboveCount).forEach(function (node) { sectionAbove.appendChild(node) })
+          combinedNodes.slice(gap.keepAboveCount).forEach(function (node) { sectionBelow.appendChild(node) })
+
+          var aboveHeading = sectionAbove.children[0] ? sectionAbove.children[0].textContent.trim() : ''
+          var belowHeading = sectionBelow.children[0] ? sectionBelow.children[0].textContent.trim() : ''
+          announceBoundaryMove(
+            movedCount,
+            direction === 'up-to-down' ? aboveHeading : belowHeading,
+            direction === 'up-to-down' ? belowHeading : aboveHeading
+          )
+
+          // Moving paragraphs across the boundary can carry an anchor
+          // span with them — re-sort the Comments list to match, in case
+          // that changed which anchor now comes first between the two
+          // sections either side of this boundary.
+          sortCommentsByAnchorOrder()
+        }
+
+        function onMouseMove (event) {
+          if (!dragging) return
+          activeGap = nearestGap(event.clientY)
+          previewGap(activeGap)
+        }
+
+        function onMouseUp () {
+          dragging = false
+          document.removeEventListener('mousemove', onMouseMove)
+          document.removeEventListener('mouseup', onMouseUp)
+          commitGap(activeGap)
+        }
+
+        handle.addEventListener('mousedown', function (event) {
+          if (!sectionAbove || !sectionBelow) return
+          computeGaps()
+          if (!gaps.length) return
+          event.preventDefault()
+          dragging = true
+          activeGap = null
+          document.addEventListener('mousemove', onMouseMove)
+          document.addEventListener('mouseup', onMouseUp)
+        })
+
+        handle.addEventListener('keydown', function (event) {
+          if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+          if (!sectionAbove || !sectionBelow) return
+          event.preventDefault()
+
+          computeGaps()
+          if (!gaps.length) return
+
+          var targetKeepAboveCount = originalKeepAboveCount + (event.key === 'ArrowUp' ? -1 : 1)
+          var gap = gaps.filter(function (candidate) { return candidate.keepAboveCount === targetKeepAboveCount })[0]
+          if (!gap) return
+
+          commitGap(gap)
+        })
+      }
+
+      document.querySelectorAll('[data-boundary-handle]').forEach(wireBoundaryHandle)
+
+      // "Hide" collapses the Changes pane and gives the editor pane the
+      // freed width — see .app-experiment-editor's flex-grow in
+      // _app-editor-experiment.scss for why no extra class is needed on it.
+      // "Show comments" (hidden until Hide is used) is the way back — see
+      // its own comment near the top of the template for why it's
+      // position: fixed rather than a plain in-flow button.
+      var changesPane = document.querySelector('[data-changes-pane]')
+      var hideLink = document.querySelector('[data-hide-changes]')
+      var showButton = document.querySelector('[data-show-changes]')
+
+      if (changesPane && hideLink && showButton) {
+        hideLink.addEventListener('click', function () {
+          changesPane.hidden = true
+          showButton.hidden = false
+        })
+
+        showButton.addEventListener('click', function () {
+          changesPane.hidden = false
+          showButton.hidden = true
+        })
+      }
+
+      // "Preview" — posts the editor's current live content (including any
+      // unsaved edits and reordering, since nothing here is persisted until
+      // "Save") into req.session.data.editorExperimentPreview, then
+      // navigates to /v6/editor-experiment/preview, which renders the REAL
+      // saved-document-view.html customSteps stepper from that session data
+      // (see routes.js) — the same template/branch a document like
+      // cs-ma-land-user-or-land-cover-not-compatible-signoff-2026 already
+      // uses, not a simplified alternate layout. Two things are sent: "html"
+      // is an exact, untouched copy of [data-editor-content], used to put
+      // the editor back exactly as it was when "Back to editor" is used;
+      // "steps" is the same content split into one customSteps-shaped entry
+      // per Content-nav section (see buildCustomStepsFromEditor below), so
+      // it renders as "Part 1 of N: <section>", "Part 2 of N: ...", etc.
+      // instead of one long scrolling page.
+      var previewButton = document.querySelector('[data-preview-button]')
+
+      // One customSteps entry per <li> in the Content nav, in ITS current
+      // DOM order — the same order the Move up/down buttons leave it in
+      // after any reordering (updateNavMoveButtonStates/
+      // wireNavItemMoveButtons further down), and including anything
+      // appended by "Add new content" — rather than iterating
+      // editorContent's own section-N divs
+      // directly, since the nav list (not document order) is this page's
+      // one definition of "the current section order". sectionName comes
+      // from the nav link's own (static) label; heading comes from the
+      // section's own <h2> as it stands right now, since that IS
+      // live-editable text and can have been changed since the nav link was
+      // first rendered — matching how a real document's own flat steps
+      // (app/data/guidance-documents.js) can have a sectionName that
+      // differs from its numbered heading.
+      //
+      // body is built generically from the section's own child elements
+      // (skipping its <h2>): a <ul>/<ol> becomes a bullet-list entry (one
+      // string per <li>), anything else (a <p>, or an <h3> sub-heading such
+      // as the fixed sample's "Land eligibility"/"Business eligibility")
+      // becomes a plain-paragraph string. This intentionally uses
+      // .textContent, not .innerHTML — the customSteps body shape used by
+      // real documents is plain text (each entry piped through
+      // renderLinkMarkers, which HTML-escapes everything except its own
+      // LINK-marker markup — see app/filters.js), so this reuses that
+      // exact rendering path rather than special-casing preview-sourced
+      // steps to accept raw HTML. The one consequence: inline formatting
+      // applied via the toolbar (bold/italic) and an <h3> sub-heading's
+      // extra emphasis do not carry into the preview, only their text and
+      // paragraph/bullet-list structure do. .textContent also naturally
+      // drops the comment-anchor icon buttons (SVG-only, no text) and
+      // resolves an app-editor-anchor span to just its wrapped text, with
+      // no separate stripping step needed.
+      function buildCustomStepsFromEditor () {
+        var navItems = document.querySelectorAll('[data-content-nav-list] > li')
+        var steps = []
+
+        navItems.forEach(function (item) {
+          var link = item.querySelector('.app-experiment-nav__link')
+          if (!link) return
+
+          var sectionId = link.getAttribute('href').slice(1)
+          var sectionEl = document.getElementById(sectionId)
+          if (!sectionEl) return
+
+          var headingEl = sectionEl.children[0]
+          var heading = headingEl ? headingEl.textContent.trim() : link.textContent.trim()
+          var body = []
+
+          getSectionBodyNodes(sectionEl).forEach(function (child) {
+            if (child.tagName === 'UL' || child.tagName === 'OL') {
+              var items = Array.prototype.map.call(child.querySelectorAll('li'), function (li) {
+                return li.textContent.trim()
+              }).filter(function (text) { return text })
+              if (items.length) body.push(items)
+              return
+            }
+
+            var text = child.textContent.trim()
+            if (text) body.push(text)
+          })
+
+          steps.push({
+            sectionName: link.textContent.trim(),
+            heading: heading,
+            body: body
+          })
+        })
+
+        return steps
+      }
+
+      if (previewButton) {
+        previewButton.addEventListener('click', function () {
+          var params = new URLSearchParams(window.location.search)
+          var heading = document.querySelector('h1.govuk-heading-m')
+
+          fetch('/v6/editor-experiment/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: params.get('id') || '',
+              title: heading ? heading.textContent.trim() : '',
+              html: editorContent.innerHTML,
+              steps: buildCustomStepsFromEditor()
+            })
+          }).then(function () {
+            window.location.href = '/v6/editor-experiment/preview'
+          })
+        })
+      }
+    })()
+  </script>
+{% endblock %}

@@ -9,18 +9,19 @@ const fs = require('fs')
 const path = require('path')
 
 const { versions } = require('../data/prototypes')
+const { templatePathFor, viewExtensions } = require('./view-paths')
 
 const viewsDir = path.join(__dirname, '..', 'views')
-const viewExtensions = ['.html', '.njk']
 
 // A step counts as built once a view file exists at its path.
-function stepExists (stepPath) {
+function stepExists(stepPath) {
+  const templatePath = templatePathFor(stepPath)
   return viewExtensions.some((extension) =>
-    fs.existsSync(path.join(viewsDir, `${stepPath}${extension}`))
+    fs.existsSync(path.join(viewsDir, `${templatePath}${extension}`))
   )
 }
 
-function decorateJourney (journey, version) {
+function decorateJourney(journey, version) {
   const steps = journey.steps.map((step, index) => ({
     ...step,
     index,
@@ -53,7 +54,7 @@ function decorateJourney (journey, version) {
 }
 
 // Journeys grouped by persona, preserving the order they are defined in.
-function groupByPersona (journeys) {
+function groupByPersona(journeys) {
   const groups = []
 
   journeys.forEach((journey) => {
@@ -71,7 +72,7 @@ function groupByPersona (journeys) {
 }
 
 // All versions, with build state resolved.
-function getVersions () {
+function getVersions() {
   return versions.map((version) => {
     const journeys = version.journeys.map((journey) =>
       decorateJourney(journey, version)
@@ -88,15 +89,15 @@ function getVersions () {
   })
 }
 
-function getCurrentVersion () {
+function getCurrentVersion() {
   return getVersions().find((version) => version.status === 'current')
 }
 
-function getPreviousVersions () {
+function getPreviousVersions() {
   return getVersions().filter((version) => version.status !== 'current')
 }
 
-function allJourneys () {
+function allJourneys() {
   return getVersions().flatMap((version) =>
     version.journeys.map((journey) => ({ version, journey }))
   )
@@ -109,7 +110,7 @@ function allJourneys () {
 // journey the participant actually started takes priority — otherwise a shared
 // page would always send them down whichever variant happens to be defined
 // first.
-function findStep (urlPath, activeJourneyId) {
+function findStep(urlPath, activeJourneyId) {
   const candidates = allJourneys()
   const ordered = [
     ...candidates.filter(({ journey }) => journey.id === activeJourneyId),
@@ -150,7 +151,7 @@ function findStep (urlPath, activeJourneyId) {
 // Where a branch such as "migrate" should start. A page shared between variants
 // — the landing page — uses this so it sends the participant down the variant
 // they were started on, falling back to the first one defined.
-function getBranchStart (branch, activeJourneyId) {
+function getBranchStart(branch, activeJourneyId) {
   const journeys = allJourneys().map(({ journey }) => journey)
 
   const journey =

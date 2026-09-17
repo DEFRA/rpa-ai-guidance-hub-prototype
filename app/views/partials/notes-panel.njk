@@ -1,0 +1,57 @@
+{#
+  Notes: a designer/dev annotation panel, inspired by "Alan" in
+  defra-design/fcp-farming-front-door. Shows whatever this page's
+  `*.notes.md` file says (see app/lib/page-notes.js) — status, the intended
+  designer URL slug (which may not match this prototype's own route — see
+  CLAUDE.md), and a freeform markdown body — whatever the author wants:
+  dated entries, headings, bullet points — rendered as HTML.
+
+  There's no way to add a note from the browser: edit the page's
+  `*.notes.md` file (next to its template) and commit it, same as any other
+  change to the prototype.
+
+  The toggle is a tab docked to the screen edge, not a govuk-button — this is
+  a persistent utility toggle, not a call to action, and a solid button reads
+  as the latter. Follows the same pattern a few GOV.UK services use for a
+  "Feedback" tab fixed to the edge of the viewport.
+#}
+<button type="button" class="app-notes-trigger" id="app-notes-trigger" onclick="toggleNotesPanel()">
+  Notes
+</button>
+
+<div class="app-notes-panel" id="app-notes-panel">
+  <div class="app-notes-panel__header">
+    <h2 class="app-notes-panel__title">Notes</h2>
+    <button type="button" class="app-notes-panel__close" onclick="toggleNotesPanel()">
+      <span class="govuk-visually-hidden">Close</span>&times;
+    </button>
+  </div>
+
+  <div class="app-notes-panel__body">
+    {% if pageNotes %}
+      {% if pageNotes.url %}
+        <p class="app-notes-panel__url">
+          URL slug: <code>{{ pageNotes.url }}</code>
+        </p>
+      {% endif %}
+
+      {% if pageNotes.status %}
+        <p class="app-notes-panel__status">
+          <strong class="govuk-tag">{{ pageNotes.status }}</strong>
+        </p>
+      {% endif %}
+
+      {% if pageNotes.html %}
+        <div class="app-notes-panel__markdown">{{ pageNotes.html | safe }}</div>
+      {% else %}
+        <p class="govuk-body-s">No notes for this page yet.</p>
+      {% endif %}
+    {% else %}
+      <p class="govuk-body-s">
+        No notes for this page yet. Add a <code>page.notes.md</code>
+        (or <code>&lt;template&gt;.notes.md</code>) file alongside its
+        template to leave one.
+      </p>
+    {% endif %}
+  </div>
+</div>

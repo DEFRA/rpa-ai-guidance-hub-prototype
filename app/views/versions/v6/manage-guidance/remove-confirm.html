@@ -1,0 +1,77 @@
+{#
+  Confirms removing a row from the "Editing" tab on all-guidance-docs.html
+  — the same "are you sure?" pattern delete-search-confirm.html already
+  uses for find-guidance.html's own Remove links, adapted here rather than
+  reused directly: this one only ever has a single list ("Editing" —
+  Awaiting approval has no Remove action at all), so there is no ?tab= to
+  carry through, and it posts to its own route rather than
+  /v6/find-guidance/remove.
+
+  documentTitle comes from app/routes.js, looked up from the current
+  Editing list by ?id= — a direct visit with no id, or one that matches
+  nothing there (including an Awaiting approval id, which this page does
+  not know about), leaves it undefined, so the generic fallback below is
+  shown instead of erroring. documentId is that same ?id=, carried through
+  as a hidden form field rather than read back off the query string again.
+
+  "Yes, remove" is a real POST to /v6/manage-guidance/remove (app/routes.js),
+  which adds this id to req.session.data.manageGuidanceEditingRemovedIds —
+  buildManageGuidanceRows() filters the Editing list against that array
+  every time it builds it, so the document stays gone from the count and
+  table on every subsequent visit this session, not just until the
+  in-memory list is rebuilt — before redirecting to all-guidance-docs.html
+  at the Editing tab's own #editing anchor. Cancel is unrelated to that
+  POST (a plain link, not a submit) and always returns to
+  all-guidance-docs.html's default tab.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+
+{% set pageName = "Are you sure you want to remove this guidance?" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Manage guidance", href: "/v6/all-guidance-docs" },
+        { text: pageName }
+      ]
+    }) }}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Are you sure you want to remove this guidance?</h1>
+
+    {% if documentTitle %}
+      <p class="govuk-body govuk-!-font-weight-bold">You are about to remove '{{ documentTitle }}' from your Editing list.</p>
+    {% else %}
+      <p class="govuk-body govuk-!-font-weight-bold">You are about to remove this guidance.</p>
+    {% endif %}
+
+    <form method="post" action="/v6/manage-guidance/remove">
+      <input type="hidden" name="id" value="{{ documentId }}">
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Yes, remove",
+          classes: "govuk-button--warning"
+        }) }}
+        {{ govukButton({
+          text: "Cancel",
+          href: "/v6/all-guidance-docs",
+          classes: "govuk-button--secondary"
+        }) }}
+      </div>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

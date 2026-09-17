@@ -1,0 +1,16 @@
+{#
+  The ordinary page shape: a single two-thirds-width column. Most page
+  modules extend this. The back link stays owned by layouts/main.html's own
+  beforeContent block (driven by backHref/backLinkHref) — not repeated here.
+#}
+{% extends "common/layouts/base.njk" %}
+
+{% set pageName = pageName or title %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% block columns %}{% endblock %}
+    </div>
+  </div>
+{% endblock %}

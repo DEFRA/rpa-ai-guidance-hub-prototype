@@ -1,0 +1,93 @@
+{#
+  Results of the search box on all-guidance-docs.html (v6 only) — GET
+  /v6/manage-guidance-search?q=..., see that route in app/routes.js. query
+  and results (already filtered, case-insensitive substring match on name,
+  across both the Editing and Awaiting approval lists — Published is not
+  shown on all-guidance-docs.html any more, so it is not searched here
+  either) both come from there; an empty q means results is simply empty
+  rather than matching everything.
+
+  The results table is the exact same manageGuidanceTable macro
+  all-guidance-docs.html defines for its own two tabs, repeated here rather
+  than extracted to a shared partial for one extra call site — same
+  reasoning as e.g. find-guidance.html's own documentsTable macro, which
+  isn't shared anywhere else either. No Action column, same as that page —
+  Document name is the only way into a row, linking to
+  /v6/manage-guidance/document-overview?id=. Version and Last modified are
+  the same bare numbered tag/plain date that page's own table uses, from
+  the real guidance-documents.js document each row now is.
+
+  A plain res.locals.backHref back to /v6/all-guidance-docs, rather than
+  breadcrumbs — this is one step off that page, not a page with its own
+  place in the hub's hierarchy.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+
+{% set pageName = "Search results" %}
+
+{% set versionTags = {
+  "Version 1": { text: "1", classes: "govuk-tag--green" },
+  "Version 2": { text: "2", classes: "govuk-tag--purple" }
+} %}
+
+{% macro manageGuidanceTable(documents) %}
+  {% set rows = [] %}
+  {% for document in documents %}
+    {% set nameCell %}<a class="govuk-link" href="/v6/manage-guidance/document-overview?id={{ document.id }}">{{ document.name }}</a>{% endset %}
+    {% set versionCell %}{{ govukTag(versionTags[document.version]) }}{% endset %}
+    {% set rows = (rows.push([
+      { html: nameCell },
+      { html: versionCell },
+      { text: document.lastModified }
+    ]), rows) %}
+  {% endfor %}
+
+  {{ govukTable({
+    head: [
+      { text: "Document name", classes: "govuk-!-width-one-half" },
+      { text: "Version" },
+      { text: "Last modified" }
+    ],
+    rows: rows
+  }) }}
+{% endmacro %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Manage guidance", href: "/v6/all-guidance-docs" },
+        { text: pageName }
+      ]
+    }) }}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Search results for &lsquo;{{ query }}&rsquo;</h1>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    {% if results.length %}
+      {{ manageGuidanceTable(results) }}
+    {% else %}
+      <p class="govuk-body">No guidance documents match your search.</p>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
