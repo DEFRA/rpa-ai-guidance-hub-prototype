@@ -7,8 +7,12 @@
 
 function toggleNotesPanel() {
   var panel = document.getElementById('app-notes-panel')
+  var trigger = document.getElementById('app-notes-trigger')
   if (panel) {
     panel.classList.toggle('app-notes-panel--open')
+  }
+  if (trigger) {
+    trigger.classList.toggle('app-notes-trigger--hidden')
   }
 }
 

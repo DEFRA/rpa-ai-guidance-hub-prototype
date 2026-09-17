@@ -1,3 +1,5 @@
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
 {#
   Notes: a designer/dev annotation panel, inspired by "Alan" in
   defra-design/fcp-farming-front-door. Shows whatever this page's
@@ -9,7 +11,21 @@
   There's no way to add a note from the browser: edit the page's
   `*.notes.json` file (next to its template) and commit it, same as any other
   change to the prototype.
+
+  The toggle is a real govukButton (not a custom-styled one) so it carries
+  the same GOV.UK/Defra button look — colour, focus state, hover — as
+  everything else in the prototype; app-notes-trigger only repositions it as
+  a floating trigger, it doesn't restyle it.
 #}
+{% set notesTriggerIcon %}<svg class="app-notes-trigger__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M11 0l1.7 6.4L19 8l-6.3 1.6L11 16l-1.7-6.4L3 8l6.3-1.6L11 0zM19.5 14l.9 3.6L24 18.5l-3.6.9-.9 3.6-.9-3.6L15 18.5l3.6-.9.9-3.6z"/></svg>{% endset %}
+{{ govukButton({
+  html: notesTriggerIcon + ' Notes',
+  classes: "app-notes-trigger",
+  id: "app-notes-trigger",
+  type: "button",
+  attributes: { onclick: "toggleNotesPanel()" }
+}) }}
+
 <div class="app-notes-panel" id="app-notes-panel">
   <div class="app-notes-panel__header">
     <h2 class="app-notes-panel__title">Notes</h2>
