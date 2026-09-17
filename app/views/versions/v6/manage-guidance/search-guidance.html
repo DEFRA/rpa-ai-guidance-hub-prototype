@@ -1,0 +1,574 @@
+{#
+  "Search guidance" for the Manage guidance side of the hub (v6 only) — a
+  fully independent duplicate of the Find guidance side's own
+  organic-search.html, not a shared template: this file, and the route
+  behind it (GET /v6/manage-guidance/search-guidance, app/routes.js), are
+  free to diverge from that page from here on without either affecting the
+  other. Anything that looks unfamiliar compared to organic-search.html is
+  explained below; everything else works the same way that page's own
+  comment already explains in detail, just against a different dataset.
+
+  results (id/title/description/version/lastUpdated/published/category/
+  scheme/year/state/overviewHref) comes from
+  buildManageGuidanceSearchResults() in app/routes.js — every document
+  currently in the Editing or Awaiting approval tabs on
+  all-guidance-docs.html, plus whichever sample "Published" documents (also
+  local to that file) have not been moved into Editing via "Start editing"
+  this session. state is this page's own concept, not read from
+  guidance-documents.js (nothing there has it) — "Draft" for an Editing
+  document, "Awaiting review" for an Awaiting approval one, "Published" for
+  a sample document. overviewHref is always the real
+  /v6/manage-guidance/document-overview page now — that route has its own
+  fallback lookup for a sample Published document's id, which shows a
+  different layout there (Version/Version notes/Last updated/Published, and
+  "Start editing" instead of "Continue editing") rather than the
+  Draft/Awaiting review one.
+
+  State is a fifth filter group, positioned directly after Category —
+  otherwise the same collapsible checkbox-group pattern Scheme/Version
+  already use (OR within the group, AND against every other active
+  filter). stateTags below picks grey/yellow/turquoise rather than
+  organic-search.html's own green/purple Version tags, deliberately not
+  reusing either of those two colours — a card can show both a Version tag
+  and a State tag together, and giving State its own distinct palette
+  keeps the two from reading as the same kind of fact at a glance.
+
+  The search box on all-guidance-docs.html feeds into this page exactly
+  the way find-guidance.html's own search box feeds into
+  organic-search.html — a plain GET <form> to
+  /v6/manage-guidance/search-guidance?q=, pre-filling and immediately
+  applying this page's own search input via initialSearchQuery, same
+  mechanism, independent route.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+
+{% set pageName = "Search guidance" %}
+
+{% set versionTags = {
+  "Version 1": { text: "Version 1", classes: "govuk-tag--green" },
+  "Version 2": { text: "Version 2", classes: "govuk-tag--purple" }
+} %}
+
+{% set stateTags = {
+  "Draft": { text: "Draft", classes: "govuk-tag--grey" },
+  "Awaiting review": { text: "Awaiting review", classes: "govuk-tag--yellow" },
+  "Published": { text: "Published", classes: "govuk-tag--turquoise" }
+} %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Manage guidance", href: "/v6/all-guidance-docs" },
+        { text: pageName }
+      ]
+    }) }}
+  </div>
+</div>
+
+<form method="get" action="/v6/manage-guidance/search-guidance">
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+
+      <h1 class="govuk-heading-l">Search guidance</h1>
+
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+
+    <div class="govuk-grid-column-one-quarter"></div>
+
+    <div class="govuk-grid-column-three-quarters">
+
+      <div class="app-search-bar">
+        <div class="app-search-bar__input">
+          {{ govukInput({
+            id: "search",
+            name: "search",
+            value: initialSearchQuery,
+            label: { text: "Search guidance", classes: "govuk-visually-hidden" },
+            formGroup: { classes: "govuk-!-margin-bottom-0" },
+            attributes: { "data-search-input": true }
+          }) }}
+        </div>
+        {{ govukButton({
+          text: "Search",
+          type: "button",
+          classes: "govuk-!-margin-bottom-0",
+          attributes: { "data-search-button": true }
+        }) }}
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="govuk-grid-row">
+
+    <div class="govuk-grid-column-one-quarter app-organic-search__filters">
+
+      <h2 class="govuk-heading-m">Filters</h2>
+
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="true" aria-controls="filter-group-category">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            Category
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-category" data-filter-panel>
+          {{ govukSelect({
+            id: "category",
+            name: "category",
+            label: { text: "Category", classes: "govuk-visually-hidden" },
+            items: [
+              { value: "all", text: "All categories", selected: true },
+              { value: "sfi", text: "Sustainable Farming Incentive" },
+              { value: "countryside-stewardship", text: "Countryside Stewardship" },
+              { value: "cross-compliance", text: "Cross Compliance" }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="false" aria-controls="filter-group-state">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            State
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-state" data-filter-panel hidden>
+          {{ govukCheckboxes({
+            idPrefix: "state",
+            name: "state",
+            classes: "govuk-checkboxes--small",
+            fieldset: {
+              legend: { text: "State", classes: "govuk-visually-hidden" }
+            },
+            items: [
+              { value: "draft", text: "Draft" },
+              { value: "awaiting-review", text: "Awaiting review" },
+              { value: "published", text: "Published" }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="false" aria-controls="filter-group-scheme">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            Scheme
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-scheme" data-filter-panel hidden>
+          {{ govukCheckboxes({
+            idPrefix: "scheme",
+            name: "scheme",
+            classes: "govuk-checkboxes--small",
+            fieldset: {
+              legend: { text: "Scheme", classes: "govuk-visually-hidden" }
+            },
+            items: [
+              { value: "countryside-stewardship", text: "Countryside Stewardship" },
+              { value: "sustainable-farming-incentive", text: "Sustainable Farming Incentive" }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="false" aria-controls="filter-group-year">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            Year
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-year" data-filter-panel hidden>
+          {{ govukSelect({
+            id: "year",
+            name: "year",
+            label: { text: "Year", classes: "govuk-visually-hidden" },
+            items: [
+              { value: "all", text: "All years", selected: true },
+              { value: "2026", text: "2026" },
+              { value: "2025", text: "2025" },
+              { value: "2024", text: "2024" },
+              { value: "2023", text: "2023" },
+              { value: "2022", text: "2022" },
+              { value: "2021", text: "2021" },
+              { value: "2020", text: "2020" },
+              { value: "2019", text: "2019" }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      <div class="app-filter-group">
+        <h3 class="app-filter-group__heading">
+          <button type="button" class="app-filter-group__toggle" data-filter-toggle aria-expanded="false" aria-controls="filter-group-version">
+            <span class="app-filter-group__chevron" aria-hidden="true"></span>
+            Version
+          </button>
+        </h3>
+        <div class="app-filter-group__panel" id="filter-group-version" data-filter-panel hidden>
+          {{ govukCheckboxes({
+            idPrefix: "version",
+            name: "version",
+            classes: "govuk-checkboxes--small",
+            fieldset: {
+              legend: { text: "Version", classes: "govuk-visually-hidden" }
+            },
+            items: [
+              { value: "version-1", text: "Version 1" },
+              { value: "version-2", text: "Version 2" }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      {{ govukButton({
+        text: "Apply filters",
+        type: "button",
+        classes: "govuk-button--secondary govuk-!-margin-top-4",
+        attributes: { "data-apply-filters": true }
+      }) }}
+
+      <p class="govuk-body govuk-!-margin-top-2">
+        <a class="govuk-link" href="#" data-reset-filters>Reset filters</a>
+      </p>
+
+    </div>
+
+    <div class="govuk-grid-column-three-quarters">
+
+      <div class="app-search-results__header">
+        <h2 class="govuk-heading-m app-search-results__count" data-results-count>{{ results.length }} result{{ "s" if results.length != 1 }}</h2>
+
+        <div class="app-search-results__sort">
+          <label class="govuk-label app-search-results__sort-label" for="sort">Sort by</label>
+          {{ govukSelect({
+            id: "sort",
+            name: "sort",
+            classes: "app-search-results__sort-select",
+            formGroup: { classes: "govuk-!-margin-bottom-0" },
+            attributes: { "data-sort-select": true },
+            items: [
+              { value: "most-relevant", text: "Most relevant", selected: true },
+              { value: "updated-newest", text: "Updated (newest)" },
+              { value: "updated-oldest", text: "Updated (oldest)" }
+            ]
+          }) }}
+        </div>
+      </div>
+
+      <p class="govuk-body" data-results-empty hidden>No guidance matches your search or filters. Try removing some filters or using different search terms.</p>
+
+      <ul class="app-search-results" data-results-list>
+        {% for result in results %}
+          <li class="app-search-results__item">
+
+            <div class="govuk-!-margin-bottom-2">
+              {{ govukTag(versionTags[result.version]) }}
+              {{ govukTag(stateTags[result.state]) }}
+            </div>
+
+            <h3 class="govuk-heading-s app-search-results__name">
+              <a class="govuk-link" href="{{ result.overviewHref }}">{{ result.title }}</a>
+            </h3>
+
+            <p class="govuk-body app-search-results__description">{{ result.description }}</p>
+
+            <p class="govuk-body-s app-search-results__dates">Last updated: {{ result.lastUpdated }} &middot; Published: {{ result.published }}</p>
+
+          </li>
+        {% endfor %}
+      </ul>
+
+    </div>
+
+  </div>
+
+</form>
+
+<script type="application/json" data-search-results-data>{{ resultsJson | safe }}</script>
+
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    document.querySelectorAll('[data-filter-toggle]').forEach(function (toggle) {
+      toggle.addEventListener('click', function () {
+        var panel = document.getElementById(toggle.getAttribute('aria-controls'))
+        if (!panel) return
+        var expanded = toggle.getAttribute('aria-expanded') === 'true'
+        toggle.setAttribute('aria-expanded', String(!expanded))
+        panel.hidden = expanded
+      })
+    })
+  </script>
+  <script>
+    (function () {
+      var dataScript = document.querySelector('[data-search-results-data]')
+      var searchInput = document.querySelector('[data-search-input]')
+      var searchButton = document.querySelector('[data-search-button]')
+      var applyFiltersButton = document.querySelector('[data-apply-filters]')
+      var resetFiltersLink = document.querySelector('[data-reset-filters]')
+      var sortSelect = document.querySelector('[data-sort-select]')
+      var categorySelect = document.getElementById('category')
+      var yearSelect = document.getElementById('year')
+      var resultsList = document.querySelector('[data-results-list]')
+      var resultsEmpty = document.querySelector('[data-results-empty]')
+      var resultsCount = document.querySelector('[data-results-count]')
+      if (!dataScript || !searchInput || !resultsList) return
+
+      var allResults = JSON.parse(dataScript.textContent)
+
+      // Select option values are slugs; the data holds the same full label
+      // text these dropdowns/checkboxes' visible text does, so filtering
+      // just maps one to the other rather than comparing slugs directly.
+      var CATEGORY_LABELS = {
+        sfi: 'Sustainable Farming Incentive',
+        'countryside-stewardship': 'Countryside Stewardship',
+        'cross-compliance': 'Cross Compliance'
+      }
+      var STATE_LABELS = {
+        draft: 'Draft',
+        'awaiting-review': 'Awaiting review',
+        published: 'Published'
+      }
+      var SCHEME_LABELS = {
+        'countryside-stewardship': 'Countryside Stewardship',
+        'sustainable-farming-incentive': 'Sustainable Farming Incentive'
+      }
+      var VERSION_LABELS = {
+        'version-1': 'Version 1',
+        'version-2': 'Version 2'
+      }
+
+      // searchText updates live (debounced) as the user types; the five
+      // filter fields only update when "Apply filters" is clicked — each
+      // read fresh from their controls at that point, not tracked
+      // separately, so this object is always last-known-applied state for
+      // filters and always-current state for search text.
+      var searchState = {
+        searchText: '',
+        category: 'all',
+        states: [],
+        schemes: [],
+        year: 'all',
+        versions: [],
+        sort: 'most-relevant'
+      }
+
+      function getCheckedValues (name) {
+        return Array.prototype.map.call(
+          document.querySelectorAll('input[name="' + name + '"]:checked'),
+          function (input) { return input.value }
+        )
+      }
+
+      function escapeHtml (value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+      }
+
+      function matchesFilters (doc) {
+        if (searchState.category !== 'all' && doc.category !== CATEGORY_LABELS[searchState.category]) {
+          return false
+        }
+
+        if (searchState.states.length) {
+          var stateLabels = searchState.states.map(function (value) { return STATE_LABELS[value] })
+          if (stateLabels.indexOf(doc.state) === -1) return false
+        }
+
+        if (searchState.schemes.length) {
+          var schemeLabels = searchState.schemes.map(function (value) { return SCHEME_LABELS[value] })
+          if (schemeLabels.indexOf(doc.scheme) === -1) return false
+        }
+
+        if (searchState.year !== 'all' && String(doc.year) !== searchState.year) {
+          return false
+        }
+
+        if (searchState.versions.length) {
+          var versionLabels = searchState.versions.map(function (value) { return VERSION_LABELS[value] })
+          if (versionLabels.indexOf(doc.version) === -1) return false
+        }
+
+        if (searchState.searchText) {
+          var haystack = (doc.title + ' ' + doc.description).toLowerCase()
+          if (haystack.indexOf(searchState.searchText) === -1) return false
+        }
+
+        return true
+      }
+
+      function sortDocs (docs) {
+        if (searchState.sort === 'updated-newest') {
+          return docs.slice().sort(function (a, b) { return new Date(b.lastUpdated) - new Date(a.lastUpdated) })
+        }
+        if (searchState.sort === 'updated-oldest') {
+          return docs.slice().sort(function (a, b) { return new Date(a.lastUpdated) - new Date(b.lastUpdated) })
+        }
+        // "Most relevant" — no real relevance ranking to apply, so this
+        // keeps the original (server-rendered) order as-is.
+        return docs
+      }
+
+      function versionTagHtml (version) {
+        var className = version === 'Version 2' ? 'govuk-tag--purple' : 'govuk-tag--green'
+        return '<strong class="govuk-tag ' + className + '">' + escapeHtml(version) + '</strong>'
+      }
+
+      // Deliberately not reusing Version's own green/purple — see the
+      // comment at the top of this file for why State gets its own
+      // distinct palette instead.
+      var STATE_CLASSES = {
+        Draft: 'govuk-tag--grey',
+        'Awaiting review': 'govuk-tag--yellow',
+        Published: 'govuk-tag--turquoise'
+      }
+
+      function stateTagHtml (state) {
+        var className = STATE_CLASSES[state] || 'govuk-tag--grey'
+        return '<strong class="govuk-tag ' + className + '">' + escapeHtml(state) + '</strong>'
+      }
+
+      // Same markup/classes as the server-rendered cards in the view above,
+      // just built from the embedded JSON instead of Nunjucks. href comes
+      // straight off doc.overviewHref rather than being built from doc.id
+      // here, since where a card leads now depends on its state (a real
+      // document overview page for Draft/Awaiting review, the shared
+      // placeholder for a sample Published one) — see the route.
+      function renderCard (doc) {
+        var item = document.createElement('li')
+        item.className = 'app-search-results__item'
+        item.innerHTML =
+          '<div class="govuk-!-margin-bottom-2">' + versionTagHtml(doc.version) + ' ' + stateTagHtml(doc.state) + '</div>' +
+          '<h3 class="govuk-heading-s app-search-results__name">' +
+          '<a class="govuk-link" href="' + escapeHtml(doc.overviewHref) + '">' + escapeHtml(doc.title) + '</a>' +
+          '</h3>' +
+          '<p class="govuk-body app-search-results__description">' + escapeHtml(doc.description) + '</p>' +
+          '<p class="govuk-body-s app-search-results__dates">Last updated: ' + escapeHtml(doc.lastUpdated) + ' &middot; Published: ' + escapeHtml(doc.published) + '</p>'
+        return item
+      }
+
+      function render () {
+        var matched = sortDocs(allResults.filter(matchesFilters))
+
+        resultsList.innerHTML = ''
+        matched.forEach(function (doc) {
+          resultsList.appendChild(renderCard(doc))
+        })
+
+        resultsEmpty.hidden = matched.length !== 0
+        resultsList.hidden = matched.length === 0
+
+        if (resultsCount) {
+          resultsCount.textContent = matched.length + ' result' + (matched.length === 1 ? '' : 's')
+        }
+      }
+
+      var debounceTimer
+      searchInput.addEventListener('input', function () {
+        window.clearTimeout(debounceTimer)
+        debounceTimer = window.setTimeout(function () {
+          searchState.searchText = searchInput.value.trim().toLowerCase()
+          render()
+        }, 200)
+      })
+
+      if (searchButton) {
+        searchButton.addEventListener('click', function () {
+          window.clearTimeout(debounceTimer)
+          searchState.searchText = searchInput.value.trim().toLowerCase()
+          render()
+        })
+      }
+
+      if (applyFiltersButton) {
+        applyFiltersButton.addEventListener('click', function () {
+          searchState.category = categorySelect ? categorySelect.value : 'all'
+          searchState.states = getCheckedValues('state')
+          searchState.schemes = getCheckedValues('scheme')
+          searchState.year = yearSelect ? yearSelect.value : 'all'
+          searchState.versions = getCheckedValues('version')
+          render()
+        })
+      }
+
+      if (sortSelect) {
+        sortSelect.addEventListener('change', function () {
+          searchState.sort = sortSelect.value
+          render()
+        })
+      }
+
+      // Clears every control back to its default (including Sort by, so the
+      // dropdown's own displayed value stays consistent with the
+      // "Most relevant" order this puts the list back into) and re-renders
+      // from searchState directly, the same as any other change here — a
+      // real navigation-free reset rather than reloading the page, which
+      // would just show this same fixed server-rendered list again anyway.
+      if (resetFiltersLink) {
+        resetFiltersLink.addEventListener('click', function (event) {
+          event.preventDefault()
+
+          searchInput.value = ''
+          if (categorySelect) categorySelect.value = 'all'
+          if (yearSelect) yearSelect.value = 'all'
+          if (sortSelect) sortSelect.value = 'most-relevant'
+          document.querySelectorAll('input[name="state"]:checked').forEach(function (input) { input.checked = false })
+          document.querySelectorAll('input[name="scheme"]:checked').forEach(function (input) { input.checked = false })
+          document.querySelectorAll('input[name="version"]:checked').forEach(function (input) { input.checked = false })
+
+          window.clearTimeout(debounceTimer)
+          searchState.searchText = ''
+          searchState.category = 'all'
+          searchState.states = []
+          searchState.schemes = []
+          searchState.year = 'all'
+          searchState.versions = []
+          searchState.sort = 'most-relevant'
+
+          render()
+        })
+      }
+
+      // Arriving with ?q= (from the search box on all-guidance-docs.html —
+      // see GET /v6/manage-guidance/search-guidance in app/routes.js,
+      // which reads it into initialSearchQuery and pre-fills this same
+      // input server-side above) applies it immediately, the same as
+      // typing it and pressing Search would, so the results are already
+      // filtered on the very first render rather than the visitor having
+      // to retype/resubmit what they just searched for. A direct visit
+      // with no q leaves searchState at its default, so the unfiltered
+      // list already rendered server-side just stays as it is — this only
+      // runs render() again when there is actually an initial value to
+      // apply.
+      if (searchInput.value) {
+        searchState.searchText = searchInput.value.trim().toLowerCase()
+        render()
+      }
+    })()
+  </script>
+{% endblock %}

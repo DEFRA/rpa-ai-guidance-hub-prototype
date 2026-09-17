@@ -3110,13 +3110,78 @@ const EDITOR_EXPERIMENT_COMMENTS = [
     timestamp: '1 week ago',
     text: 'Worth adding a worked example here for first-time applicants.',
     section: 'section-3',
-    anchorId: 'anchor-3',
+    anchorId: 'anchor-3'
+  },
+  // Comments 4-8: spread across the fixed sample's later sections
+  // (Application process, Supporting evidence, Review dates), which
+  // previously had none at all — comment-1/2/3 above all cluster in the
+  // first three sections. Purely more anchored/floating mock data so the
+  // Changes panel has comments at varying scroll positions down the whole
+  // page, not a design or behaviour change; each anchorId matches a real
+  // app-editor-anchor span hand-placed in editor-experiment.html's fixed
+  // sample content.
+  //
+  // Deliberately mostly single comments, not threads: computeFloatingPositions
+  // (editor-experiment.html's pageScripts) sizes each card's margin-top
+  // against the PREVIOUS card's own real height, and this fixed sample's
+  // sections are short — a comment with 1-2 replies (200-280px) is often
+  // taller than the real document distance to the next anchor, which
+  // floors that next card's margin at 0 (correct, structural anti-overlap
+  // behaviour, not a bug) and visually reads as "stacked with no gap".
+  // Keeping most of these single (~160px) instead gives the algorithm
+  // enough real slack to show an actual gap at most transitions; only
+  // comment-1 (top of the page, with by far the most real distance to the
+  // next anchor either way) and comment-8 (the LAST card — nothing
+  // renders after it, so its own height affects no other card's position)
+  // keep replies, which is also where "a couple of short threads" from
+  // the original spec still lives. anchor-4/5 (same section,
+  // "Application process") and anchor-6/7 (same section, "Supporting
+  // evidence") remain a real, unavoidable exception either way — 8
+  // comments cannot fit into this document's 6 sections without at least
+  // one pair sharing a section, and those two anchors are genuinely only
+  // a sentence apart, so their cards floor at 0 correctly rather than
+  // being pulled artificially further apart than the source text is.
+  {
+    id: 'comment-4',
+    author: 'Sam Whitfield',
+    timestamp: '3 hours ago',
+    text: 'Worth double-checking this still holds once the new online portal goes live — did the SLA change?',
+    section: 'section-4',
+    anchorId: 'anchor-4'
+  },
+  {
+    id: 'comment-5',
+    author: 'Priya Shah',
+    timestamp: '6 days ago',
+    text: 'Should we link to the parcel mapping tool here, or is that covered elsewhere?',
+    section: 'section-4',
+    anchorId: 'anchor-5'
+  },
+  {
+    id: 'comment-6',
+    author: 'Jane Smith',
+    timestamp: '1 day ago',
+    text: 'Can we specify acceptable photo file types and sizes here? Had a few queries about this.',
+    section: 'section-5',
+    anchorId: 'anchor-6'
+  },
+  {
+    id: 'comment-7',
+    author: 'Tom Reeves',
+    timestamp: '4 days ago',
+    text: 'Good to confirm this covers the full agreement term, not just the current scheme year.',
+    section: 'section-5',
+    anchorId: 'anchor-7'
+  },
+  {
+    id: 'comment-8',
+    author: 'Sam Whitfield',
+    timestamp: '6 days ago',
+    text: "Can we get an exact month once the review calendar is published? 'Spring' is a bit vague for internal planning.",
+    section: 'section-6',
+    anchorId: 'anchor-8',
     replies: [
-      {
-        author: 'Jane Smith',
-        timestamp: '4 days ago',
-        text: 'Good idea — I can draft one based on a typical mixed-tenancy holding.'
-      }
+      { author: 'Priya Shah', timestamp: '5 days ago', text: "I'll flag it to the policy team and update this once we have a firm date." }
     ]
   }
 ]
@@ -3444,6 +3509,734 @@ router.get('/v5/manage-guidance/editor-experiment-narrow', (req, res) => {
 
   res.render('versions/v5/manage-guidance/editor-experiment-narrow', {
     documentTitle: guidanceDocument.title,
+    editorSections: buildEditorSections(guidanceDocument),
+    comments,
+    addedCommentAnchorsJson,
+    restoredEditorHtml
+  })
+})
+
+// ===========================================================================
+// Version 6 — a duplicate of Version 5's own main flow, at
+// app/views/versions/v6/. See app/views/index.html, the versions list this
+// belongs to. v5 is now frozen from this point on — the same treatment v1
+// and v2 already had — so v6 exists as where any further work on this flow
+// continues; v5's own routes and views above are untouched by this block and
+// should not be edited going forward.
+//
+// Every route below is the /v6-prefixed mirror of one specific named set of
+// v5 routes — sign-in, start, the whole find-guidance/organic-search/
+// document-overview/saved-document-view cluster, and all-guidance-docs/
+// guidance-document(+edit)(+review), plus editor-experiment — the same set
+// v5 duplicated from v2, not literally everything reachable from "/".
+//
+// Same logic as each v5 handler, rendering from versions/v6/... instead of
+// versions/v5/... and redirecting/linking to other /v6/... paths rather than
+// /v5/... ones — deliberately not sharing ROUTE handler functions with v5,
+// same reasoning as v5 did not share with v2's: a frozen-going-forward v5
+// should not change behaviour just because this new v6 handler is edited
+// later. renderV6AiSearchResults/renderV6ChangeReview below are therefore
+// v6's own copies of v5's renderV5AiSearchResults/renderV5ChangeReview, not
+// the same functions reused.
+//
+// Every pure helper function and data constant the v5 block above defines,
+// though, IS reused as-is here rather than redefined — a second copy would
+// only collide as a duplicate top-level declaration, and none of them
+// contain a path or otherwise differ per version: guidanceDocuments/
+// library/guidedSearches (the data files — explicitly shared per the task
+// this was built from, since v5 no longer changes anyway),
+// VERDICTS/TOTAL_REVIEW_ISSUES/DEFAULT_AI_SEARCH_QUERY/DEFAULT_TOTAL_STEPS/
+// DEFAULT_STEP/RECENTLY_OPENED_LIMIT/REMOVE_CONFIRM_TABS (constants),
+// slugify (a pure function with no paths in it), lookupGuidanceDocumentByTitle/
+// getRemovedEditingIds/getAddedEditingIds/buildManageGuidanceRows/
+// MANAGE_GUIDANCE_PUBLISHED_SAMPLES/lookupAnyManageGuidanceDocument/
+// buildManageGuidanceSearchResults (the "Manage guidance" helpers/sample
+// data), and EDITOR_HEADING_ANCHORS/applyEditorHeadingAnchors/
+// buildEditorSections/EDITOR_EXPERIMENT_COMMENTS/getEditorExperimentReplies/
+// getEditorExperimentDeletedCommentIds/getEditorExperimentAddedComments/
+// buildEditorExperimentComments/buildAddedCommentAnchors (the
+// editor-experiment helpers) — all defined once in the Version 5 block
+// above, called directly from the /v6/ routes below exactly as v5's own
+// routes call them.
+//
+// Not namespaced: session data (recentlyOpened, savedGuidance, verdicts, the
+// AI search query, activeJourney, the "Manage guidance" removed/added-
+// editing id lists, and every editor-experiment reply/delete/added-comment/
+// preview key) is shared between v6 and v5 (and, transitively, the live
+// pages), for the same reason v5 already documents above: the point of a
+// snapshot/duplicate is a frozen (or, here, forked-forward) set of pages and
+// links, not isolated persisted state — so replying to a comment, or
+// removing a document from "Editing", in v6 also shows that change if the
+// same document is opened in v5, and vice versa.
+// ===========================================================================
+
+router.get('/v6/sign-in', (req, res) => {
+  res.render('versions/v6/sign-in')
+})
+
+router.get('/v6/start', (req, res) => {
+  // Starting fresh clears any variant left over from a previous run.
+  delete req.session.data.activeJourney
+  res.render('versions/v6/start')
+})
+
+router.get('/v6/find-guidance', (req, res) => {
+  // No backHref — find-guidance.html shows breadcrumbs instead of a Back
+  // link now (see the template).
+  const recentlyOpenedDocuments = buildFindGuidanceRows(getRecentlyOpened(req))
+  const savedGuidanceDocuments = buildFindGuidanceRows(getSavedGuidance(req))
+
+  res.render('versions/v6/find-guidance', { recentlyOpenedDocuments, savedGuidanceDocuments })
+})
+
+router.get('/v6/find-guidance/new', (req, res) => {
+  res.locals.backHref = '/v6/find-guidance'
+  res.render('versions/v6/find-guidance-new')
+})
+
+router.post('/v6/find-guidance/new', (req, res) => {
+  res.redirect(
+    req.body.searchMethod === 'ai' ? '/v6/find-guidance/ai-search' : '/v6/find-guidance/organic-search'
+  )
+})
+
+router.get('/v6/find-guidance/remove-confirm', (req, res) => {
+  const document = guidanceDocuments.find((candidate) => candidate.id === req.query.id)
+  const tab = REMOVE_CONFIRM_TABS[req.query.tab]
+
+  res.locals.backHref = '/v6/find-guidance'
+  res.render('versions/v6/delete-search-confirm', {
+    documentId: req.query.id,
+    tabParam: req.query.tab,
+    documentTitle: document ? document.title : null,
+    listName: tab ? tab.listName : null,
+    returnHref: tab ? '/v6/find-guidance#' + tab.anchor : '/v6/find-guidance'
+  })
+})
+
+router.post('/v6/find-guidance/remove', (req, res) => {
+  const tab = REMOVE_CONFIRM_TABS[req.body.tab]
+  const list = getListForTab(req, req.body.tab)
+
+  if (list && req.body.id) {
+    const index = list.findIndex((entry) => entry.id === req.body.id)
+    if (index !== -1) list.splice(index, 1)
+  }
+
+  res.redirect(tab ? '/v6/find-guidance#' + tab.anchor : '/v6/find-guidance')
+})
+
+router.get('/v6/find-guidance/document/:id', (req, res) => {
+  const guidanceDocument = guidanceDocuments.find((candidate) => candidate.id === req.params.id)
+  const legacyDocument =
+    savedDocuments.find((candidate) => candidate.id === req.params.id) ||
+    searchResults.find((candidate) => candidate.id === req.params.id)
+
+  res.locals.backHref = '/v6/document-overview/' + req.params.id + (req.query.from ? '?from=' + req.query.from : '')
+
+  const documentName = guidanceDocument
+    ? guidanceDocument.title
+    : legacyDocument ? legacyDocument.name : guidanceDocuments[0].title
+  const version = guidanceDocument ? guidanceDocument.version : guidanceDocuments[0].version
+
+  if (guidanceDocument && !req.query.step) {
+    addRecentlyOpened(req, guidanceDocument.id)
+  }
+
+  if (guidanceDocument && guidanceDocument.steps) {
+    const isNestedSteps = Array.isArray(guidanceDocument.steps[0].parts)
+
+    if (isNestedSteps) {
+      const customParts = []
+      const customSections = guidanceDocument.steps.map((section) => {
+        const firstPartNumber = customParts.length + 1
+        section.parts.forEach((part) => {
+          customParts.push({
+            partNumber: customParts.length + 1,
+            sectionNumber: section.sectionNumber,
+            sectionName: section.sectionName,
+            partName: part.partName,
+            heading: part.heading,
+            body: part.body
+          })
+        })
+        return {
+          sectionNumber: section.sectionNumber,
+          sectionName: section.sectionName,
+          firstPartNumber
+        }
+      })
+
+      const totalSteps = customParts.length
+      const requestedStep = parseInt(req.query.step, 10)
+      const stepNumber = requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
+
+      res.render('versions/v6/saved-document-view', {
+        id: req.params.id,
+        documentName,
+        version,
+        customParts,
+        customSections,
+        currentStep: customParts[stepNumber - 1],
+        stepNumber,
+        totalSteps,
+        documents: genericGuidanceContent
+      })
+      return
+    }
+
+    const totalSteps = guidanceDocument.steps.length
+    const requestedStep = parseInt(req.query.step, 10)
+    const stepNumber = requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
+
+    res.render('versions/v6/saved-document-view', {
+      id: req.params.id,
+      documentName,
+      version,
+      customSteps: guidanceDocument.steps,
+      currentStep: guidanceDocument.steps[stepNumber - 1],
+      stepNumber,
+      totalSteps,
+      documents: genericGuidanceContent
+    })
+    return
+  }
+
+  res.render('versions/v6/saved-document-view', {
+    id: req.params.id,
+    documentName,
+    version,
+    documents: genericGuidanceContent
+  })
+})
+
+router.get('/v6/find-guidance/organic-search', (req, res) => {
+  // No backHref — organic-search.html shows breadcrumbs instead of a Back
+  // link now (see the template).
+  const organicSearchResults = guidanceDocuments.filter((document) => document.showOnOrganicSearch)
+
+  res.render('versions/v6/organic-search', {
+    results: organicSearchResults,
+    // Pre-fills and immediately applies the search box on find-guidance.html
+    // (?q=, a plain GET <form> there — see that template) — the template's
+    // own script reads this same value back off the pre-filled input rather
+    // than this being passed to it directly, so a direct visit with no q
+    // behaves exactly as before (empty string, nothing pre-applied).
+    initialSearchQuery: (req.query.q || '').trim(),
+    resultsJson: JSON.stringify(organicSearchResults.map((document) => ({
+      id: document.id,
+      title: document.title,
+      description: document.description,
+      version: document.version,
+      lastUpdated: document.lastUpdated,
+      published: document.published,
+      category: document.category,
+      scheme: document.scheme,
+      year: document.year
+    })))
+  })
+})
+
+router.get('/v6/document-overview/:id', (req, res) => {
+  const document =
+    guidanceDocuments.find((candidate) => candidate.id === req.params.id) ||
+    guidanceDocuments[0]
+
+  // No backHref — document-overview.html shows breadcrumbs instead of a
+  // Back link now (see the template).
+  res.render('versions/v6/document-overview', {
+    document,
+    from: req.query.from,
+    defaultVersionKey: document.version === 'Version 1' ? 'version1' : 'version2',
+    versionsJson: JSON.stringify(document.versions)
+  })
+})
+
+router.post('/v6/find-guidance/save-to-search', (req, res) => {
+  if (req.body && req.body.id) {
+    addSavedGuidance(req, req.body.id)
+  }
+  res.status(204).end()
+})
+
+router.get('/v6/find-guidance/ai-search', (req, res) => {
+  res.locals.backHref = '/v6/find-guidance/new'
+  res.render('versions/v6/ai-search')
+})
+
+router.post('/v6/find-guidance/ai-search-loading', (req, res) => {
+  req.session.data.aiSearchQuery = (req.body.query || '').trim()
+  res.redirect('/v6/find-guidance/ai-search-loading')
+})
+
+router.get('/v6/find-guidance/ai-search-loading', (req, res) => {
+  res.render('versions/v6/ai-search-loading')
+})
+
+function renderV6AiSearchResults (req, res) {
+  const search = guidedSearches.find((candidate) => candidate.id === req.params.id)
+  const id = search ? search.id : 'new'
+  const totalSteps = search ? search.totalSteps : DEFAULT_TOTAL_STEPS
+  const startingStep = search ? search.resumeStep : DEFAULT_STEP
+
+  const step = Math.min(
+    Math.max(Number(req.params.step) || startingStep, 1),
+    totalSteps
+  )
+
+  res.render('versions/v6/ai-search-results', {
+    id,
+    step,
+    totalSteps,
+    query: req.session.data.aiSearchQuery || DEFAULT_AI_SEARCH_QUERY,
+    backHref:
+      step > 1
+        ? `/v6/find-guidance/ai-search-results/${id}/${step - 1}`
+        : (search ? '/v6/find-guidance' : '/v6/find-guidance/ai-search'),
+    backLinkHref: '/v6/find-guidance',
+    backLinkText: 'Back to your searches',
+    completeHref:
+      step < totalSteps ? `/v6/find-guidance/ai-search-results/${id}/${step + 1}` : '/v6/find-guidance'
+  })
+}
+
+router.get('/v6/find-guidance/ai-search-results', renderV6AiSearchResults)
+router.get('/v6/find-guidance/ai-search-results/:id', renderV6AiSearchResults)
+router.get('/v6/find-guidance/ai-search-results/:id/:step', renderV6AiSearchResults)
+
+router.get('/v6/all-guidance-docs', (req, res) => {
+  // No backHref — all-guidance-docs.html shows breadcrumbs instead of a
+  // Back link now (see the template).
+  const { editingDocuments, awaitingApprovalDocuments } = buildManageGuidanceRows(req)
+
+  res.render('versions/v6/all-guidance-docs', { editingDocuments, awaitingApprovalDocuments })
+})
+
+// The search box on all-guidance-docs.html, directly below "Create or
+// upload guidance" — a plain GET <form>, same reasoning as the one on
+// find-guidance.html: it only ever needs to hand a term off to this page,
+// not filter anything itself, so Enter/Search both just submit it
+// natively. Matches on document name only (a case-insensitive substring
+// match), across both Editing and Awaiting approval — Published is not
+// searched either, since it is not shown on this page any more. An empty
+// q shows no results rather than matching everything.
+router.get('/v6/manage-guidance-search', (req, res) => {
+  const query = (req.query.q || '').trim()
+  const { editingDocuments, awaitingApprovalDocuments } = buildManageGuidanceRows(req)
+  const allDocuments = editingDocuments.concat(awaitingApprovalDocuments)
+
+  const results = query
+    ? allDocuments.filter((document) => document.name.toLowerCase().includes(query.toLowerCase()))
+    : []
+
+  res.locals.backHref = '/v6/all-guidance-docs'
+  res.render('versions/v6/manage-guidance-search', { query, results })
+})
+
+// The overview a Document name link on all-guidance-docs.html/
+// manage-guidance-search.html/search-guidance.html now leads to, instead
+// of straight into Edit or the old Action column's buttons — a stop in
+// between, shaped differently depending on the document's state: an
+// Editing/Awaiting approval document gets the original layout (Publishing
+// checks/Changes requested/Status, "Continue editing" — see the template's
+// {% else %} branch); a Published one gets Version/Version notes/Last
+// updated/Published instead, plus "Start editing" rather than
+// "Continue editing" (the template's {% if status == "Published" %}
+// branch).
+//
+// ?id= is looked up against buildManageGuidanceRows() first (Editing, then
+// Awaiting approval — an id can only be in one of the two, but checking
+// both rather than assuming which saves the caller from having to say),
+// then MANAGE_GUIDANCE_PUBLISHED_SAMPLES if neither matched. A Published
+// match is reshaped to the same { id, name, ... } document shape the
+// other two branches already pass (name rather than
+// MANAGE_GUIDANCE_PUBLISHED_SAMPLES' own title field), so the template's
+// heading/breadcrumb work unchanged regardless of which branch rendered
+// them. An id that matches nothing at all — a stale/mistyped link —
+// redirects back to /v6/all-guidance-docs rather than erroring or showing
+// a broken page.
+router.get('/v6/manage-guidance/document-overview', (req, res) => {
+  const { editingDocuments, awaitingApprovalDocuments } = buildManageGuidanceRows(req)
+
+  const editingMatch = editingDocuments.find((candidate) => candidate.id === req.query.id)
+  const awaitingApprovalMatch = awaitingApprovalDocuments.find((candidate) => candidate.id === req.query.id)
+
+  // No backHref on either render below — the template shows a breadcrumb
+  // back to Manage guidance instead of a Back link.
+  if (editingMatch || awaitingApprovalMatch) {
+    res.render('versions/v6/manage-guidance/document-overview', {
+      document: editingMatch || awaitingApprovalMatch,
+      status: editingMatch ? 'Editing' : 'Awaiting approval'
+    })
+    return
+  }
+
+  const publishedMatch = MANAGE_GUIDANCE_PUBLISHED_SAMPLES.find((candidate) => candidate.id === req.query.id)
+
+  if (!publishedMatch) {
+    res.redirect('/v6/all-guidance-docs')
+    return
+  }
+
+  res.render('versions/v6/manage-guidance/document-overview', {
+    document: {
+      id: publishedMatch.id,
+      name: publishedMatch.title,
+      version: publishedMatch.version,
+      versionNotes: publishedMatch.versionNotes,
+      lastUpdated: publishedMatch.lastUpdated,
+      published: publishedMatch.published
+    },
+    status: 'Published'
+  })
+})
+
+// "Start editing" on document-overview.html's Published branch — adds id
+// to req.session.data.manageGuidanceEditingAddedIds (via
+// getAddedEditingIds, used by buildManageGuidanceRows() every time it
+// builds the Editing list), so the document moves from Published to
+// Editing/Draft for the rest of the session: a later visit to this same
+// document-overview page finds it via editingMatch above instead, and
+// renders the normal Editing layout rather than this one. Straight on to
+// the editor afterwards — the same /v6/editor-experiment?id= destination
+// "Continue editing" already uses — rather than back to this page, since
+// there is nothing further to confirm here. A POST with no id is simply a
+// no-op redirect to the editor with no id of its own, which
+// editor-experiment.html already handles gracefully (its own fixed sample
+// content, same as a direct visit).
+router.post('/v6/manage-guidance/start-editing', (req, res) => {
+  if (req.body.id) {
+    const addedIds = getAddedEditingIds(req)
+    if (addedIds.indexOf(req.body.id) === -1) addedIds.push(req.body.id)
+  }
+
+  res.redirect('/v6/editor-experiment?id=' + encodeURIComponent(req.body.id || ''))
+})
+
+// Confirms removing a row from the Editing tab on all-guidance-docs.html —
+// reached from that table's own "Remove" links (Awaiting approval has no
+// such link), which carry ?id=. Only looks the id up against
+// editingDocuments, not awaitingApprovalDocuments too — unlike
+// /v6/manage-guidance/document-overview above, an Awaiting approval id
+// reaching this page is exactly as unmatched as one that does not exist at
+// all, since there is nothing here for it to remove. A direct visit with
+// no id, or one that matches nothing, leaves documentTitle undefined, so
+// the generic fallback in the template is shown instead of erroring.
+router.get('/v6/manage-guidance/remove-confirm', (req, res) => {
+  const { editingDocuments } = buildManageGuidanceRows(req)
+  const document = editingDocuments.find((candidate) => candidate.id === req.query.id)
+
+  res.locals.backHref = '/v6/all-guidance-docs'
+  res.render('versions/v6/manage-guidance/remove-confirm', {
+    documentId: req.query.id,
+    documentTitle: document ? document.name : null
+  })
+})
+
+// "Yes, remove" on remove-confirm.html above — adds id to
+// req.session.data.manageGuidanceEditingRemovedIds (via
+// getRemovedEditingIds, used by buildManageGuidanceRows() every time it
+// builds the Editing list), so the document is filtered out of the count
+// and table on every subsequent visit this session — then back to
+// all-guidance-docs.html at the Editing tab's own #editing anchor
+// (govuk-frontend's tabs.js selects whichever tab's id matches
+// location.hash on load). A POST with no id is simply a no-op redirect,
+// same graceful handling as find-guidance.html's equivalent route.
+router.post('/v6/manage-guidance/remove', (req, res) => {
+  if (req.body.id) {
+    const removedIds = getRemovedEditingIds(req)
+    if (removedIds.indexOf(req.body.id) === -1) removedIds.push(req.body.id)
+  }
+
+  res.redirect('/v6/all-guidance-docs#editing')
+})
+
+// A fully independent duplicate of /v6/find-guidance/organic-search above
+// — same search/filter/sort mechanics, but its own dataset
+// (buildManageGuidanceSearchResults, not guidanceDocuments filtered by
+// showOnOrganicSearch) and its own State filter alongside
+// Category/Scheme/Year/Version. Deliberately not sharing a template or any
+// route logic with organic-search.html — see
+// app/views/versions/v6/manage-guidance/search-guidance.html — so the two
+// are safe to diverge further without either affecting the other. ?q=
+// pre-fills and immediately applies the search box on all-guidance-docs.html,
+// same mechanism as organic-search.html's own initialSearchQuery.
+router.get('/v6/manage-guidance/search-guidance', (req, res) => {
+  const searchResults = buildManageGuidanceSearchResults(req)
+
+  res.render('versions/v6/manage-guidance/search-guidance', {
+    results: searchResults,
+    initialSearchQuery: (req.query.q || '').trim(),
+    resultsJson: JSON.stringify(searchResults.map((document) => ({
+      id: document.id,
+      title: document.title,
+      description: document.description,
+      version: document.version,
+      lastUpdated: document.lastUpdated,
+      published: document.published,
+      category: document.category,
+      scheme: document.scheme,
+      year: document.year,
+      state: document.state,
+      overviewHref: document.overviewHref
+    })))
+  })
+})
+
+router.get('/v6/guidance-document/:id', (req, res) => {
+  // No backHref — guidance-document.html shows breadcrumbs instead of a
+  // Back link now (see the template).
+  res.render('versions/v6/guidance-document')
+})
+
+router.get('/v6/guidance-document/:id/edit', (req, res) => {
+  const uploaded = library.batch.find((document) => slugify(document.name) === req.params.id)
+
+  res.locals.backHref = '/v6/all-guidance-docs'
+  res.render('versions/v6/guidance-document-edit', {
+    id: req.params.id,
+    documentName: uploaded ? uploaded.name : library.current.name,
+    documentPages: uploaded ? uploaded.pages : library.current.pages
+  })
+})
+
+function renderV6ChangeReview (req, res) {
+  const id = req.params.id
+  const issueNumber = Math.min(
+    Math.max(Number(req.params.issueNumber) || 1, 1),
+    TOTAL_REVIEW_ISSUES
+  )
+
+  res.locals.backHref = `/v6/guidance-document/${id}`
+
+  res.render('versions/v6/change-review', {
+    id,
+    issueNumber,
+    totalIssues: TOTAL_REVIEW_ISSUES,
+    previousIssueHref:
+      issueNumber > 1 ? `/v6/guidance-document/${id}/review/${issueNumber - 1}` : null,
+    nextIssueHref:
+      issueNumber < TOTAL_REVIEW_ISSUES ? `/v6/guidance-document/${id}/review/${issueNumber + 1}` : null
+  })
+}
+
+router.get('/v6/guidance-document/:id/review', renderV6ChangeReview)
+router.get('/v6/guidance-document/:id/review/:issueNumber', renderV6ChangeReview)
+
+// Same standalone design experiment as /v2/editor-experiment above, but
+// driven by whichever document ?id= names (the destination of "Continue
+// editing" on /v6/manage-guidance/document-overview.html) rather than
+// always showing the same fixed "SFI 23 Guidance document" sample —
+// documentTitle/editorSections, built above, replace the page heading and
+// every section in the sidebar/editable content area; the sample Comments/
+// Checks in the Changes panel are unaffected; that data is not
+// document-specific either before or after this change. A direct visit
+// with no ?id=, or one that matches no guidance-documents.js entry, falls
+// back to rendering with neither variable set — see the template, which
+// then shows the exact same fixed sample content it always has.
+router.get('/v6/editor-experiment', (req, res) => {
+  const guidanceDocument = guidanceDocuments.find((candidate) => candidate.id === req.query.id)
+  const comments = buildEditorExperimentComments(req)
+  const addedCommentAnchorsJson = JSON.stringify(buildAddedCommentAnchors(req))
+
+  // Restores in-progress edits when returning via "Back to editor" from the
+  // Preview flow (see /v6/editor-experiment/preview below) — only when the
+  // stored preview's id still matches the document (or fixed sample, both
+  // '') being opened here, so previewing one document and then separately
+  // opening a different one does not leak the first one's draft into it.
+  const preview = req.session.data.editorExperimentPreview
+  const restoredEditorHtml =
+    preview && preview.id === (req.query.id || '') ? preview.html : null
+
+  if (!guidanceDocument) {
+    res.render('versions/v6/editor-experiment', { comments, addedCommentAnchorsJson, restoredEditorHtml })
+    return
+  }
+
+  res.render('versions/v6/editor-experiment', {
+    documentTitle: guidanceDocument.title,
+    guidanceDocumentId: guidanceDocument.id,
+    editorSections: buildEditorSections(guidanceDocument),
+    comments,
+    addedCommentAnchorsJson,
+    restoredEditorHtml
+  })
+})
+
+// Persists the editor's current live content (including unsaved edits and
+// any reordering, since nothing on this page is saved until "Save" — see
+// pageScripts there) into req.session.data.editorExperimentPreview, so
+// /v6/editor-experiment/preview below can render it. "steps" is already
+// split into one entry per Content-nav section by the client
+// (buildCustomStepsFromEditor in pageScripts) — see the GET route below for
+// how that becomes the same customSteps shape a real guidanceDocuments
+// entry's flat steps use. Fire-and-forget from the client, the same way
+// reply/delete/add-comment above are.
+router.post('/v6/editor-experiment/preview', (req, res) => {
+  const steps = Array.isArray(req.body && req.body.steps) ? req.body.steps : []
+
+  req.session.data.editorExperimentPreview = {
+    id: (req.body && req.body.id) || '',
+    title: (req.body && req.body.title) || '',
+    html: (req.body && req.body.html) || '',
+    steps: steps.map((step, index) => ({
+      sectionNumber: index + 1,
+      sectionName: (step && step.sectionName) || '',
+      heading: (step && step.heading) || '',
+      body: Array.isArray(step && step.body) ? step.body : []
+    }))
+  }
+
+  res.status(204).end()
+})
+
+// Renders the REAL saved-document-view.html customSteps stepper — same
+// template/branch a document like cs-ma-land-user-or-land-cover-not-
+// compatible-signoff-2026 already uses, not a separate preview layout —
+// from the in-progress content captured above rather than from any
+// guidance-documents.js entry. stepNumber/currentStep/totalSteps are built
+// exactly the way the flat-steps branch of GET /v6/find-guidance/document/
+// :id above does; stepLinkBase (see saved-document-view.html) keeps the
+// sidebar/Back/Next links generated by that same branch pointed at this
+// route (?step=N here) rather than their normal /v6/find-guidance/document/
+// :id target, since a live editor draft has no such id to navigate back to.
+// A direct visit with nothing captured yet (no preceding POST above) falls
+// back to the editor rather than erroring.
+router.get('/v6/editor-experiment/preview', (req, res) => {
+  const preview = req.session.data.editorExperimentPreview
+
+  if (!preview || !preview.steps.length) {
+    res.redirect('/v6/editor-experiment')
+    return
+  }
+
+  const guidanceDocument = guidanceDocuments.find((candidate) => candidate.id === preview.id)
+  const totalSteps = preview.steps.length
+  const requestedStep = parseInt(req.query.step, 10)
+  const stepNumber = requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
+
+  res.locals.backHref = '/v6/editor-experiment' + (preview.id ? '?id=' + encodeURIComponent(preview.id) : '')
+  res.locals.backLinkText = 'Back to editor'
+
+  res.render('versions/v6/saved-document-view', {
+    id: preview.id,
+    documentName: preview.title || 'SFI 23 Guidance document',
+    version: guidanceDocument ? guidanceDocument.version : 'Version 1',
+    documents: genericGuidanceContent,
+    customSteps: preview.steps,
+    currentStep: preview.steps[stepNumber - 1],
+    stepNumber,
+    totalSteps,
+    isPreview: true,
+    stepLinkBase: '/v6/editor-experiment/preview'
+  })
+})
+
+// Persists a reply added through a thread's "Reply" control on
+// editor-experiment.html into req.session.data.editorExperimentReplies, so
+// it is still there next time that route is rendered (e.g. after "Save" or
+// any other reload) — the client already shows the new reply instantly
+// (see pageScripts there), this is fire-and-forget the same way "Save to
+// search" on document-overview.html is.
+router.post('/v6/editor-experiment/reply', (req, res) => {
+  const commentId = req.body && req.body.commentId
+  const text = req.body && (req.body.text || '').trim()
+
+  if (commentId && text) {
+    const sessionReplies = getEditorExperimentReplies(req)
+    if (!sessionReplies[commentId]) sessionReplies[commentId] = []
+    sessionReplies[commentId].push({ author: 'You', timestamp: 'Just now', text })
+  }
+
+  res.status(204).end()
+})
+
+// Removes a comment (and, for a threaded one, its whole thread — replies
+// are only ever stored keyed by their parent comment's id, so there is
+// nothing else to clean up) via a card's "Delete" control, on either
+// editor-experiment.html or its narrow-container duplicate below — see
+// getEditorExperimentDeletedCommentIds/buildEditorExperimentComments
+// above. Works the same regardless of whether commentId is one of the
+// three seeded comments or one created live via the floating "add
+// comment" icon (getEditorExperimentAddedComments) — either way it is
+// just an id being added to the deleted list, which
+// buildEditorExperimentComments/buildAddedCommentAnchors both already
+// filter against, so a deleted live comment's anchor is not restored on
+// the next reload either. The client already removes the card from the
+// page instantly (see pageScripts), this is fire-and-forget the same way
+// the reply route above is.
+router.post('/v6/editor-experiment/delete', (req, res) => {
+  const commentId = req.body && req.body.commentId
+
+  if (commentId) {
+    const deletedIds = getEditorExperimentDeletedCommentIds(req)
+    if (!deletedIds.includes(commentId)) deletedIds.push(commentId)
+    delete getEditorExperimentReplies(req)[commentId]
+  }
+
+  res.status(204).end()
+})
+
+// Persists a comment created live by selecting editor text and using the
+// floating "add comment" icon (editor-experiment.html's pageScripts) into
+// req.session.data.editorExperimentAddedComments — see
+// getEditorExperimentAddedComments above. text/sectionId/selectedText are
+// all required: sectionId + selectedText are what
+// buildAddedCommentAnchors uses to tell the client which substring to
+// re-wrap in an app-editor-anchor span inside which section on a later
+// page load (restoreAddedCommentAnchors, pageScripts) — a request missing
+// any of them is silently ignored rather than creating a comment with no
+// way to find its own anchor again after a reload. commentId/anchorId are
+// both generated client-side (see pageScripts) and simply trusted here,
+// the same way a reply's author is always just "You" — this is
+// session-local mock data, not real multi-user content.
+router.post('/v6/editor-experiment/add-comment', (req, res) => {
+  const commentId = req.body && req.body.commentId
+  const anchorId = req.body && req.body.anchorId
+  const sectionId = req.body && req.body.sectionId
+  const text = req.body && (req.body.text || '').trim()
+  const selectedText = req.body && req.body.selectedText
+
+  if (commentId && anchorId && sectionId && text && selectedText) {
+    getEditorExperimentAddedComments(req).push({
+      id: commentId,
+      author: 'You',
+      timestamp: 'Just now',
+      text,
+      sectionId,
+      anchorId,
+      selectedText
+    })
+  }
+
+  res.status(204).end()
+})
+
+// Narrow-container comparison duplicate of the route above — same
+// documentTitle/editorSections/comments/addedCommentAnchorsJson data
+// (including editorExperimentReplies/editorExperimentAddedComments
+// persistence — a reply or a newly-added comment made on either page
+// lands in the same session buckets, since none of this is page-specific),
+// rendering versions/v6/manage-guidance/editor-experiment-narrow instead.
+// Not linked from anywhere in the UI; reached only by visiting this URL
+// directly.
+router.get('/v6/manage-guidance/editor-experiment-narrow', (req, res) => {
+  const guidanceDocument = guidanceDocuments.find((candidate) => candidate.id === req.query.id)
+  const comments = buildEditorExperimentComments(req)
+  const addedCommentAnchorsJson = JSON.stringify(buildAddedCommentAnchors(req))
+
+  const preview = req.session.data.editorExperimentPreview
+  const restoredEditorHtml =
+    preview && preview.id === (req.query.id || '') ? preview.html : null
+
+  if (!guidanceDocument) {
+    res.render('versions/v6/manage-guidance/editor-experiment-narrow', { comments, addedCommentAnchorsJson, restoredEditorHtml })
+    return
+  }
+
+  res.render('versions/v6/manage-guidance/editor-experiment-narrow', {
+    documentTitle: guidanceDocument.title,
+    guidanceDocumentId: guidanceDocument.id,
     editorSections: buildEditorSections(guidanceDocument),
     comments,
     addedCommentAnchorsJson,

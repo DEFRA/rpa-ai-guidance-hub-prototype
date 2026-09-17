@@ -1,0 +1,220 @@
+{#
+  All guidance documents in the hub (v6 only) — two tabs instead of four.
+  "Editing" merges what used to be separate "Recently added" and "Ready to
+  review" tabs into one list; "Awaiting approval" is unchanged; "Published"
+  is dropped entirely — no longer shown on this page at all.
+  editingDocuments/awaitingApprovalDocuments (from app/routes.js, see
+  buildManageGuidanceRows there) are each a flat list of rows already
+  carrying their own Publishing checks/Changes requested placeholder
+  counts — nothing about that is computed in this template, so
+  app/views/versions/v6/manage-guidance-search.html can reuse the exact
+  same manageGuidanceTable macro below on a filtered subset of the same
+  rows and render identically.
+
+  Edit/Start Checks (and Ready to review/Awaiting approval's old "Open")
+  are gone from this table entirely — Document name is the way into a row
+  now: a govuk-link (styled the same way find-guidance.html styles its own
+  title links) to /v6/manage-guidance/document-overview?id=, a stop in
+  between that itself links on to "Continue editing" and "Start Checks" —
+  see that route and app/views/versions/v6/manage-guidance/
+  document-overview.html. The only Action column left is Remove, on
+  Editing rows only — see the manageGuidanceTable macro below.
+  govuk-!-width-one-half on Document name leaves Version/Last
+  modified-or-Publishing checks/Changes requested their own share, so it
+  visibly takes more of the row than shrink-wrapping to its own content.
+
+  The search box directly below the intro paragraph — before "Create or
+  upload guidance", not after, matching find-guidance.html's own
+  search-box-first layout — is a plain GET <form> to
+  /v6/manage-guidance/search-guidance — a fully independent, filterable
+  results page (its own template and route, not sharing anything with
+  organic-search.html on the Find guidance side) built from every document
+  in the Editing/Awaiting approval tabs plus a handful of sample Published
+  ones — see app/views/versions/v6/manage-guidance/search-guidance.html
+  and buildManageGuidanceSearchResults() in app/routes.js. This used to
+  point at /v6/manage-guidance-search (the plain table-of-matches page,
+  see that file) — that route/template are untouched and still work if
+  visited directly, just no longer where this box itself leads. Reuses
+  .app-search-bar/.app-search-bar__input as-is, the same
+  GOV.UK-homepage-style layout find-guidance.html's own search box already
+  uses. "Create or upload guidance" sits below it with its own
+  govuk-!-margin-top-6, on top of the button's already-existing default
+  bottom margin, so the two read as two distinct actions rather than one
+  continuous flow — search for something that exists, or start something
+  new.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/tabs/macro.njk" import govukTabs %}
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageName = "All your guidance docs" %}
+
+{#
+  Just the number — same convention as find-guidance.html/organic-search.html,
+  which spell it out in full or leave it bare depending on whether a
+  "Version" column header is doing that job for them; this table has one,
+  so this stays bare.
+#}
+{% set versionTags = {
+  "Version 1": { text: "1", classes: "govuk-tag--green" },
+  "Version 2": { text: "2", classes: "govuk-tag--purple" }
+} %}
+
+{#
+  Every row (both tabs, and manage-guidance-search.html's own results,
+  built from the exact same rows) always carries id/name/version/
+  lastModified/publishingChecks/changesRequested regardless of which tab it
+  is in — /v6/manage-guidance/document-overview.html's own summary list
+  still shows publishingChecks/changesRequested for every document either
+  way. Which of those a *table* actually shows differs by tab now though:
+  Editing shows Last modified plus a Remove action (Document name | Version
+  | Last modified | Action), Awaiting approval shows Publishing checks/
+  Changes requested and no Action column at all (Document name | Version |
+  Publishing checks | Changes requested) — the two tabs diverged enough
+  that one shared column set no longer fits both, so this macro takes
+  which columns to render as its second argument rather than assuming.
+  "lastModified" is only ever passed for the Editing tab in this file (see
+  below), so the Action/Remove column is tied to that branch rather than a
+  column choice of its own. manage-guidance-search.html's results table is
+  unaffected by any of this — searching spans both tabs at once with no
+  tab of its own to key a column (or Remove) choice off, so it keeps the
+  single Last modified, no-Action format it already had.
+
+  Remove (govuk-link, Editing rows only) links to
+  /v6/manage-guidance/remove-confirm?id=, the same
+  "are you sure?" confirmation pattern find-guidance.html's own Remove
+  links already use — see app/views/versions/v6/manage-guidance/
+  remove-confirm.html and the two routes in app/routes.js. A
+  visually-hidden document name after "Remove" gives each link its own
+  accessible name, same as find-guidance.html's Remove links do.
+#}
+{% macro manageGuidanceTable(documents, columns) %}
+  {% set rows = [] %}
+  {% for document in documents %}
+    {% set nameCell %}<a class="govuk-link" href="/v6/manage-guidance/document-overview?id={{ document.id }}">{{ document.name }}</a>{% endset %}
+    {% set versionCell %}{{ govukTag(versionTags[document.version]) }}{% endset %}
+    {% if columns == "checks" %}
+      {% set checksText %}{% if document.publishingChecks == 0 %}No issues{% else %}{{ document.publishingChecks }} issue{{ "s" if document.publishingChecks != 1 }}{% endif %}{% endset %}
+      {% set changesText %}{% if document.changesRequested == 0 %}None{% else %}{{ document.changesRequested }} change{{ "s" if document.changesRequested != 1 }} requested{% endif %}{% endset %}
+      {% set rows = (rows.push([
+        { html: nameCell },
+        { html: versionCell },
+        { text: checksText },
+        { text: changesText }
+      ]), rows) %}
+    {% else %}
+      {% set actionCell %}
+        <a class="govuk-link" href="/v6/manage-guidance/remove-confirm?id={{ document.id }}">
+          Remove<span class="govuk-visually-hidden"> {{ document.name }}</span>
+        </a>
+      {% endset %}
+      {% set rows = (rows.push([
+        { html: nameCell },
+        { html: versionCell },
+        { text: document.lastModified },
+        { html: actionCell }
+      ]), rows) %}
+    {% endif %}
+  {% endfor %}
+
+  {% if columns == "checks" %}
+    {{ govukTable({
+      head: [
+        { text: "Document name", classes: "govuk-!-width-one-half" },
+        { text: "Version" },
+        { text: "Publishing checks" },
+        { text: "Changes requested" }
+      ],
+      rows: rows
+    }) }}
+  {% else %}
+    {{ govukTable({
+      head: [
+        { text: "Document name", classes: "govuk-!-width-one-half" },
+        { text: "Version" },
+        { text: "Last modified" },
+        { html: '<span class="govuk-visually-hidden">Action</span>' }
+      ],
+      rows: rows
+    }) }}
+  {% endif %}
+{% endmacro %}
+
+{% set editingTable %}
+  {{ manageGuidanceTable(editingDocuments, "lastModified") }}
+{% endset %}
+
+{% set awaitingApprovalTable %}
+  {{ manageGuidanceTable(awaitingApprovalDocuments, "checks") }}
+{% endset %}
+
+{% block content %}
+
+{#
+  No breadcrumb — this is the "Manage guidance" tab's own landing page (the
+  top-level nav bar above already shows that tab as current), same choice
+  as find-guidance.html makes for the "Find guidance" side. Pages one level
+  in (manage-guidance/document-overview.html, guidance-document.html) do
+  show a "Manage guidance > ..." trail back to here.
+#}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Manage guidance
+    </h1>
+
+    <p class="govuk-body">
+      View, upload and manage guidance. Track which ones are
+      being edited or awaiting approval.
+    </p>
+
+    <form method="get" action="/v6/manage-guidance/search-guidance">
+      <div class="app-search-bar">
+        <div class="app-search-bar__input">
+          {{ govukInput({
+            id: "manage-guidance-search",
+            name: "q",
+            label: { text: "Search guidance documents", classes: "govuk-visually-hidden" },
+            formGroup: { classes: "govuk-!-margin-bottom-0" }
+          }) }}
+        </div>
+        {{ govukButton({
+          text: "Search",
+          classes: "govuk-!-margin-bottom-0"
+        }) }}
+      </div>
+    </form>
+
+    {{ govukButton({ text: "Create or upload guidance", href: "/create-guidance", classes: "govuk-!-margin-top-6" }) }}
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+
+    {{ govukTabs({
+      idPrefix: "guidance-docs",
+      items: [
+        {
+          label: "Editing (" + editingDocuments.length + ")",
+          id: "editing",
+          panel: { html: editingTable }
+        },
+        {
+          label: "Awaiting approval (" + awaitingApprovalDocuments.length + ")",
+          id: "awaiting-approval",
+          panel: { html: awaitingApprovalTable }
+        }
+      ]
+    }) }}
+
+  </div>
+</div>
+
+{% endblock %}

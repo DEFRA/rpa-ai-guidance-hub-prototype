@@ -1,0 +1,320 @@
+{#
+  A guidance document's overview from the "Manage guidance" side of the hub
+  (v6 only) — what a Document name link on all-guidance-docs.html,
+  manage-guidance-search.html or search-guidance.html now leads to, rather
+  than straight into Edit or a row's old Action buttons. GET
+  /v6/manage-guidance/document-overview?id=, see that route in
+  app/routes.js: document and status ("Editing"/"Awaiting approval"/
+  "Published", worked out there from which list — or, for a sample
+  Published document, MANAGE_GUIDANCE_PUBLISHED_SAMPLES — the id matched)
+  are the only two things this page needs, though which other fields
+  document actually carries differs by status; see the two branches below.
+
+  Styled the same way as the find-guidance side's own document-overview.html
+  — breadcrumb, h1, a govukSummaryList of label/value rows, a button at the
+  bottom — but no description paragraph even on the Published branch,
+  which otherwise mirrors that page's own Version/Version notes/Last
+  updated/Published rows: unlike a guidance-documents.js entry, nothing in
+  app/routes.js's buildManageGuidanceRows()/MANAGE_GUIDANCE_PUBLISHED_SAMPLES
+  has any real description text to show, and inventing filler for it would
+  read as more content than there really is.
+
+  status == "Published" is its own branch, not just a variant of the
+  Editing/Awaiting approval one below — different rows (Version/Version
+  notes/Last updated/Published, not Publishing checks/Changes
+  requested/Status), a govukInsetText warning that starting to edit moves
+  it into Draft, and "Start editing" (a real POST to
+  /v6/manage-guidance/start-editing, not a plain link — it needs to change
+  session state before it goes anywhere) in place of "Continue editing".
+  "Start editing" adds this id to
+  req.session.data.manageGuidanceEditingAddedIds (see that route) and
+  redirects straight into the editor; a later visit to this same page for
+  the same id then hits the editingMatch branch in the route instead (its
+  buildManageGuidanceRows() now includes it), so it renders the ordinary
+  Editing layout below from then on, not this one — "Draft"/"Editing" here
+  are the same thing, just named differently in two different places
+  (search-guidance.html's State filter says "Draft", this page's own
+  Status row says "Editing", matching what it already said before a
+  document could ever arrive here by this route).
+
+  For an Editing/Awaiting approval document (the original, still-default
+  branch): "Continue editing" goes to /v6/editor-experiment?id=document.id
+  — that route (app/routes.js) looks the id up in guidance-documents.js and
+  renders that document's own content into the editor, rather than the
+  fixed "SFI 23 Guidance document" sample it showed before this page
+  existed — and stays the sole button at the bottom of the page. "View
+  issues" (only shown once a simulated check run below completes) goes to
+  the same shared placeholder document (guidance-document.html for sfi-23)
+  every Start Checks/Open action on this page's tables already pointed at
+  before this change — the href is real and functional, it just does not
+  need to differ per document for this prototype.
+
+  The Publishing checks row (.app-manage-guidance-checks-row,
+  _app-manage-guidance.scss) is three states inside one
+  [data-checks-cell], toggled with the [hidden] attribute by the inline
+  script below rather than three separate page states: idle
+  ([data-checks-idle], "Checks not run" + the Start Checks button — what
+  renders by default, and what a fresh page load always shows again, since
+  none of this is persisted anywhere, session or otherwise, matching the
+  brief) → running ([data-checks-running], hidden until Start Checks is
+  clicked — a countdown line and a progress bar that fills over a fixed
+  8-second simulated duration) → complete ([data-checks-complete], hidden
+  until that duration elapses — a results summary and "View issues").
+  data-issue-count on [data-checks-cell] carries document.publishingChecks
+  through to the script, so the simulated result uses this document's own
+  real stored count rather than a fully random one wherever that count
+  exists (every document reachable from all-guidance-docs.html has one;
+  the random fallback in the script is only for a document that somehow
+  does not). The severity breakdown (High/Medium/Low) is split randomly
+  but weighted toward Medium/Low each run, summing back to the total
+  exactly either way.
+
+  .app-progress__track/.app-progress__bar (_app-progress.scss) are reused
+  as-is for the bar itself — the same "div-based bar, CSS transition on
+  width" component the file upload/scan wait screens already use — but
+  with their own transitionDuration set in JS rather than that
+  component's fixed 800ms, and independently of
+  app/assets/javascripts/application.js's own [data-module="app-progress"]
+  behaviour (a different, shared, global script this page does not use or
+  touch — this row has its own distinct data-checks-* attributes so the
+  two can never collide).
+
+  A small "(Checks complete)" note appears next to the Status value once a
+  run finishes ([data-checks-status-note], hidden until then) — Status
+  itself stays "Editing"/"Awaiting approval" throughout; nothing here moves
+  a document between those two lists.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageName = document.name %}
+
+{#
+  Bare number, same convention as all-guidance-docs.html/search-guidance.html
+  — a "Version" row/column header already gives it context.
+#}
+{% set versionTags = {
+  "Version 1": { text: "1", classes: "govuk-tag--green" },
+  "Version 2": { text: "2", classes: "govuk-tag--purple" }
+} %}
+
+{% set checksValue %}
+  <div data-checks-cell data-issue-count="{{ document.publishingChecks }}">
+
+    <div class="app-manage-guidance-checks-row" data-checks-idle>
+      <span>Checks not run</span>
+      {{ govukButton({
+        text: "Start Checks",
+        type: "button",
+        classes: "govuk-button--secondary govuk-!-margin-bottom-0",
+        attributes: { "data-start-checks-inline": true }
+      }) }}
+    </div>
+
+    <div data-checks-running hidden>
+      <p class="govuk-body-s govuk-!-margin-bottom-2" data-checks-countdown role="status">
+        Running checks — estimated time remaining: 8 seconds
+      </p>
+      <div class="app-progress__track">
+        <div class="app-progress__bar" data-checks-bar></div>
+      </div>
+    </div>
+
+    <div data-checks-complete hidden>
+      <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1" data-checks-headline></p>
+      <p class="govuk-body-s govuk-!-margin-bottom-2" data-checks-breakdown></p>
+      {{ govukButton({
+        text: "View issues",
+        href: "/v6/guidance-document/sfi-23",
+        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+      }) }}
+    </div>
+
+  </div>
+{% endset %}
+{% set changesValue %}{% if document.changesRequested == 0 %}None{% else %}{{ document.changesRequested }} change{{ "s" if document.changesRequested != 1 }} requested{% endif %}{% endset %}
+{% set statusValue %}{{ status }} <span class="govuk-body-s" data-checks-status-note hidden>(Checks complete)</span>{% endset %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Manage guidance", href: "/v6/all-guidance-docs" },
+        { text: document.name }
+      ]
+    }) }}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">{{ document.name }}</h1>
+
+    {% if status == "Published" %}
+
+      {% set versionCell %}{{ govukTag(versionTags[document.version]) }}{% endset %}
+      {{ govukSummaryList({
+        rows: [
+          {
+            key: { text: "Version" },
+            value: { html: versionCell }
+          },
+          {
+            key: { text: "Version notes" },
+            value: { text: document.versionNotes }
+          },
+          {
+            key: { text: "Last updated" },
+            value: { text: document.lastUpdated }
+          },
+          {
+            key: { text: "Published" },
+            value: { text: document.published }
+          }
+        ]
+      }) }}
+
+      {{ govukInsetText({
+        text: "Starting to edit this guidance will change its status from Published to Draft, and it will be added to your Editing list on the Manage guidance page."
+      }) }}
+
+      <form method="post" action="/v6/manage-guidance/start-editing">
+        <input type="hidden" name="id" value="{{ document.id }}">
+        <div class="govuk-button-group">
+          {{ govukButton({ text: "Start editing" }) }}
+        </div>
+      </form>
+
+    {% else %}
+
+      {{ govukSummaryList({
+        rows: [
+          {
+            key: { text: "Publishing checks" },
+            value: { html: checksValue }
+          },
+          {
+            key: { text: "Changes requested" },
+            value: { text: changesValue }
+          },
+          {
+            key: { text: "Status" },
+            value: { html: statusValue }
+          }
+        ]
+      }) }}
+
+      <div class="govuk-button-group">
+        {{ govukButton({
+          text: "Continue editing",
+          href: "/v6/editor-experiment?id=" + document.id
+        }) }}
+      </div>
+
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block pageScripts %}
+  <script>
+    (function () {
+      var checksCell = document.querySelector('[data-checks-cell]')
+      if (!checksCell) return
+
+      var idleState = checksCell.querySelector('[data-checks-idle]')
+      var runningState = checksCell.querySelector('[data-checks-running]')
+      var completeState = checksCell.querySelector('[data-checks-complete]')
+      var startButton = checksCell.querySelector('[data-start-checks-inline]')
+      var countdownText = checksCell.querySelector('[data-checks-countdown]')
+      var bar = checksCell.querySelector('[data-checks-bar]')
+      var headline = checksCell.querySelector('[data-checks-headline]')
+      var breakdown = checksCell.querySelector('[data-checks-breakdown]')
+      var statusNote = document.querySelector('[data-checks-status-note]')
+
+      if (!startButton || !idleState || !runningState || !completeState) return
+
+      var DURATION_SECONDS = 8
+
+      // Prefers this document's own real stored count (document.publishingChecks,
+      // carried through as data-issue-count) so the simulated result agrees
+      // with what all-guidance-docs.html/manage-guidance-search.html already
+      // show for it — a random 1-20 only stands in for a document with no
+      // such count at all.
+      function issueCount () {
+        var stored = Number(checksCell.dataset.issueCount)
+        if (!isNaN(stored) && stored >= 0) return stored
+        return Math.floor(Math.random() * 20) + 1
+      }
+
+      // Random but weighted toward Medium/Low each run — a handful of
+      // serious issues among more numerous minor ones reads more like a
+      // real check result than an even three-way split — while still
+      // always summing back to the total exactly.
+      function splitBySeverity (total) {
+        if (total === 0) return { high: 0, medium: 0, low: 0 }
+
+        var high = Math.min(total, Math.round(total * (0.1 + Math.random() * 0.15)))
+        var medium = Math.min(total - high, Math.round(total * (0.3 + Math.random() * 0.2)))
+        var low = total - high - medium
+
+        return { high: high, medium: medium, low: low }
+      }
+
+      function setCountdown (secondsRemaining) {
+        countdownText.textContent = 'Running checks — estimated time remaining: ' + secondsRemaining + ' second' + (secondsRemaining !== 1 ? 's' : '')
+      }
+
+      startButton.addEventListener('click', function () {
+        idleState.hidden = true
+        completeState.hidden = true
+        runningState.hidden = false
+
+        var remaining = DURATION_SECONDS
+        setCountdown(remaining)
+
+        // Reset then re-trigger the width transition, rather than just
+        // setting it to 100% once — starting a second run right after a
+        // previous one otherwise has nothing to animate from, since the
+        // bar is already sitting at 100% from last time.
+        bar.style.transitionDuration = '0s'
+        bar.style.width = '0%'
+        window.setTimeout(function () {
+          bar.style.transitionDuration = DURATION_SECONDS + 's'
+          bar.style.width = '100%'
+        }, 0)
+
+        var tick = window.setInterval(function () {
+          remaining = Math.max(remaining - 1, 0)
+          setCountdown(remaining)
+        }, 1000)
+
+        window.setTimeout(function () {
+          window.clearInterval(tick)
+
+          var total = issueCount()
+          var severity = splitBySeverity(total)
+
+          headline.textContent = total === 0 ? 'No issues found' : total + ' issue' + (total !== 1 ? 's' : '') + ' found'
+          breakdown.textContent = severity.high + ' high priority, ' + severity.medium + ' medium priority, ' + severity.low + ' low priority'
+
+          runningState.hidden = true
+          completeState.hidden = false
+
+          if (statusNote) statusNote.hidden = false
+        }, DURATION_SECONDS * 1000)
+      })
+    })()
+  </script>
+{% endblock %}

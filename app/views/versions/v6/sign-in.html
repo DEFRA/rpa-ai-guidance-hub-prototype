@@ -1,0 +1,56 @@
+{#
+  The entry point for the whole /v2/ prototype, sitting before
+  /v6/find-guidance — same content/markup as the older, unused
+  app/views/designer/sign-in.html (a leftover "step 1" from the
+  pre-index.html journey system), but wired up for the current /v2/ flow
+  specifically: a hardcoded href to /v6/find-guidance rather than that
+  page's journey-driven nextHref, and no backHref set, so no Back link
+  shows — this page sits outside the hub's normal navigation hierarchy, as
+  a pre-entry screen, not a step within it.
+
+  Goes straight to /v6/find-guidance now, not /v6/start — the tab-based
+  "Find guidance"/"Manage guidance" nav (app/routes.js, defra-header.njk)
+  replaced the old hub-with-two-cards landing page as the real entry point
+  into the rest of v6; /v6/start itself is still a real route (nothing here
+  removes it), just no longer linked to from anywhere in the v6 flow.
+#}
+{% extends "layouts/main.html" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set pageName = "Sign in" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <h1 class="govuk-heading-l">Sign in to the {{ serviceName }}</h1>
+
+    <p class="govuk-body">
+      Use the hub to write, review and publish RPA guidance. You need a Defra
+      account to sign in.
+    </p>
+
+    {{ govukButton({
+      text: "Sign in with your Defra account",
+      href: "/v6/find-guidance",
+      isStartButton: true
+    }) }}
+
+    {{ govukInsetText({
+      text: "This prototype does not sign you in. Selecting the button takes you to the landing page."
+    }) }}
+
+    <h2 class="govuk-heading-m">If you cannot sign in</h2>
+
+    <p class="govuk-body">
+      Email the AI Capability and Enablement team at
+      <a class="govuk-link" href="mailto:AICapabilityAndEnablement@defra.gov.uk">AICapabilityAndEnablement@defra.gov.uk</a>.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

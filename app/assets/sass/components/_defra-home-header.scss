@@ -1,0 +1,139 @@
+// v6's "home header" — find-guidance.html and all-guidance-docs.html only
+// (see the isV6Home branch in app/views/partials/defra-header.njk). A
+// taller green banner than the plain .defra-service-navigation bar every
+// other v6 page still uses, carrying a page title inside the green area
+// itself, with the same Find guidance/Manage guidance items positioned
+// below it rather than directly under the white top bar. The tabs
+// themselves use the exact same visual treatment as
+// .defra-service-navigation__link/[aria-current='page'] below — a darker-
+// green highlight box with a white underline for the active one, plain
+// white text for the inactive one — just re-declared under this
+// component's own class names rather than shared, since the two are
+// different markup (this is a <h1>+tabs banner, not a plain nav bar) and
+// not meant to double as a mixin. Bespoke banner-with-title layout — no
+// GOV.UK Design System or Defra pattern for it — flagged here the same way
+// other bespoke interactions elsewhere in this codebase are; the tab
+// styling itself is not a deviation, it is the existing one.
+.defra-home-header {
+  background-color: $defra-green;
+  padding: 32px 0 0;
+}
+
+.defra-home-header__title {
+  margin: 0 0 12px;
+  color: $govuk-white;
+  font-family: $govuk-font-family;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 700;
+  font-size: 36px;
+  line-height: 1.1;
+}
+
+// Same size/line-height as GOV.UK's own govuk-body (mobile 16px/20px,
+// desktop 19px/25px via govuk-font($size: 19)) recoloured white for the
+// green background, rather than reusing that class directly, since
+// govuk-body also carries govuk-text-colour (near-black) which would be
+// unreadable here.
+.defra-home-header__description {
+  max-width: 40em;
+  margin: 0 0 24px;
+  color: $govuk-white;
+  font-family: $govuk-font-family;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+  line-height: 1.25;
+
+  @include govuk-media-query($from: tablet) {
+    font-size: 19px;
+    line-height: 1.3157894737;
+  }
+}
+
+.defra-home-header__tabs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+// Aligns the first tab's own text (and, once active, its highlight box)
+// with the title above and the page content below, same reasoning and
+// value as .defra-service-navigation__item:first-child's own version.
+.defra-home-header__tabs-item:first-child .defra-home-header__tab {
+  margin-left: -16px;
+}
+
+// Same treatment as .defra-service-navigation__link below: no background or
+// border by default (border-bottom stays transparent so hover/focus/active
+// never shift layout by adding one), a darker-green overlay + inset white
+// underline + bold weight only once aria-current='page' is added, i.e. only
+// for the active tab.
+.defra-home-header__tab {
+  display: block;
+  padding: 12px 16px;
+  text-decoration: none;
+  font-family: $govuk-font-family;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+  border-bottom: 4px solid transparent;
+
+  &,
+  &:link,
+  &:visited {
+    color: $govuk-white;
+  }
+
+  &:hover {
+    color: $govuk-white;
+    background-color: rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 -4px 0 0 $defra-light-green;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+    background-color: $govuk-yellow;
+    color: $govuk-black;
+    box-shadow: none;
+  }
+}
+
+.defra-home-header__tab--active {
+  background-color: rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 -4px 0 0 $govuk-white;
+  font-weight: 700;
+
+  &:focus {
+    background-color: $govuk-yellow;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .defra-home-header {
+    padding-top: 20px;
+  }
+
+  .defra-home-header__title {
+    margin-bottom: 8px;
+    font-size: 28px;
+  }
+
+  .defra-home-header__description {
+    margin-bottom: 16px;
+  }
+
+  .defra-home-header__tabs-list {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .defra-home-header__tabs-item:first-child .defra-home-header__tab {
+    margin-left: 0;
+  }
+}
