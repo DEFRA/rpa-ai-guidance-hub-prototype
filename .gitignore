@@ -13,3 +13,8 @@ npm-debug.log
 .env
 migrate.log
 usage-data-config.json
+
+# Real guidance .docx source files (app/lib/guidance-loader.js) — never
+# committed: these are real government guidance content, not fixture/
+# sample data, and can be large (several MB each).
+Documents/

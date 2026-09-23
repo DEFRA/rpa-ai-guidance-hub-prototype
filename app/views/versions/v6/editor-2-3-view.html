@@ -1,83 +1,104 @@
 {#
-  Started as a fully standalone design experiment with no links in — now
-  also the destination of "Continue editing" on
-  /v6/manage-guidance/document-overview.html, at
-  /v6/editor-experiment?id=<a guidance-documents.js id>. documentTitle/
-  editorSections (app/routes.js) replace the page heading and every
-  section here with that document's own title/content when a real id
-  matches; a direct visit with neither set (no ?id=, or one matching
-  nothing) still renders the exact same fixed "SFI 23 Guidance document"
-  sample this page always has — see the {% if editorSections %} branch
-  further down. Comments/Checks in the Changes panel stay hardcoded sample
-  data regardless — not part of this change, per the task it was built
-  from — so this route does not touch session data either way, only
-  guidance-documents.js/generic-guidance-content.js when editorSections is
-  actually being built.
+  Duplicate of /v6/editor-experiment (app/views/versions/v6/editor-experiment.html)
+  reworked into a review layout matching find-guidance.html's own
+  container, per a specific design review request — not linked from
+  anywhere in the UI, reachable directly at /v6/editor-2-3-view (see
+  app/views/v6/editor-2-3-view/routes.js, a plain render with no props,
+  same as app/views/v6/sign-in/routes.js — this page only ever shows its
+  own fixed sample content, never a real document's). editor-experiment.html itself is untouched by this: every class
+  this page does NOT explicitly override below
+  (_app-editor-experiment.scss, its own "2/3 view" section at the bottom)
+  renders identically on both; only the handful this file's own top-level
+  wrapper (.app-editor-2-3-view) scopes overrides under, or replaces
+  outright with brand new classes, differ.
 
-  Layout: Content sidebar (left) and, in the main column, the page title,
-  then the Tiptap-styled toolbar as its own separate card
-  (.tiptap-toolbar — see that class's own comment for why it is not fused
-  to the box beneath it), then a row of two genuinely separate areas side
-  by side — the editor (guidance content only, in its own bordered/
-  rounded box, .app-experiment-box/.app-experiment-editor) and the
-  Changes panel (.app-experiment-changes, no border/background of its own
-  at all, just its "Changes" heading, the Comments/Checks tabs, and each
-  comment's own already-bordered card — see both classes' own comments in
-  _app-editor-experiment.scss). The editor and Changes panel used to be
-  one shared bordered box with an internal divider; they are fully
-  independent containers now, each with its own max-height +
-  overflow-y: auto, so either can be scrolled without moving the other at
-  all. Comments and Checks are two tabs inside the Changes pane —
-  hand-rolled rather than govukTabs(), since that macro pipes each panel
-  through Nunjucks' indent() filter (a known issue with markdown/code-like
-  content elsewhere in this
-  prototype) and these tabs also need a different look (underline, not
-  boxed) to the ones used elsewhere, so reusing that markup pattern would
-  not fit anyway.
+  Layout: govuk-grid-column-full (govuk-width-container caps and centres
+  it, the same as every other page in this project) — no full-width
+  breakout the way editor-experiment.html's own .app-experiment-page uses.
+  Despite this file's own name (kept as-is — renaming it would break the
+  URL this was already reviewed at — see the task history): the container
+  is full width, NOT govuk-grid-column-two-thirds. That was tried first,
+  and does exactly match find-guidance.html's own two-thirds row (its
+  heading + search box, 660px, confirmed via computed width) — but the
+  part of find-guidance.html actually being compared against turned out to
+  be its OTHER row further down (the "Recently opened"/"Saved guidance"
+  tabs and table), which is govuk-grid-column-full (990px), not
+  -two-thirds — a real, substantial difference on that page itself, not a
+  rendering bug. Confirmed with the user directly before widening this
+  page to match that row instead.
 
-  Clicking a comment's header still highlights the *section* it's linked
-  to (data-target-section) and scrolls the editor pane there — unchanged.
-  Every comment now always renders fully expanded (thread and reply box
-  both permanently visible, no collapse/reveal step) — see the Comments
-  panel comment further down for what that replaced.
+  Inside the full-width column: the page title + Rename row, spanning the
+  column's full width (not narrower, unlike editor-experiment.html's own
+  title row, which only ever spans as wide as the toolbar/editor beside
+  its quarter-width sidebar — see .app-experiment-title-wrapper's own
+  override below); then a row split in two — a left-hand panel
+  (.app-editor-2-3-view__panel) merging what editor-experiment.html keeps
+  as two separate areas (its quarter-width Content sidebar, and the
+  Changes panel's own Comments/Checks tabs) into ONE tabbed panel,
+  Content/Comments/Checks — and, to its right, the toolbar + editor
+  content (.app-editor-2-3-view__editor), taking the remaining width.
 
-  The sidebar's active item does track real clicks (setActiveNavItem,
-  pageScripts) — moved to whichever Content nav link was last clicked,
-  not scroll position; see that function's own comment for why clicks
-  rather than a scroll listener.
+  Content/Comments/Checks share the exact same generic tab-switching JS
+  editor-experiment.html's own two tabs (Comments/Checks) already use
+  (tabButtons.forEach in pageScripts, entirely unchanged) — adding a third
+  [data-tab-button]/[data-tab-panel] pair is all a third tab needed, no
+  script changes. Each tab's own inner markup/behaviour (checkboxes/move
+  up-down/rename/delete for Content; reply/delete/threading for Comments;
+  severity tags for Checks) is the exact same markup editor-experiment.html
+  renders, just relocated here — every element driving it
+  (data-nav-actions, data-content-nav-list, data-comments-list,
+  data-tab-panel, and so on) is looked up by attribute/id in pageScripts,
+  not by its position in the page, so relocating it needed no script
+  changes beyond the new Hide/Show toggle below. Content starts as the
+  active tab here (matching the design this was built from), not Comments
+  — editor-experiment.html's own two-tab version starts on Comments, since
+  it has no Content tab to default to instead.
 
-  Full width: govuk-width-container (from the kit's own template.njk, not a
-  file this page can touch) caps and centres everything passed to the
-  content block, so .app-experiment-page uses the standard "break out via
-  100vw" trick to escape it regardless of that container's own max-width,
-  rather than trying to override govuk-width-container itself.
+  "Hide sidebar" (data-hide-left-panel) collapses the whole left panel —
+  one link that toggles its own text between "Hide sidebar"/"Show sidebar"
+  (and its own aria-expanded), rather than a separate "Show" control
+  appearing elsewhere the way
+  editor-experiment.html's own Changes-panel equivalent does
+  (data-hide-changes plus a separately positioned, position: fixed
+  data-show-changes button): this page's simpler single-panel layout
+  doesn't need a second, differently positioned control just to get back
+  in. With the panel taken out of flex flow entirely ([hidden] on
+  .app-editor-2-3-view__panel), .app-editor-2-3-view__editor — the only
+  flex item left in .app-editor-2-3-view__row once that happens — grows to
+  fill the full row width on its own, no separate width class/JS needed on
+  it (the same flex-fallback mechanism .app-experiment-editor's own comment
+  already documents for editor-experiment.html's Changes-panel hide).
 
-  Comment cards in the Changes panel are a normal stacked list, ordered to
-  match their anchor's position in the editor content (document order),
-  not pixel-matched to any scroll position — an earlier version
-  (computeFloatingPositions) tried to line each card's margin-top up with
-  its anchor's exact viewport position, which only worked at all while the
-  editor and Changes panel shared one scroll container; once they became
-  independently scrollable (this update), a card's "correct" pixel
-  position relative to its own anchor stopped being a single fixed value
-  at all — see sortCommentsByAnchorOrder/insertCommentInOrder further down
-  for what replaced it.
+  Static footer bar: editor-experiment.html's own Save/Preview/Send for
+  approval bar is position: fixed to the viewport, with its own white
+  background/border/box-shadow, specifically because it sits alongside two
+  independently max-height-constrained scrolling panes and needs to stay
+  reachable regardless of either one's own scroll position. This page has
+  no such constrained panes — every area here (the left panel, the editor
+  content) is left to its own natural height, the whole page scrolling
+  together as one, the ordinary way an ordinary GOV.UK page does — so the
+  button bar simply sits in normal document flow directly beneath
+  .app-editor-2-3-view__row instead, right-aligned the same way, with no
+  box of its own around it (.app-editor-2-3-view__footer-bar).
 
-  Editable content: [data-editor-content] is still contenteditable, but
-  the toolbar above it is now styled to match Tiptap's own Simple Editor
-  template (see the comment on that markup) and is purely visual — an
-  earlier version wired Bold/Italic/Heading to document.execCommand for
-  real formatting; that's gone entirely now, not kept underneath the new
-  icon set, per the brief this was rebuilt from. The section divs and ids
-  inside the content are unchanged, so the sidebar's plain #section-x
-  anchor links and the comment highlight-and-scroll logic both still work
-  exactly as before; contenteditable only affects typing and selection
-  inside the text, not clicks on the sidebar or the comments list. Each
-  section is
-  preceded by a app-experiment-boundary marker — dragging (or arrow-keying)
-  one now really does move paragraphs between the two sections it sits
-  between, see wireBoundaryHandle further down; "Add new content" appends
-  a brand new, empty one at the very end, after everything else here.
+  Save/Send for approval both actually do something now — previously
+  govukButton's own default type="submit" with no wrapping <form>, so
+  neither had any effect on click. "Save" shows a brief, non-blocking
+  toast ([data-save-toast], "Changes saved") while capturing the editor's
+  current content in the background — see pageScripts' capturePreview/
+  saveButton and _app-editor-experiment.scss's .app-toast. "Send for
+  approval" captures the same content, then navigates to a review step
+  (send-for-approval.njk) rather than changing anything immediately —
+  that page's own button is what actually moves the document from Editing
+  to Awaiting approval (app/data/manage-guidance.js).
+
+  Editable content: [data-editor-content] itself, and everything inside it
+  (the fixed "SFI 23" sample or a real document's editorSections, the
+  section-N ids the Content nav/comment highlighting both still target,
+  app-editor-anchor spans, app-experiment-boundary markers), is an exact,
+  unmodified copy of editor-experiment.html's own — see that file's own top
+  comment for what all of it does; nothing about the editable region itself
+  changed here, only what surrounds it.
 #}
 {% extends "layouts/main.html" %}
 
@@ -193,8 +214,14 @@
 
 {#
   comments (each with a replies array, possibly empty) comes from
-  app/routes.js — GET /v6/editor-experiment — rather than being hardcoded
-  here: replies added below persist in req.session.data.editorExperimentReplies
+  app/views/v6/editor-2-3-view/controller.js — GET /v6/editor-2-3-view —
+  rather than being hardcoded here: replies added below persist in
+  req.session.data.editorExperimentReplies — the same session key
+  editor-experiment.html's own controller reads/writes too (both pages
+  call the same app/data/editor-experiment.js helpers, so a comment/reply
+  added on one page is visible on the other — intentional, the same
+  sharing editor-experiment-narrow.html's own controller already relies
+  on)
   and have to be merged into the base sample thread data server-side
   before this renders. See EDITOR_EXPERIMENT_COMMENTS/
   buildEditorExperimentComments in routes.js. default([]) is just a safety
@@ -218,32 +245,90 @@
 
 {% block content %}
 
-<div class="app-experiment-page">
-
-{#
-  The way back once "Hide" (data-hide-changes, further down) collapses
-  the Comments/Checks column — position: fixed to the viewport, not
-  wherever it happens to fall in document flow, specifically because the
-  editor pane it appears alongside can be arbitrarily tall: a plain button
-  placed after the (now full-width) editor content, as this was first
-  built, could end up far below the fold with nothing on screen to say it
-  still exists. Fixed to the right edge and vertically centred instead, so
-  it's on screen at any scroll position — see pageScripts for the
-  hidden/hidden-toggle wiring, unchanged from that first version, only
-  this element's own positioning is different.
-#}
-<button type="button" class="app-experiment-show-changes" data-show-changes hidden>Show comments</button>
+<div class="app-editor-2-3-view">
 
 {{ govukBreadcrumbs({
   classes: "govuk-!-margin-bottom-4",
   items: editorBreadcrumbItems
 }) }}
 
-<div class="govuk-grid-row app-experiment-row">
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
 
-  <div class="govuk-grid-column-one-quarter app-experiment-sidebar">
+    {#
+      "Guidance title" is a plain govuk-caption-m label sitting above the
+      heading, GDS' own convention for pairing a small muted caption with
+      the heading scale directly below it (govuk-heading-m here — sized
+      down from govuk-heading-l, which read too large for what is really
+      a document title, not a page-level H1 in the usual GDS sense).
+      Static text, not tied to pageName in any way — renaming the
+      document (below) only ever changes the heading itself.
 
-    <h2 class="govuk-heading-m">Content</h2>
+      Renaming here is entirely client-side (beginTitleRename/
+      finishTitleRename, pageScripts) — it updates this page's own H1 (and
+      document.title) the same way a Content nav card's own rename updates
+      just that card's label, and is lost on reload the same way that is
+      too: nothing here is session-persisted, consistent with how every
+      other "rename" on this page already works, not a new exception.
+
+      Deliberately NOT flush with the row's own left edge (where
+      .app-editor-2-3-view__panel-header/"Hide sidebar" below still sits,
+      aligned with the panel it controls) — the title instead lines up
+      with .app-editor-2-3-view__editor specifically, per an explicit
+      request that it sit above the editor/toolbar rather than spanning
+      the whole row above both columns. [data-title-spacer] is an empty
+      flex item mirroring .app-editor-2-3-view__panel's own flex-basis
+      (380px — the two must be kept in sync if that value ever changes) so
+      the title content beside it starts exactly where the editor column
+      does; pageScripts' setLeftPanelHidden toggles this spacer's own
+      [hidden] in step with the real panel, so once "Hide sidebar" is
+      clicked and the editor grows to fill the whole row, the title grows
+      to match it rather than staying offset above empty space.
+    #}
+    <div class="app-editor-2-3-view__title-row">
+      <div class="app-editor-2-3-view__title-spacer" data-title-spacer></div>
+      <div class="app-editor-2-3-view__title-content">
+        <span class="govuk-caption-m">Guidance title</span>
+        <div class="app-experiment-title-wrapper" data-title-wrapper>
+          <h1 class="govuk-heading-m" data-page-title>{{ pageName }}</h1>
+          <button type="button" class="app-experiment-title-rename" data-title-rename>Rename</button>
+        </div>
+      </div>
+    </div>
+
+    {#
+      Sits above .app-editor-2-3-view__row, not inside
+      .app-editor-2-3-view__panel alongside the tabs it controls — the
+      link has to stay reachable once that panel is hidden ([hidden] on a
+      panel hides everything inside it, itself included), the same reason
+      editor-experiment.html's own Changes-panel equivalent uses a
+      completely separate element (data-show-changes) positioned outside
+      the pane it brings back, rather than one link inside it. Left-aligned
+      (.app-editor-2-3-view__panel-header's own justify-content: flex-start,
+      _app-editor-experiment.scss) to the whole
+      (govuk-grid-column-full) container's own left edge — the same edge
+      .app-editor-2-3-view__panel (the leftmost item in the row below)
+      starts at, so this reads as sitting directly above that panel
+      specifically, matching what it actually controls, rather than above
+      the toolbar/editor on the right the way an earlier version of this
+      (right-aligned) had it.
+    #}
+    <div class="app-editor-2-3-view__panel-header">
+      <button type="button" class="govuk-link app-experiment-hide-link" data-hide-left-panel aria-expanded="true">Hide sidebar</button>
+    </div>
+
+    <div class="app-editor-2-3-view__row">
+
+      <div class="app-editor-2-3-view__panel" data-left-panel>
+
+        <div class="app-experiment-tabs" role="tablist">
+          <button type="button" class="app-experiment-tab app-experiment-tab--active" data-tab-button="content" role="tab" aria-selected="true">Content</button>
+          <button type="button" class="app-experiment-tab" data-tab-button="comments" role="tab" aria-selected="false">Comments ({{ comments.length }})</button>
+          <button type="button" class="app-experiment-tab" data-tab-button="checks" role="tab" aria-selected="false">Checks ({{ checks.length }})</button>
+        </div>
+
+        <div data-tab-panel="content">
+
 
     {#
       Each item has its own Move up/Move down buttons — reordering is
@@ -307,7 +392,28 @@
       control before that was made always-open — see the Comments panel
       further down), rather than the input hiding itself again after each
       submission, so adding several new headings in a row doesn't need
-      re-clicking "Add new content" each time.
+      re-clicking "Add new content" each time. Cancel (data-add-content-cancel)
+      is the one way out instead — clears whatever was typed and returns
+      to just the link, the same "hasn't committed to anything yet" escape
+      hatch a draft comment's own Cancel (data-draft-cancel,
+      .app-experiment-draft-cancel, further down) already gives.
+
+      Standard GDS shape for the form itself: a real, visible label (not
+      govuk-visually-hidden — a GDS compliance fix, this being the one
+      input on the page whose label was hidden) above the input, then
+      "Add" and "Cancel" together in a .govuk-button-group beneath it —
+      govuk-frontend's own object for exactly this "primary button +
+      plain link" pairing (see, for the same pattern already used
+      elsewhere in this project, app/views/versions/v3/guide-edit.html) —
+      rather than the input+Add stacked in one row with Cancel floating
+      above it on its own, which is what this used to be. Cancel keeps
+      .app-experiment-draft-cancel's own button-chrome reset (padding/
+      border/background, still needed — .govuk-link alone does not reset
+      those, it assumes an <a>) alongside govuk-link itself, which is what
+      .govuk-button-group .govuk-link's own scoped rule actually keys off
+      to give it the same baseline alignment/font-size/spacing as the
+      button beside it — both classes are doing different jobs here, not
+      duplicating one.
     #}
     <button type="button" class="app-experiment-add-content-link" data-show-add-content>Add new content</button>
 
@@ -316,44 +422,99 @@
         {{ govukInput({
           id: "new-content-heading",
           name: "newContentHeading",
-          label: { text: "New content heading", classes: "govuk-visually-hidden" },
+          label: { text: "New content heading" },
           classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__input",
           attributes: { "data-add-content-input": true }
         }) }}
+      </div>
+      <div class="govuk-button-group">
         {{ govukButton({
           text: "Add",
           type: "button",
-          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__button",
+          classes: "govuk-!-margin-bottom-0",
           attributes: { "data-add-content-button": true }
         }) }}
+        <button type="button" class="govuk-link app-experiment-draft-cancel" data-add-content-cancel>Cancel</button>
       </div>
     </div>
 
-  </div>
 
-  <div class="govuk-grid-column-three-quarters">
+        </div>
 
-    {#
-      "Guidance title" is a plain govuk-caption-m label sitting above the
-      heading, GDS' own convention for pairing a small muted caption with
-      the heading scale directly below it (govuk-heading-m here — sized
-      down from govuk-heading-l, which read too large for what is really
-      a document title, not a page-level H1 in the usual GDS sense).
-      Static text, not tied to pageName in any way — renaming the
-      document (below) only ever changes the heading itself.
+          <div data-tab-panel="comments" hidden>
 
-      Renaming here is entirely client-side (beginTitleRename/
-      finishTitleRename, pageScripts) — it updates this page's own H1 (and
-      document.title) the same way a Content nav card's own rename updates
-      just that card's label, and is lost on reload the same way that is
-      too: nothing here is session-persisted, consistent with how every
-      other "rename" on this page already works, not a new exception.
-    #}
-    <span class="govuk-caption-m">Guidance title</span>
-    <div class="app-experiment-title-wrapper" data-title-wrapper>
-      <h1 class="govuk-heading-m" data-page-title>{{ pageName }}</h1>
-      <button type="button" class="app-experiment-title-rename" data-title-rename>Rename</button>
-    </div>
+            <div class="app-experiment-comments-list" data-comments-list>
+              {% for comment in comments %}
+                <div class="app-experiment-comment"
+                     data-comment-id="{{ comment.id }}"
+                     data-comment-author="{{ comment.author }}"
+                     data-comment-timestamp="{{ comment.timestamp }}"
+                     data-comment-text="{{ comment.text }}"
+                     data-target-section="{{ comment.section }}"
+                     {% if comment.anchorId %}data-anchor-id="{{ comment.anchorId }}"{% endif %}>
+
+                  <div class="app-experiment-comment__header" data-highlight-trigger data-target-section="{{ comment.section }}" tabindex="0" role="button">
+                    <div class="app-experiment-comment__row">
+                      <p class="govuk-body-s app-experiment-comment__meta">{{ comment.author }} &middot; {{ comment.timestamp }}</p>
+                      <button type="button" class="app-experiment-comment__delete" data-delete-comment>Delete</button>
+                    </div>
+                    <p class="govuk-body app-experiment-comment__text">{{ comment.text }}</p>
+                  </div>
+
+                  <div class="app-experiment-comment__thread" data-thread-body>
+                    <ul class="app-experiment-comment__replies" data-replies-list>
+                      {% for reply in comment.replies %}
+                        <li class="app-experiment-comment__reply">
+                          <p class="govuk-body-s app-experiment-comment__meta">{{ reply.author }} &middot; {{ reply.timestamp }}</p>
+                          <p class="govuk-body app-experiment-comment__text">{{ reply.text }}</p>
+                        </li>
+                      {% endfor %}
+                    </ul>
+
+                    <button type="button" class="app-experiment-comment__reply-link" data-show-reply-form>Reply</button>
+
+                    <div class="app-experiment-reply-form" data-reply-form hidden>
+                      <div class="app-experiment-add-comment">
+                        {{ govukInput({
+                          id: "reply-input-" + comment.id,
+                          name: "reply-" + comment.id,
+                          label: { text: "Reply", classes: "govuk-visually-hidden" },
+                          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__input",
+                          attributes: { "data-reply-input": true }
+                        }) }}
+                        {{ govukButton({
+                          text: "Add",
+                          type: "button",
+                          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__button",
+                          attributes: { "data-add-reply": true }
+                        }) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
+          </div>
+
+
+          <div data-tab-panel="checks" hidden>
+
+            <ul class="app-experiment-checks">
+              {% for check in checks %}
+                <li class="app-experiment-check" data-highlight-trigger data-target-section="{{ check.section }}" tabindex="0" role="button">
+                  {{ govukTag(severityTags[check.severity]) }}
+                  <span class="app-experiment-check__text">{{ check.text }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+
+          </div>
+
+
+      </div>
+
+      <div class="app-editor-2-3-view__editor" data-editor-area>
 
     {#
       Styled to match Tiptap's own Simple Editor template
@@ -467,10 +628,10 @@
 
           {% if restoredEditorHtml %}
             {#
-              Set by routes.js only when arriving back from "Back to editor"
-              on saved-document-view.html's preview flow, and only when the
-              stored preview's id still matches this page's own ?id= (or
-              lack of one) — see /v6/editor-experiment there. This is an
+              Set by controller.js only when arriving back from "Back to
+              editor" on saved-document-view.html's preview flow, and only
+              when the stored preview's id still matches this page's own
+              ?id= (or lack of one) — see getPreview there. This is an
               exact copy of [data-editor-content]'s own innerHTML captured
               client-side just before Preview navigated away (its "html"
               field — see the Preview button's click handler in pageScripts
@@ -630,190 +791,36 @@
 
       </div>
 
-      <div class="app-experiment-changes" data-changes-pane>
+    </div>
 
-        <div class="app-experiment-changes__fixed">
-
-          <div class="app-experiment-changes__header">
-            <button type="button" class="govuk-link app-experiment-hide-link" data-hide-changes>Hide</button>
-          </div>
-
-          <h2 class="govuk-heading-m">Changes</h2>
-
-          {#
-            Counts in parentheses — comments.length (top-level comments
-            only: buildEditorExperimentComments, app/routes.js, already
-            merges each thread's replies into its parent rather than
-            listing them separately) and checks.length, both server-
-            rendered here for the initial count so it is correct before
-            any JS runs, same as everything else on this page; updateTabCounts
-            (pageScripts) keeps it live afterwards — after a comment is
-            deleted, or a draft comment becomes a real one — by recounting
-            .app-experiment-comment cards in the DOM rather than tracking a
-            separate number, so it can never drift out of sync with what is
-            actually showing.
-          #}
-          <div class="app-experiment-tabs" role="tablist">
-            <button type="button" class="app-experiment-tab app-experiment-tab--active" data-tab-button="comments" role="tab" aria-selected="true">Comments ({{ comments.length }})</button>
-            <button type="button" class="app-experiment-tab" data-tab-button="checks" role="tab" aria-selected="false">Checks ({{ checks.length }})</button>
-          </div>
-
-        </div>
-
-        <div class="app-experiment-changes__scroll">
-
-          {#
-            A normal, top-to-bottom stacked list, not pixel-matched to
-            each comment's anchor position any more (that whole system —
-            computeFloatingPositions/floatingCards/insertFloatingCard, an
-            earlier version of this page — is gone; see
-            sortCommentsByAnchorOrder/insertCommentInOrder in pageScripts
-            for what replaced it). Sort order is DOCUMENT order of each
-            comment's own anchor span, not render/creation order: on load,
-            sortCommentsByAnchorOrder re-appends every card here to match
-            the order .app-editor-anchor spans actually appear in
-            [data-editor-content] (querySelectorAll always returns
-            elements in that order, which is what this reads rather than
-            trusting comments, app/routes.js, to already be in that
-            order); a comment created live afterwards (the toolbar's own
-            Comment icon, with text selected) is inserted at the matching
-            index via insertCommentInOrder, not appended to the end — one
-            added with nothing selected has no anchor span to match
-            against, so it always lands at the very end instead, the same
-            place insertCommentInOrder's own fallback for an unresolved
-            anchor already puts a card. Ordinary CSS margin (each card's own
-            margin-bottom, .app-editor-experiment.scss) is the only
-            spacing between cards — no artificial gap simulating document
-            distance the way margin-top once did here.
-
-            Every comment's own thread (its replies list) is always shown
-            — there is no collapse/expand step for that — but the reply
-            input + Add button underneath stay hidden behind a "Reply"
-            link until clicked (data-show-reply-form/data-reply-form, see
-            wireCommentReply in pageScripts): an always-open input there
-            was tried and reverted, since it felt too heavy with several
-            comments on screen at once.
-          #}
-          <div data-tab-panel="comments">
-
-            <div class="app-experiment-comments-list" data-comments-list>
-              {% for comment in comments %}
-                <div class="app-experiment-comment"
-                     data-comment-id="{{ comment.id }}"
-                     data-comment-author="{{ comment.author }}"
-                     data-comment-timestamp="{{ comment.timestamp }}"
-                     data-comment-text="{{ comment.text }}"
-                     data-target-section="{{ comment.section }}"
-                     {% if comment.anchorId %}data-anchor-id="{{ comment.anchorId }}"{% endif %}>
-
-                  <div class="app-experiment-comment__header" data-highlight-trigger data-target-section="{{ comment.section }}" tabindex="0" role="button">
-                    <div class="app-experiment-comment__row">
-                      <p class="govuk-body-s app-experiment-comment__meta">{{ comment.author }} &middot; {{ comment.timestamp }}</p>
-                      <button type="button" class="app-experiment-comment__delete" data-delete-comment>Delete</button>
-                    </div>
-                    <p class="govuk-body app-experiment-comment__text">{{ comment.text }}</p>
-                  </div>
-
-                  <div class="app-experiment-comment__thread" data-thread-body>
-                    <ul class="app-experiment-comment__replies" data-replies-list>
-                      {% for reply in comment.replies %}
-                        <li class="app-experiment-comment__reply">
-                          <p class="govuk-body-s app-experiment-comment__meta">{{ reply.author }} &middot; {{ reply.timestamp }}</p>
-                          <p class="govuk-body app-experiment-comment__text">{{ reply.text }}</p>
-                        </li>
-                      {% endfor %}
-                    </ul>
-
-                    <button type="button" class="app-experiment-comment__reply-link" data-show-reply-form>Reply</button>
-
-                    <div class="app-experiment-reply-form" data-reply-form hidden>
-                      <div class="app-experiment-add-comment">
-                        {{ govukInput({
-                          id: "reply-input-" + comment.id,
-                          name: "reply-" + comment.id,
-                          label: { text: "Reply", classes: "govuk-visually-hidden" },
-                          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__input",
-                          attributes: { "data-reply-input": true }
-                        }) }}
-                        {{ govukButton({
-                          text: "Add",
-                          type: "button",
-                          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__button",
-                          attributes: { "data-add-reply": true }
-                        }) }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-
-          </div>
-
-          <div data-tab-panel="checks" hidden>
-
-            <ul class="app-experiment-checks">
-              {% for check in checks %}
-                <li class="app-experiment-check" data-highlight-trigger data-target-section="{{ check.section }}" tabindex="0" role="button">
-                  {{ govukTag(severityTags[check.severity]) }}
-                  <span class="app-experiment-check__text">{{ check.text }}</span>
-                </li>
-              {% endfor %}
-            </ul>
-
-          </div>
-
-        </div>
 
       </div>
 
     </div>
 
-  </div>
+    {#
+      No box of its own around this any more (no background/border the
+      way editor-experiment.html's own position: fixed equivalent needs —
+      see this file's own top comment, "Static footer bar") — just the
+      three buttons, right-aligned, in normal document flow directly
+      beneath the row above.
 
-</div>
-
-{#
-  GOV.UK Design System deviation, flagged rather than treated as
-  compliant: a fixed, full-width footer action bar has no GDS equivalent
-  — the Design System's own pattern keeps Save/Continue-style buttons in
-  normal document flow at the natural end of the page content, not
-  pinned to the viewport. Matches how .app-experiment-show-changes above
-  is already flagged the same way for the same reason (position: fixed).
-
-  Replaces the Save/Preview/Send for approval buttons (and the "Once
-  sent for approval..." hint, no longer needed once they are not the
-  last thing in the sidebar) that used to sit at the bottom of the
-  Content nav column — same three buttons, same order, same
-  secondary/secondary/primary styling (govuk-button--secondary on
-  Save/Preview, default green on Send for approval), just laid out in a
-  row here rather than stacked full-width in a narrow column, since a
-  horizontal bar is what they are in now. data-preview-button is
-  unchanged, so the existing Preview click handler (pageScripts) keeps
-  working with no changes there — it looks this up by attribute, not by
-  where it happens to sit in the page.
-
-  z-index: 4 — one above .app-experiment-show-changes' own z-index: 3 (so
-  this bar always paints on top of that button on the rare occasion the
-  two might overlap, e.g. very narrow/short viewports) and well above
-  .app-experiment-changes__fixed's z-index: 1 (the Changes panel's own
-  sticky "Changes"/tabs header, scoped to that panel's own internal
-  scroll, not the viewport, so it could never itself paint over a
-  position: fixed element regardless of z-index — kept higher anyway so
-  the stacking order stays unambiguous). The editor's own toolbar
-  (.tiptap-toolbar) is not position: sticky/fixed at all any more (see
-  its own comment in _app-editor-experiment.scss), so there is nothing
-  there to conflict with either. Height (see .app-experiment-footer-bar's
-  own comment) is accounted for in .app-experiment-nav/.app-experiment-
-  editor/.app-experiment-changes' own max-height estimates and
-  .app-experiment-page's own padding-bottom, so this bar never overlaps
-  or hides content at the bottom of any of those as the page (or their
-  own internal scroll) reaches its end.
-#}
-<div class="app-experiment-footer-bar">
+      Save/Preview/Send for approval are all type="button" now, not the
+      govukButton default type="submit" they rendered as before — there is
+      no <form> wrapping this bar, so a submit button here did nothing at
+      all on click (no ancestor form to submit). Each now has its own
+      pageScripts click handler instead: "Save" fires the same background
+      capture POST "Preview" already does (see buildCustomStepsFromEditor,
+      pageScripts) but shows a toast instead of navigating away; "Send for
+      approval" does the same capture, then navigates to the review step
+      at /v6/editor-2-3-view/send-for-approval.
+    #}
+    <div class="app-editor-2-3-view__footer-bar">
   {{ govukButton({
     text: "Save",
-    classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+    type: "button",
+    classes: "govuk-button--secondary govuk-!-margin-bottom-0",
+    attributes: { "data-save-button": true }
   }) }}
   {{ govukButton({
     text: "Preview",
@@ -823,13 +830,36 @@
   }) }}
   {{ govukButton({
     text: "Send for approval",
-    classes: "govuk-!-margin-bottom-0"
+    type: "button",
+    classes: "govuk-!-margin-bottom-0",
+    attributes: { "data-send-for-approval-button": true }
   }) }}
+    </div>
+
+  </div>
+</div>
+
+{#
+  A transient, non-blocking confirmation for "Save" — role="status" +
+  aria-live="polite" (not "alert": this should not interrupt whatever a
+  screen reader is already announcing, matching "does not interrupt the
+  user's work" from the task this was built from) announces it once shown,
+  without demanding a response. position: fixed and pointer-events: none
+  (_app-editor-experiment.scss) keep it out of normal document flow and
+  unclickable, so it never shifts layout or blocks the editor underneath
+  it even while visible. Starts fully transparent (opacity: 0, no [hidden]
+  toggle) — pageScripts adds/removes .app-toast--visible, which is also
+  what a no-JS visit silently never gets, so the message just never
+  appears rather than appearing and never going away.
+#}
+<div class="app-toast" data-save-toast role="status" aria-live="polite">
+  Changes saved
 </div>
 
 </div>
 
 {% endblock %}
+
 
 {% block pageScripts %}
   {#
@@ -1356,7 +1386,12 @@
           // click handler (wireTiptapToolbar's sibling, further up)
           // rather than duplicating its active-class/aria-selected/hidden
           // logic here; harmless to call when Comments is already the
-          // active tab.
+          // active tab. setLeftPanelHidden (further down) also un-hides
+          // the whole left panel first, if "Hide" (this page's own
+          // addition, not on editor-experiment.html) was used — the new
+          // pending input would otherwise be switched to the right tab
+          // but still invisible inside a collapsed panel.
+          setLeftPanelHidden(false)
           if (commentsTabButton) commentsTabButton.click()
 
           var draftInput = card.querySelector('[data-draft-input]')
@@ -1504,7 +1539,7 @@
           updateTabCounts()
 
           if (window.fetch) {
-            fetch('/v6/editor-experiment/add-comment', {
+            fetch('/v6/editor-2-3-view/add-comment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1589,7 +1624,7 @@
 
           var commentId = card.dataset.commentId
           if (commentId && window.fetch) {
-            fetch('/v6/editor-experiment/reply', {
+            fetch('/v6/editor-2-3-view/reply', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ commentId: commentId, text: text })
@@ -1603,7 +1638,7 @@
       // nothing else pointing at it to clean up) from the panel instantly,
       // and fires a background POST so it stays gone after a reload — see
       // getEditorExperimentDeletedCommentIds/buildEditorExperimentComments
-      // and POST /v6/editor-experiment/delete in app/routes.js.
+      // and POST /v6/editor-2-3-view/delete in app/views/v6/editor-2-3-view/controller.js.
       // event.stopPropagation() keeps this click from also reaching the
       // header's own highlight listener (Delete sits inside that same
       // header, on the meta row) — deleting a comment should not also
@@ -1620,7 +1655,7 @@
           updateTabCounts()
 
           if (commentId && window.fetch) {
-            fetch('/v6/editor-experiment/delete', {
+            fetch('/v6/editor-2-3-view/delete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ commentId: commentId })
@@ -1771,6 +1806,7 @@
       var addContentForm = document.querySelector('[data-add-content-form]')
       var addContentInput = document.querySelector('[data-add-content-input]')
       var addContentButton = document.querySelector('[data-add-content-button]')
+      var addContentCancelButton = document.querySelector('[data-add-content-cancel]')
       var contentNavList = document.querySelector('[data-content-nav-list]')
       var localSectionCounter = 0
 
@@ -1779,6 +1815,19 @@
           addContentForm.hidden = false
           addContentLink.hidden = true
           if (addContentInput) addContentInput.focus()
+        })
+      }
+
+      // Discards whatever was typed and goes back to just the "Add new
+      // content" link — the reverse of the click handler just above,
+      // rather than a submission of any kind: nothing has been added to
+      // the Content nav list or the editor content yet, so there is
+      // nothing else here to undo.
+      if (addContentCancelButton && addContentForm && addContentLink && addContentInput) {
+        addContentCancelButton.addEventListener('click', function () {
+          addContentInput.value = ''
+          addContentForm.hidden = true
+          addContentLink.hidden = false
         })
       }
 
@@ -2257,32 +2306,57 @@
 
       document.querySelectorAll('[data-boundary-handle]').forEach(wireBoundaryHandle)
 
-      // "Hide" collapses the Changes pane and gives the editor pane the
-      // freed width — see .app-experiment-editor's flex-grow in
-      // _app-editor-experiment.scss for why no extra class is needed on it.
-      // "Show comments" (hidden until Hide is used) is the way back — see
-      // its own comment near the top of the template for why it's
-      // position: fixed rather than a plain in-flow button.
-      var changesPane = document.querySelector('[data-changes-pane]')
-      var hideLink = document.querySelector('[data-hide-changes]')
-      var showButton = document.querySelector('[data-show-changes]')
+      // Shared by the "Hide" link's own click handler just below and by
+      // wireAddCommentButton (above), which calls this with false so a
+      // newly added comment's own pending input is never hidden away
+      // inside a collapsed panel the user has no visible way back into
+      // otherwise.
+      function setLeftPanelHidden (hidden) {
+        var panel = document.querySelector('[data-left-panel]')
+        var titleSpacer = document.querySelector('[data-title-spacer]')
+        var link = document.querySelector('[data-hide-left-panel]')
+        if (!panel || !link) return
 
-      if (changesPane && hideLink && showButton) {
-        hideLink.addEventListener('click', function () {
-          changesPane.hidden = true
-          showButton.hidden = false
-        })
+        panel.hidden = hidden
+        // Keeps the title's own left offset in step with the real panel —
+        // see that spacer's own comment in editor-2-3-view.html — so the
+        // title grows to the row's full width alongside the editor
+        // (rather than staying offset above now-empty space) whenever the
+        // sidebar itself is hidden, and back again when it's shown.
+        if (titleSpacer) titleSpacer.hidden = hidden
+        link.textContent = hidden ? 'Show sidebar' : 'Hide sidebar'
+        link.setAttribute('aria-expanded', String(!hidden))
+      }
 
-        showButton.addEventListener('click', function () {
-          changesPane.hidden = false
-          showButton.hidden = true
+      // "Hide" collapses the whole left panel (Content/Comments/Checks)
+      // and gives .app-editor-2-3-view__editor the freed width — see
+      // .app-editor-2-3-view__panel's own [hidden] rule
+      // (_app-editor-experiment.scss) for why no extra class/JS is needed
+      // on the editor side: with the panel taken out of flex flow
+      // entirely, it becomes the only flex item left in
+      // .app-editor-2-3-view__row, so it grows to fill the row on its
+      // own. One link toggles both its own text (Hide/Show) and
+      // aria-expanded — this page's single merged panel doesn't need a
+      // second, separately positioned control to get back in, the way
+      // editor-experiment.html's own Changes-panel equivalent
+      // (data-hide-changes + a position: fixed data-show-changes button)
+      // does. setLeftPanelHidden is also used by wireAddCommentButton
+      // above, so adding a comment while the panel is hidden still
+      // reveals its new pending input rather than switching to a Comments
+      // tab nobody can see.
+      var leftPanel = document.querySelector('[data-left-panel]')
+      var hidePanelLink = document.querySelector('[data-hide-left-panel]')
+
+      if (leftPanel && hidePanelLink) {
+        hidePanelLink.addEventListener('click', function () {
+          setLeftPanelHidden(!leftPanel.hidden)
         })
       }
 
       // "Preview" — posts the editor's current live content (including any
       // unsaved edits and reordering, since nothing here is persisted until
       // "Save") into req.session.data.editorExperimentPreview, then
-      // navigates to /v6/editor-experiment/preview, which renders the REAL
+      // navigates to /v6/editor-2-3-view/preview, which renders the REAL
       // saved-document-view.html customSteps stepper from that session data
       // (see routes.js) — the same template/branch a document like
       // cs-ma-land-user-or-land-cover-not-compatible-signoff-2026 already
@@ -2366,22 +2440,74 @@
         return steps
       }
 
+      // The same capture POST "Preview"/"Save"/"Send for approval" all
+      // fire — extracted once rather than repeated three times. Returns
+      // the fetch's own promise, so each caller decides what to do once
+      // it settles: Preview and Send for approval both navigate on
+      // success (to the preview stepper and the review step
+      // respectively); Save doesn't wait at all (see its own handler
+      // below), matching the "Save to search" fire-and-forget convention
+      // used elsewhere in this app.
+      function capturePreview () {
+        var params = new URLSearchParams(window.location.search)
+        var heading = document.querySelector('h1.govuk-heading-m')
+
+        return fetch('/v6/editor-2-3-view/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: params.get('id') || '',
+            title: heading ? heading.textContent.trim() : '',
+            html: editorContent.innerHTML,
+            steps: buildCustomStepsFromEditor()
+          })
+        })
+      }
+
       if (previewButton) {
         previewButton.addEventListener('click', function () {
-          var params = new URLSearchParams(window.location.search)
-          var heading = document.querySelector('h1.govuk-heading-m')
+          capturePreview().then(function () {
+            window.location.href = '/v6/editor-2-3-view/preview'
+          })
+        })
+      }
 
-          fetch('/v6/editor-experiment/preview', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: params.get('id') || '',
-              title: heading ? heading.textContent.trim() : '',
-              html: editorContent.innerHTML,
-              steps: buildCustomStepsFromEditor()
-            })
-          }).then(function () {
-            window.location.href = '/v6/editor-experiment/preview'
+      // "Save" — captures the same draft Preview does (so a later Preview/
+      // Send for approval/page reload sees this save too, via the shared
+      // editorExperimentPreview session object — see controller.js), but
+      // shows a toast instead of navigating anywhere. Fire-and-forget: the
+      // toast appears instantly, it does not wait on the network, and
+      // there is nothing useful to do here if the request fails.
+      var saveButton = document.querySelector('[data-save-button]')
+      var saveToast = document.querySelector('[data-save-toast]')
+      var saveToastTimeout
+
+      if (saveButton && saveToast) {
+        saveButton.addEventListener('click', function () {
+          capturePreview().catch(function () {})
+
+          // Restarts the auto-dismiss timer on every click, so clicking
+          // Save again while the toast is still showing keeps it up for
+          // another full 3 seconds rather than letting the first click's
+          // timer cut it short.
+          window.clearTimeout(saveToastTimeout)
+          saveToast.classList.add('app-toast--visible')
+          saveToastTimeout = window.setTimeout(function () {
+            saveToast.classList.remove('app-toast--visible')
+          }, 3000)
+        })
+      }
+
+      // "Send for approval" — captures the same draft, then navigates to
+      // the review step (send-for-approval.njk) rather than changing
+      // anything immediately; that page's own "Send for approval" button
+      // is the real state change (controller.js's postSendForApproval).
+      var sendForApprovalButton = document.querySelector('[data-send-for-approval-button]')
+
+      if (sendForApprovalButton) {
+        sendForApprovalButton.addEventListener('click', function () {
+          capturePreview().then(function () {
+            window.location.href = '/v6/editor-2-3-view/send-for-approval'
           })
         })
       }

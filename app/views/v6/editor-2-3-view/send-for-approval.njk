@@ -1,0 +1,79 @@
+{#
+  The review step "Send for approval" (editor-2-3-view.html's own footer
+  bar) opens before the status actually changes — reached by capturing the
+  editor's current live content first (the same fetch/payload "Save"/
+  "Preview" already use, see that page's pageScripts), then navigating
+  here rather than acting immediately, per the task this page was built
+  from. GET /v6/editor-2-3-view/send-for-approval (controller.js) reads
+  that just-captured req.session.data.editorExperimentPreview for the
+  title and content sections (so this reflects the live, possibly
+  reordered/renamed/unsaved state of the editor, not a stale copy), and
+  guidanceDocuments for the real description where the session being
+  edited has a real id.
+
+  Back link ("Back to editor", res.locals.backHref/backLinkText,
+  controller.js) is the only way back to the editor — no separate button
+  duplicating it further down the page.
+
+  The status badge shown here is deliberately the TARGET state (Awaiting
+  approval, yellow — matching document-overview.html's own statusTags
+  exactly), not the document's current one: this page is a preview of
+  what is about to happen, not a record of what already has.
+
+  Clicking "Send for approval" below POSTs to this same URL
+  (postSendForApproval, controller.js) — the real state change: the id
+  moves from Editing to Awaiting approval for the rest of the session
+  (app/data/manage-guidance.js), then redirects straight to that
+  document's own document-overview page, where the now-updated yellow
+  badge and the loss of any edit option are visible proof the move
+  actually happened, not just a message on this one page.
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Send for approval" %}
+
+{% set sectionsCell %}
+  {% if sections and sections.length %}
+    <ol class="govuk-list govuk-list--number">
+      {% for section in sections %}
+        <li>{{ section.sectionName }}</li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    No content sections
+  {% endif %}
+{% endset %}
+
+{% set statusCell %}{{ govukTag({ text: "Awaiting approval", classes: "govuk-tag--yellow" }) }}{% endset %}
+
+{% block columns %}
+
+  <h1 class="govuk-heading-l">Send for approval</h1>
+
+  <p class="govuk-body">
+    Check the details below before sending this guidance for approval.
+  </p>
+
+  {{ govukSummaryList({
+    rows: [
+      { key: { text: "Guidance title" }, value: { text: documentName } },
+      { key: { text: "Description" }, value: { text: description } },
+      { key: { text: "Content sections" }, value: { html: sectionsCell } },
+      { key: { text: "Status" }, value: { html: statusCell } }
+    ]
+  }) }}
+
+  <p class="govuk-body">
+    Sending this guidance for approval will change its status to Awaiting
+    approval. It will no longer be editable until an owner reviews it.
+  </p>
+
+  <form method="post" action="/v6/editor-2-3-view/send-for-approval">
+    {{ govukButton({ text: "Send for approval" }) }}
+  </form>
+
+{% endblock %}

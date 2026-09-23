@@ -47,8 +47,27 @@
 // never matches either one, same as ticking a scheme that genuinely does not
 // apply to it. year is lastUpdated's year, as a number.
 //
+// guidanceDocuments below (the export every call site actually reads) is
+// this hardcoded list with whatever app/lib/guidance-loader.js finds in
+// Documents/Guidance-data (project root — .gitignore'd, real guidance
+// .docx files are never committed) appended after it — parsed with
+// mammoth, each becoming one entry in the same shape as the hardcoded
+// ones above (see that file's own top comment for the field mapping, and
+// for why loading them is a synchronous, blocking call here despite
+// mammoth's own async-only API). hardcodedGuidanceDocuments itself is
+// untouched by that — every one of the 24 entries below is exactly as it
+// always was; loadGuidanceFromWordDocs() only ever adds to the end of
+// the combined array, never replaces or reorders anything in it, and
+// skips (with a console.error — see that file) any loaded entry whose
+// own slugified id already matches one of these 24, rather than
+// appending a same-id near-duplicate. An empty/missing Guidance-data
+// folder is not an error — see that file — so this falls back to exactly
+// the hardcoded list alone.
+//
 
-const guidanceDocuments = [
+const { loadGuidanceFromWordDocs } = require('../lib/guidance-loader')
+
+const hardcodedGuidanceDocuments = [
   {
     id: 'cs-ma-revenue-options-claim-rule-signoff-2026',
     title: 'CS MA Claim - Revenue Options Claim Rule at Signoff 2026',
@@ -1030,5 +1049,11 @@ const guidanceDocuments = [
     ]
   }
 ]
+
+const guidanceDocuments = hardcodedGuidanceDocuments.concat(
+  loadGuidanceFromWordDocs(
+    hardcodedGuidanceDocuments.map((document) => document.id)
+  )
+)
 
 module.exports = { guidanceDocuments }

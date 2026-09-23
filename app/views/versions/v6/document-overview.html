@@ -24,14 +24,22 @@
 
   "Save to search" reveals the success notification banner above the
   heading (govuk-notification-banner--success, hidden until then), moves
-  focus to it, and turns the button itself into a disabled "Saved" — all
+  focus to it, and turns the control itself into a disabled "Saved" — all
   client-side and instant, see pageScripts below. The banner starts with
   role="alert" and tabindex="-1" already in its markup rather than relying
   on govuk-frontend's own notification-banner.mjs to add these on init,
   since that component only auto-focuses once, when the page first loads —
-  which is before this banner is ever shown. Neither button's behaviour
+  which is before this banner is ever shown. Neither control's behaviour
   changes with the Version dropdown — both stay exactly as they are
-  regardless of which version is selected.
+  regardless of which version is selected. "Save to search" is a real
+  <button> (a JS action, not navigation — there is no href to link to)
+  styled as a plain govuk-link and moved onto its own line below the
+  button group instead of a govukButton inside it, matching the same
+  change made to the manage-guidance side's own document-overview.html
+  (app/views/versions/v6/manage-guidance/document-overview.html) — see
+  .app-link-button (_app-manage-guidance.scss, shared site-wide via the
+  one compiled stylesheet, not duplicated here) for the button-reset-to-
+  look-like-a-link technique.
 
   Alongside that instant client-side feedback, the same click also fires a
   fire-and-forget fetch to POST /v6/find-guidance/save-to-search with
@@ -53,8 +61,10 @@
   shows it as the current tab), so this is as far back as a trail here
   needs to go.
 
-  "Open" carries the same ?from= forward too (app/routes.js reads it back on
-  the way in there, and uses it to send this page's own Back link — normally
+  "View" (labelled "Open" until a later pass renamed it, matching the same
+  rename made across the manage-guidance side's own document-overview.html)
+  carries the same ?from= forward too (app/routes.js reads it back on the
+  way in there, and uses it to send this page's own Back link — normally
   rendered by layouts/main.html from res.locals.backHref — to this exact
   document-overview.html rather than to /v6/find-guidance), so the trail a
   designer arrived on stays intact one page further than this one.
@@ -92,7 +102,7 @@
 {% set publishedCell %}<span data-version-field="published">{{ currentVersion.published }}</span>{% endset %}
 
 {% set breadcrumbItems = [
-  { text: "Find guidance", href: "/v6/find-guidance" }
+  { text: "Home", href: "/v6/unified-guidance" }
 ] %}
 {% if from != "find-guidance" %}
   {% set breadcrumbItems = (breadcrumbItems.push({ text: "Search for guidance", href: "/v6/find-guidance/organic-search" }), breadcrumbItems) %}
@@ -146,16 +156,17 @@
 
     <div class="govuk-button-group">
       {{ govukButton({
-        text: "Open",
+        text: "View",
         href: "/v6/find-guidance/document/" + document.id + ("?from=" + from if from else "")
       }) }}
-      {{ govukButton({
-        text: "Save to search",
-        type: "button",
-        classes: "govuk-button--secondary",
-        attributes: { "data-save-to-search": true, "data-document-id": document.id }
-      }) }}
     </div>
+
+    <p class="govuk-body">
+      <button type="button" class="govuk-link app-link-button"
+              data-save-to-search data-document-id="{{ document.id }}">
+        Save to search
+      </button>
+    </p>
 
   </div>
 </div>
@@ -199,7 +210,6 @@
 
         saveButton.textContent = 'Saved'
         saveButton.disabled = true
-        saveButton.classList.add('govuk-button--disabled')
 
         // Persists this into req.session.data.savedGuidance server-side —
         // see POST /v6/find-guidance/save-to-search in app/routes.js — so it

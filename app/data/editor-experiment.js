@@ -225,14 +225,17 @@ function getEditorExperimentDeletedCommentIds(req) {
   return req.session.data.editorExperimentDeletedCommentIds
 }
 
-// Comments created live by selecting editor text and using the floating
-// "add comment" icon (editor-experiment.html's pageScripts) — kept separate
-// from the fixed EDITOR_EXPERIMENT_COMMENTS array above rather than pushed
-// into it, since that constant is a shared module-level value, not
-// something a request should mutate. Each entry carries enough to both
-// show the comment and restore its anchor span in the editor content on a
-// later page load (anchorId/sectionId/selectedText) — see
-// buildAddedCommentAnchors below and restoreAddedCommentAnchors in
+// Comments created live in editor-experiment.html's pageScripts — kept
+// separate from the fixed EDITOR_EXPERIMENT_COMMENTS array above rather
+// than pushed into it, since that constant is a shared module-level value,
+// not something a request should mutate. v5's own trigger for this is
+// still selecting text directly (frozen, unchanged); v6's is its
+// toolbar's own Comment icon, which can also add a comment with nothing
+// selected — that kind has no anchorId/sectionId/selectedText of its own
+// (see postAddComment, app/views/v6/editor-experiment/controller.js).
+// Where present, anchorId/sectionId/selectedText carry enough to restore
+// the comment's anchor span in the editor content on a later page load —
+// see buildAddedCommentAnchors below and restoreAddedCommentAnchors in
 // pageScripts.
 function getEditorExperimentAddedComments(req) {
   if (!req.session.data.editorExperimentAddedComments) {
@@ -266,14 +269,19 @@ function buildEditorExperimentComments(req) {
   return seeded.concat(added)
 }
 
-// {anchorId, sectionId, selectedText} for every still-live added comment —
-// everything editor-experiment.html's pageScripts needs to re-wrap that
-// exact substring inside section sectionId in a fresh app-editor-anchor
-// span on page load. Deleted comments are already excluded.
+// {anchorId, sectionId, selectedText} for every still-live added comment
+// that has an anchor at all — everything editor-experiment.html's
+// pageScripts needs to re-wrap that exact substring inside section
+// sectionId in a fresh app-editor-anchor span on page load. Deleted
+// comments are already excluded. v6's own toolbar Comment icon can also
+// add a comment with nothing selected (no anchor at all, always sorting
+// to the end of the list — see wireAddCommentButton there) — filtered out
+// here too, alongside deleted ones, since there is nothing to restore for
+// one of those.
 function buildAddedCommentAnchors(req) {
   const deletedIds = getEditorExperimentDeletedCommentIds(req)
   return getEditorExperimentAddedComments(req)
-    .filter((comment) => !deletedIds.includes(comment.id))
+    .filter((comment) => !deletedIds.includes(comment.id) && comment.anchorId)
     .map((comment) => ({
       anchorId: comment.anchorId,
       sectionId: comment.sectionId,

@@ -1,18 +1,18 @@
 {#
   The entry point for the whole /v2/ prototype, sitting before
-  /v6/find-guidance — same content/markup as the older, unused
+  /v6/unified-guidance — same content/markup as the older, unused
   app/views/designer/sign-in.html (a leftover "step 1" from the
   pre-index.html journey system), but wired up for the current /v2/ flow
-  specifically: a hardcoded href to /v6/find-guidance rather than that
+  specifically: a hardcoded href to /v6/unified-guidance rather than that
   page's journey-driven nextHref, and no backHref set, so no Back link
   shows — this page sits outside the hub's normal navigation hierarchy, as
   a pre-entry screen, not a step within it.
 
-  Goes straight to /v6/find-guidance now, not /v6/start — the tab-based
-  "Find guidance"/"Manage guidance" nav (app/routes.js, defra-header.njk)
-  replaced the old hub-with-two-cards landing page as the real entry point
-  into the rest of v6; /v6/start itself is still a real route (nothing here
-  removes it), just no longer linked to from anywhere in the v6 flow.
+  Goes straight to /v6/unified-guidance now, not /v6/start — that page
+  (app/views/v6/unified-guidance/) replaced the old two-page
+  "Find guidance"/"Manage guidance" split as the real entry point into the
+  rest of v6; /v6/start itself is still a real route (nothing here removes
+  it), just no longer linked to from anywhere in the v6 flow.
 #}
 {% extends "layouts/main.html" %}
 
@@ -35,7 +35,7 @@
 
     {{ govukButton({
       text: "Sign in with your Defra account",
-      href: "/v6/find-guidance",
+      href: "/v6/unified-guidance",
       isStartButton: true
     }) }}
 

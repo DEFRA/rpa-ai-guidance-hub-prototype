@@ -1,0 +1,40 @@
+{#
+  v6's own port of v4's upload-guide.html — the entry point into the
+  upload journey. Pick the Word document here, wait through the upload
+  and scan (processing.njk), add the guide's details (metadata.njk/
+  metadata-purpose.njk), check everything (check.njk), convert, then a
+  success page (converted.njk) that lets you view the converted guidance.
+  Nothing is really uploaded in a static prototype: the details live in
+  the session (controller.js), and the converted content is whatever
+  /v6/editor-2-3-view already shows with no id.
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Upload guidance" %}
+
+{% block columns %}
+
+  <h1 class="govuk-heading-l">Upload guidance</h1>
+
+  <p class="govuk-body">
+    Upload a Word document and the hub will convert it into a guide. The
+    file is scanned for viruses before it is accepted.
+  </p>
+
+  <form method="post" action="/v6/create-guidance/upload">
+
+    {{ govukFileUpload({
+      id: "guide-file",
+      name: "guideFile",
+      label: { text: "Word document", classes: "govuk-label--s" },
+      hint: { text: "Must be a .docx file" }
+    }) }}
+
+    {{ govukButton({ text: "Upload" }) }}
+
+  </form>
+
+{% endblock %}

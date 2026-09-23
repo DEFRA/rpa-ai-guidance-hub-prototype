@@ -2,10 +2,12 @@ const { guidanceDocuments } = require('../../../data/guidance-documents')
 const guidanceLists = require('../../../data/guidance-lists')
 const viewModel = require('./view-model')
 
-// No backHref — find-guidance.html shows breadcrumbs instead of a Back
-// link now (see the template).
+// Retired as its own page — /v6/unified-guidance (app/views/v6/unified-guidance/)
+// replaces this and /v6/all-guidance-docs with one screen, four sidebar
+// tabs instead of two peer pages. Kept as a redirect, not removed, so
+// existing bookmarks/links elsewhere in the app still land somewhere real.
 function get(req, res) {
-  res.render('versions/v6/find-guidance', viewModel.fromSession(req))
+  res.redirect('/v6/unified-guidance')
 }
 
 function getNew(req, res) {
@@ -38,10 +40,15 @@ function getRemoveConfirm(req, res) {
 // A real POST — this actually takes the entry out of
 // req.session.data.recentlyOpened or .savedGuidance, so it stays gone on
 // the next visit rather than only looking removed until the session's
-// underlying array is read again. Falls back to just redirecting straight
-// back if id/tab don't resolve to a real list.
+// underlying array is read again. Redirects straight to the matching tab
+// on /v6/unified-guidance — req.body.tab (recently-opened/saved-guidance)
+// is already exactly that page's own ?tab= vocabulary, so no separate
+// anchor-name lookup is needed the way REMOVE_CONFIRM_TABS.anchor used to
+// provide (that mapping only ever existed for saved-guidance's own
+// govukTabs id, "favourited-guidance", never renamed to match its label —
+// a quirk this page's own tab names don't carry forward). Falls back to
+// the default tab if id/tab don't resolve to a real list.
 function postRemove(req, res) {
-  const tab = guidanceLists.REMOVE_CONFIRM_TABS[req.body.tab]
   const list = guidanceLists.getListForTab(req, req.body.tab)
 
   if (list && req.body.id) {
@@ -49,7 +56,9 @@ function postRemove(req, res) {
     if (index !== -1) list.splice(index, 1)
   }
 
-  res.redirect(tab ? '/v6/find-guidance#' + tab.anchor : '/v6/find-guidance')
+  res.redirect(
+    '/v6/unified-guidance?tab=' + (list ? req.body.tab : 'recently-opened')
+  )
 }
 
 // Tracks this as a "recently opened" document — but only on the actual

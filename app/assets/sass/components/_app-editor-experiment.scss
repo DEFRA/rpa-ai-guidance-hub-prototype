@@ -823,6 +823,18 @@
   }
 }
 
+// A comment added via the toolbar's own Comment icon (editor-experiment.html's
+// pageScripts, wrapRangeInAnchor) still needs a real .app-editor-anchor span
+// at the right DOM position — sortCommentsByAnchorOrder reads its position to
+// place the comment card correctly among the others — but should not mark
+// the text it spans the way the rest above does: this modifier overrides the
+// grey background back to nothing, so the span is functionally present but
+// visually inert. No trailing icon to worry about either — this kind of span
+// never gets one (see wrapRangeInAnchor).
+.app-editor-anchor--hidden {
+  background-color: transparent;
+}
+
 // The small comment icon at the end of an anchored line — inline-flex so
 // it sits on the same text baseline as the sentence before it rather than
 // dropping to its own line.
@@ -1432,4 +1444,374 @@
 // the one property being changed.
 .app-experiment-check .govuk-tag {
   border-radius: 6px;
+}
+
+// ===========================================================================
+// /v6/editor-2-3-view (app/views/versions/v6/editor-2-3-view.html) — a
+// duplicate of /v6/editor-experiment reworked into a review layout matching
+// find-guidance.html's own container, per a specific design review request.
+// The container itself is govuk-grid-column-full (990px), not
+// -two-thirds (660px) despite the file's own name — see that file's own top
+// comment for why. editor-experiment.html and every rule above this point
+// are completely untouched by what follows: these rules either scope an
+// override under this page's own top-level .app-editor-2-3-view wrapper (so
+// the shared class's own base rule above — still used unmodified by
+// editor-experiment.html — keeps winning there, unaffected), or introduce a
+// brand new class/attribute value nothing above this point defines at all.
+// ===========================================================================
+
+// Full width, not the narrower calc() editor-experiment.html's own version
+// needs to line its own Rename link up with a toolbar in a different,
+// narrower column beside a sidebar (see that rule's own comment) — this
+// page's title row sits directly in the (govuk-grid-column-full) column
+// with nothing beside it, so it can just be the column's own full width
+// instead.
+//
+// flex-direction: column — Rename always sits directly beneath the title,
+// left-aligned with it, rather than editor-experiment.html's own
+// side-by-side (with wrap) arrangement: there, Rename only ever drops
+// onto its own line when the title itself is long enough to wrap (see the
+// base rule's own comment, and .app-experiment-title-wrapper
+// [data-page-title]'s own margin-zeroing below, both inherited unchanged)
+// — a short title there keeps Rename beside it on the same line. This
+// page always wants the stacked look regardless of title length, so the
+// main axis is forced vertical outright rather than relying on wrapping.
+// justify-content: flex-start (overriding the base rule's own
+// space-between, which has nothing left to do once there's only one
+// column of items with no extra cross-axis space to distribute) is
+// mostly for clarity, not correctness — gap (inherited, unchanged, 5px)
+// is what actually sets the space between the title and Rename, same
+// value already established as correct for the stacked case, unaffected
+// by this rule.
+.app-editor-2-3-view .app-experiment-title-wrapper {
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+// The title's own row, mirroring .app-editor-2-3-view__row's two-column
+// split below it so the title lines up with .app-editor-2-3-view__editor
+// specifically, not the whole (govuk-grid-column-full) container's left
+// edge — see editor-2-3-view.html's own comment on
+// [data-title-spacer]/[data-title-content] for why. gap matches that row's
+// own value so the two rows' column boundaries land at the same x
+// position.
+.app-editor-2-3-view__title-row {
+  display: flex;
+  gap: govuk-spacing(4);
+}
+
+// Empty — purely reserves the same width .app-editor-2-3-view__panel
+// takes below, so .app-editor-2-3-view__title-content starts where
+// .app-editor-2-3-view__editor does. flex-basis must stay in sync with
+// that class's own 380px if it's ever changed. No [hidden] override
+// needed: like .app-editor-2-3-view__panel itself, this sets no display
+// property of its own to out-specificity the browser's default [hidden] {
+// display: none }, so pageScripts' setLeftPanelHidden toggling this
+// element's own hidden attribute (in step with the real panel) already
+// works with nothing extra.
+.app-editor-2-3-view__title-spacer {
+  flex: 0 1 380px;
+  min-width: 0;
+}
+
+.app-editor-2-3-view__title-content {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+// The row splitting the left-hand tabbed panel from the editor —
+// align-items: flex-start (not the flex default, stretch) so each side
+// keeps its own natural height rather than the shorter one being stretched
+// to match the taller: neither side has an independent max-height/scroll of
+// its own on this page any more (see the .app-experiment-editor/
+// .app-experiment-nav overrides below) for a stretched, empty-looking
+// bordered box to be preferable to. gap matches .app-experiment-box's own
+// (govuk-spacing(4)) — the closest existing precedent for a two-column
+// split like this one.
+.app-editor-2-3-view__row {
+  display: flex;
+  align-items: flex-start;
+  gap: govuk-spacing(4);
+  margin-bottom: govuk-spacing(6);
+}
+
+// flex-basis 320px, not a flex-grow ratio against
+// .app-editor-2-3-view__editor's own flex: 1 1 0 below (which is what
+// actually takes every pixel this panel doesn't, so widening this value
+// automatically narrows that side by the same amount within the row's own
+// fixed total width — no separate rule needed there). Chosen against the
+// tabs bar's own true natural width at whichever tab is currently BOLD
+// (.app-experiment-tab--active, the active one — any of the three can be)
+// — not each label's own regular-weight width, which is narrower and was
+// what an earlier value here (320px) was actually measured against; bold
+// text is wider than regular at the same font-size, so that measurement
+// silently assumed a state no tab is ever actually rendered in on its
+// own. Measured directly, not estimated: cloning each [data-tab-button]
+// off-screen, once with .app-experiment-tab--active added (forcing bold)
+// and once without, both with white-space: nowrap, and reading each
+// clone's own real rendered width gives Content 60px (bold; regular is
+// narrower, at 56px, since it's the default-active tab) / Comments (0)
+// 107px bold (101px regular) / Checks (5) 81px bold (77px regular) — the
+// worst case is whichever ONE of the three is bold at a time with the
+// other two at their own regular width, not all three bold at once (only
+// one tab is ever active): Content bold + the other two regular = 239px,
+// Comments (0) bold + the other two regular = 240px, Checks (5) bold + the
+// other two regular = 238px — 240px is the real floor, not 279px as
+// before. Plus 2×20px gaps (280px) plus .app-editor-2-3-view__panel
+// .app-experiment-tabs' own horizontal padding (govuk-spacing(4) each
+// side, 40px total — also not accounted for in the 320px this replaces,
+// which is what actually left it under a real margin at all once "bold"
+// was the correct comparison rather than "regular": 320 - 280 content
+// width needed - 40 padding = 0px real margin, not the ~41px that
+// comment claimed) = 320px bare minimum. 380px leaves a real ~60px margin
+// instead. flex-shrink: 1 (not 0) still lets this narrow further than
+// 380px on a genuinely tight viewport rather than forcing
+// .app-editor-2-3-view__row itself wider than its own
+// (govuk-grid-column-full) container — tab labels wrapping again there is
+// an accepted trade-off of that (white-space: nowrap on
+// .app-experiment-tab, scoped below, only stops labels wrapping onto
+// their own second line; it cannot stop the tabs bar itself narrowing
+// below its own content's needs), not a regression of this fix, which is
+// only ever guaranteed at this rule's own flex-basis width and above. No
+// [hidden] override needed here the way several rules above need one for
+// their own [hidden] elements: this class sets no display property of its
+// own to out-specificity the browser's default [hidden] { display: none
+// }, so "Hide sidebar" (pageScripts) setting this element's own hidden
+// attribute already works with nothing extra — see
+// .app-editor-2-3-view__editor's own comment below for what then happens
+// to the space this frees up.
+.app-editor-2-3-view__panel {
+  flex: 0 1 380px;
+  min-width: 0;
+}
+
+// Guarantees a tab label never wraps onto its own second line regardless
+// of which one is currently bold (.app-experiment-tab--active) — belt and
+// braces alongside .app-editor-2-3-view__panel's own flex-basis above
+// (sized with real margin against the bold-weight case specifically, see
+// that rule's own comment): that sizing is what actually keeps the tabs
+// bar from overflowing its own container in the first place, this is what
+// stops an individual label from wrapping if it ever does anyway (e.g. a
+// future label change, or a narrower viewport once flex-shrink kicks in
+// on the panel above). Scoped to .app-editor-2-3-view, not the bare
+// .app-experiment-tab class, since that class is also used unscoped by
+// editor-experiment.html's own two-tab Comments/Checks bar, which this
+// page must not affect.
+.app-editor-2-3-view .app-experiment-tab {
+  white-space: nowrap;
+}
+
+// Left-aligns "Hide"/"Show" (pageScripts toggles this link's own text and
+// aria-expanded, not a separate element the way editor-experiment.html's
+// Changes-panel equivalent uses) directly above .app-editor-2-3-view__row
+// — specifically above .app-editor-2-3-view__panel, the leftmost item in
+// that row, matching what this link actually controls (the left panel,
+// not the editor on the right — it was right-aligned, above the toolbar,
+// before this). See this element's own comment in editor-2-3-view.html
+// for why it sits outside .app-editor-2-3-view__panel entirely, as its
+// own row above it, rather than inside it alongside the tabs it controls.
+// No horizontal padding/explicit width of its own: flex-start alignment
+// on this full-width row is what actually lines it up with the panel
+// below (both start at the row's own left edge), rather than matching the
+// panel's own flex-basis width directly.
+// margin-bottom govuk-spacing(4) (up from govuk-spacing(2), the value
+// editor-experiment.html's own equivalent — .app-experiment-changes__header
+// — still uses unmodified): that smaller value read as "Hide
+// sidebar"/tabs squashed together with barely any gap once this became
+// its own full row above .app-editor-2-3-view__row (rather than sitting
+// inside .app-experiment-changes__fixed alongside a "Changes" heading
+// giving it more visual weight of its own, the way editor-experiment.html's
+// version does), not a case for reusing that same figure here.
+.app-editor-2-3-view__panel-header {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: govuk-spacing(4);
+}
+
+// Scoped to this panel specifically, not the bare .app-experiment-tabs
+// class (also used, unscoped, by editor-experiment.html's own Changes
+// panel, which gets its own matching horizontal padding a different way —
+// from .app-experiment-changes__fixed, its own wrapper — not from this
+// rule). Same reasoning/value as .app-editor-2-3-view__panel-header above.
+.app-editor-2-3-view__panel .app-experiment-tabs {
+  padding: 0 govuk-spacing(4);
+}
+
+// The Content tab's own panel — Content nav's checkboxes/move-up-down/
+// rename/delete/"Add new content" are all exactly the same markup and
+// pageScripts wiring editor-experiment.html's own quarter-width sidebar
+// uses, just relocated here, so none of it needs styling of its own; this
+// rule only gives the panel itself the same govuk-spacing(4) padding
+// [data-tab-panel="checks"] already has (above, pre-existing, unscoped —
+// applies here for free) and .app-experiment-comments-list gives itself
+// (also pre-existing, unscoped), so all three tabs' own content lines up
+// with the tabs/Hide link above them. &[hidden] is required, not
+// defensive, for the same reason every other &[hidden] rule in this file
+// is: display: flex here and the browser's own default [hidden] {
+// display: none } are equal-specificity single-selector rules, and author
+// styles always win that tie regardless of origin.
+[data-tab-panel="content"] {
+  display: flex;
+  flex-direction: column;
+  padding: govuk-spacing(4);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+// flex: 1 1 0 — takes every pixel .app-editor-2-3-view__row has left once
+// .app-editor-2-3-view__panel's own flex-basis (280px, see that class's own
+// comment) is subtracted, rather than a ratio of its own against that
+// panel's width. Once that panel is hidden ([hidden] takes it out of flex
+// flow entirely), this becomes the only flex item left in
+// .app-editor-2-3-view__row, so it grows to fill the row's full width on
+// its own — the same flex-fallback mechanism .app-experiment-editor's own
+// comment above already documents for editor-experiment.html's
+// Changes-panel hide, no separate width class/JS needed here either.
+.app-editor-2-3-view__editor {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+}
+
+// Full width of .app-editor-2-3-view__editor, not the narrower calc()
+// editor-experiment.html's own toolbar needs to reconstruct
+// .app-experiment-editor's own flex math against a Changes panel beside it
+// (see that rule's own comment) — on this page .app-experiment-box (below)
+// has no such sibling any more, just this toolbar's own parent to match, so
+// 100% is already the exact right answer with no calc() needed.
+.app-editor-2-3-view__editor .tiptap-toolbar {
+  width: 100%;
+}
+
+// Fixed height + its own internal scroll, close to the full viewport
+// height — the same pattern editor-experiment.html's own
+// .app-experiment-editor uses (base rule above: max-height/overflow-y/
+// resize), just with the subtracted figure recalculated for this page's
+// own, different vertical stack above it. editor-experiment.html's own
+// calc(100vh - 390px) is derived against ITS header/title/toolbar stack
+// PLUS ~70px reserved for its own position: fixed footer bar overlapping
+// the bottom of the viewport (see that bar's own comment) — this page's
+// footer is in normal document flow instead (see
+// .app-editor-2-3-view__footer-bar's own comment), so nothing needs
+// reserving there, but its own stack above the editor is taller
+// (breadcrumb, the title + Rename row now stacked rather than side by
+// side, a "Hide" row, the tabs row, all before the toolbar). 470px is
+// that real measured stack height (.app-experiment-editor's own
+// getBoundingClientRect().top, confirmed unchanged across several
+// viewport heights, since everything above it is fixed content, not
+// viewport-relative) plus a small ~22px margin so the box's own bottom
+// edge doesn't sit flush against the viewport's, not a re-estimate the
+// way 390px above was originally derived (add up type-scale sizes) —
+// flagged as measured, not guessed, but still worth re-checking if
+// anything above the editor on this page changes height again later.
+// min-height (inherited, unchanged) still applies, keeping the same
+// sensible floor for a short document editor-experiment.html's own has.
+.app-editor-2-3-view .app-experiment-editor {
+  max-height: calc(100vh - 470px);
+}
+
+// Same reasoning as .app-experiment-editor's own override just above — no
+// independent scroll of its own on this page, the Content tab's own list
+// just grows to whatever height it needs, the whole page scrolling as one.
+// min-height (inherited, unchanged) still applies.
+.app-editor-2-3-view .app-experiment-nav {
+  max-height: none;
+  overflow-y: visible;
+}
+
+// No box of its own around the buttons (no background/border/box-shadow —
+// see this class's own comment in editor-2-3-view.html for why: this page
+// has no fixed-viewport bar to visually separate from scrolling content
+// behind it, since nothing here is position: fixed any more) — just a
+// right-aligned row in normal flow beneath .app-editor-2-3-view__row.
+.app-editor-2-3-view__footer-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: govuk-spacing(3);
+  margin-top: govuk-spacing(6);
+}
+
+// .app-experiment-add-comment now wraps the input only (the "Add" button
+// moved into its own .govuk-button-group alongside "Cancel" below,
+// editor-2-3-view.html — the standard GDS button + cancel link layout,
+// not this stacked-input-plus-button one any more) — column/stretch here
+// just keeps the input's own form-group full width the same way
+// .app-experiment-comment .app-experiment-add-comment's own override
+// above does for a draft comment/reply's input, not for pairing it with
+// a button beneath it any more. Scoped to .app-editor-2-3-view
+// specifically so editor-experiment.html's own "Add new content" form
+// (.app-experiment-add-content-form, reused unscoped by both pages)
+// keeps its original side-by-side input+button layout, untouched.
+.app-editor-2-3-view .app-experiment-add-content-form .app-experiment-add-comment {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.app-editor-2-3-view .app-experiment-add-content-form .app-experiment-add-comment__input {
+  flex: 0 0 auto;
+}
+
+// [data-tab-panel="content"]'s own display: flex; flex-direction: column
+// (above) stretches every direct child to the panel's full width by
+// default (align-items: stretch, the flex default, never overridden) —
+// harmless for .app-experiment-nav (a block-level <ul>, already full
+// width regardless) but not for this <button>, which would otherwise
+// still only be as wide as its own text. Stretched to full width, a
+// <button>'s own default text-align: center then reads as "indented",
+// its text sitting in the middle of that width rather than flush against
+// the Content nav cards' own left edge just above it. align-self:
+// flex-start reverts it to its natural, content-sized width instead — the
+// same fix .app-experiment-comment .app-experiment-add-comment__button
+// above already uses for an identical stretch-avoidance case. Scoped to
+// .app-editor-2-3-view since .app-experiment-add-content-link is also
+// used, unscoped, by editor-experiment.html's own sidebar, which has no
+// such flex-column parent to begin with and was rendering correctly
+// already.
+.app-editor-2-3-view .app-experiment-add-content-link {
+  align-self: flex-start;
+}
+
+// "Changes saved" (editor-2-3-view.html, [data-save-toast]) — a transient
+// confirmation for the Save button, not a GOV.UK/Defra pattern this
+// project already has one for (govukNotificationBanner, used elsewhere
+// for e.g. "Saved to search" on document-overview.html, is a persistent,
+// in-flow banner meant to stay until dismissed or navigated away from —
+// the opposite of what "appears briefly and disappears automatically"
+// calls for here), so this is hand-rolled and flagged as such.
+//
+// position: fixed takes it out of normal document flow entirely (so it
+// never shifts layout, whether shown or not) and pointer-events: none
+// keeps it from ever intercepting a click meant for whatever is
+// underneath it — both together are what "does not interrupt the user's
+// work" actually means here, not just the auto-dismiss timing.
+// Opacity/transform, not the [hidden] attribute: pageScripts toggles
+// .app-toast--visible on a timer, and a smooth fade reads as much less
+// jarring appearing/disappearing over an editor someone is actively
+// working in than an instant show/hide would.
+.app-toast {
+  position: fixed;
+  right: govuk-spacing(4);
+  bottom: govuk-spacing(4);
+  z-index: 100;
+  padding: govuk-spacing(3) govuk-spacing(4);
+  background-color: $govuk-text-colour;
+  color: $govuk-white;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: translateY(govuk-spacing(2));
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  pointer-events: none;
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

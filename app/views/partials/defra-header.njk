@@ -9,9 +9,10 @@
   carries the accessible name instead.
 
   Set `navigation` in app/views/legacy/routes.js to show the service
-  navigation bar — also set `isV6Home` there (v6's find-guidance.html/
-  all-guidance-docs.html only) for the taller green "home header" variant of
-  it instead; every other v6 page shows neither, using a govukBreadcrumbs
+  navigation bar — also set `isV6Home` there (v6's own /v6/unified-guidance
+  only) for the taller green "home header" variant instead, title +
+  description with no tabs list (that page's own left sidebar is its
+  navigation); every other v6 page shows neither, using a govukBreadcrumbs
   component in its own content instead.
 #}
 <header class="defra-header" role="banner">
@@ -48,33 +49,33 @@
     </div>
   </div>
 </header>
-{% if isV6Home and navigation and navigation.length %}
+{% if isV6Home %}
   {#
-    v6's own "home" pages only (find-guidance.html, all-guidance-docs.html —
-    isV6Home set in app/views/legacy/routes.js) — a taller green banner replacing the
-    plain service-navigation bar every other page still uses below, with a
-    page title and a short description of what each tab is for inside the
-    green area itself, and the same Find guidance/Manage guidance items as
-    bordered, more prominent tabs rather than small underlined links.
-    Bespoke, no GOV.UK Design System or Defra pattern equivalent for this —
-    flagged rather than built silently. Reuses the exact same `navigation`
-    array (text/href/current) the plain bar below renders from, just styled
-    and marked up differently, so both stay driven by the one
-    V6_NAVIGATION list in app/routes.js.
+    /v6/unified-guidance only (isV6Home set in app/views/legacy/routes.js) —
+    a taller green banner replacing the plain service-navigation bar every
+    other page still uses below, with a page title and short description
+    inside the green area itself. Bespoke, no GOV.UK Design System or Defra
+    pattern equivalent for this — flagged rather than built silently. No
+    `navigation` is set for this page, so the tabs list below never renders
+    — that page's own left sidebar (app/views/v6/unified-guidance/page.njk)
+    is its navigation now, not a tabs list in the header; the guard is kept
+    in case a future isV6Home page wants both.
   #}
   <div class="defra-home-header">
     <div class="govuk-width-container">
       <h1 class="defra-home-header__title">RPA Guidance hub</h1>
       <p class="defra-home-header__description">Find guidance to help you review and process claims, or manage guidance documents if you're responsible for keeping them up to date.</p>
-      <nav class="defra-home-header__tabs" aria-label="Service navigation">
-        <ul class="defra-home-header__tabs-list">
-          {% for item in navigation %}
-            <li class="defra-home-header__tabs-item">
-              <a class="defra-home-header__tab{% if item.current %} defra-home-header__tab--active{% endif %}" href="{{ item.href }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.text }}</a>
-            </li>
-          {% endfor %}
-        </ul>
-      </nav>
+      {% if navigation and navigation.length %}
+        <nav class="defra-home-header__tabs" aria-label="Service navigation">
+          <ul class="defra-home-header__tabs-list">
+            {% for item in navigation %}
+              <li class="defra-home-header__tabs-item">
+                <a class="defra-home-header__tab{% if item.current %} defra-home-header__tab--active{% endif %}" href="{{ item.href }}"{% if item.current %} aria-current="page"{% endif %}>{{ item.text }}</a>
+              </li>
+            {% endfor %}
+          </ul>
+        </nav>
+      {% endif %}
     </div>
   </div>
 {% elif navigation and navigation.length %}
