@@ -14,9 +14,18 @@
 // GOV.UK Design System or Defra pattern for it — flagged here the same way
 // other bespoke interactions elsewhere in this codebase are; the tab
 // styling itself is not a deviation, it is the existing one.
+// Flush to the left/right edges (no horizontal padding — the inner
+// .govuk-width-container, set in app/views/partials/defra-header.njk,
+// already provides that), symmetric 32px top and bottom instead of the
+// old top-only value —
+// only the title/description showed here before (see the isV6Home comment
+// on that partial), so the description's own margin-bottom was standing
+// in as the banner's bottom spacing; that's now zeroed via
+// .defra-home-header__description:last-child below so the two values
+// don't stack when there is no tabs list to sit under the description.
 .defra-home-header {
   background-color: $defra-green;
-  padding: 32px 0 0;
+  padding: 32px 0;
 }
 
 .defra-home-header__title {
@@ -48,6 +57,14 @@
   @include govuk-media-query($from: tablet) {
     font-size: 19px;
     line-height: 1.3157894737;
+  }
+
+  // No tabs list below it (isV6Home with no navigation, e.g.
+  // /v6/unified-guidance) — its own margin-bottom would otherwise stack
+  // with .defra-home-header's new padding-bottom, making the bottom gap
+  // deeper than the top one.
+  &:last-child {
+    margin-bottom: 0;
   }
 }
 
@@ -117,6 +134,7 @@
 @media (max-width: 640px) {
   .defra-home-header {
     padding-top: 20px;
+    padding-bottom: 20px;
   }
 
   .defra-home-header__title {

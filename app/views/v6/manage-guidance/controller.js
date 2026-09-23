@@ -11,10 +11,11 @@ const {
 } = require('../../../data/editor-experiment')
 const viewModel = require('./view-model')
 
-// No backHref on either render below — the template shows a breadcrumb
-// back to Manage guidance instead of a Back link. An id that matches
-// nothing at all — a stale/mistyped link — redirects back to
-// /v6/all-guidance-docs rather than erroring or showing a broken page.
+// No backHref — the template shows a breadcrumb back to Home instead of a
+// Back link (per the task this three-state layout was built from). An id
+// that matches nothing at all — a stale/mistyped link — redirects to
+// /v6/all-guidance-docs (itself now a redirect on to /v6/unified-guidance)
+// rather than erroring or showing a broken page.
 function getDocumentOverview(req, res) {
   const props = viewModel.documentOverviewViewModel(req)
 
@@ -26,11 +27,14 @@ function getDocumentOverview(req, res) {
   res.render('versions/v6/manage-guidance/document-overview', props)
 }
 
-// "Start editing" on document-overview.html's Published branch — adds id
-// to req.session.data.manageGuidanceEditingAddedIds, so the document moves
-// from Published to Editing/Draft for the rest of the session. Straight on
-// to the editor afterwards — the same /v6/editor-experiment?id= destination
-// "Continue editing" already uses.
+// "Edit" on document-overview.html's Published state (route name kept as
+// "start-editing" — only the button's own visible label changed) — adds
+// id to req.session.data.manageGuidanceEditingAddedIds, so the document
+// moves from Published to Draft for the rest of the session. Straight on
+// to the editor afterwards — the same /v6/editor-2-3-view?id= destination
+// "Continue editing" already uses (the v6 editor entry point — see the
+// audit that repointed every such link at this page instead of
+// /v6/editor-experiment).
 function postStartEditing(req, res) {
   if (req.body.id) {
     const addedIds = getAddedEditingIds(req)
@@ -38,7 +42,7 @@ function postStartEditing(req, res) {
   }
 
   res.redirect(
-    '/v6/editor-experiment?id=' + encodeURIComponent(req.body.id || '')
+    '/v6/editor-2-3-view?id=' + encodeURIComponent(req.body.id || '')
   )
 }
 
@@ -52,14 +56,14 @@ function getRemoveConfirm(req, res) {
 
 // "Yes, remove" on remove-confirm.html — adds id to
 // req.session.data.manageGuidanceEditingRemovedIds, then back to
-// all-guidance-docs.html at the Editing tab's own #editing anchor.
+// /v6/unified-guidance's Editing tab.
 function postRemove(req, res) {
   if (req.body.id) {
     const removedIds = getRemovedEditingIds(req)
     if (removedIds.indexOf(req.body.id) === -1) removedIds.push(req.body.id)
   }
 
-  res.redirect('/v6/all-guidance-docs#editing')
+  res.redirect('/v6/unified-guidance?tab=editing')
 }
 
 // A fully independent duplicate of /v6/find-guidance/organic-search — same

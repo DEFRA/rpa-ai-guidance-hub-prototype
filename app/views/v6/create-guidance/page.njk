@@ -1,0 +1,78 @@
+{#
+  "Create guidance" on the unified hub — v6's own port of v2's
+  create-guidance.html, adapted with a back link to the hub (task-
+  specified) instead of a breadcrumb, and a real "must select one option"
+  validation v2's own version never had (its POST handler silently
+  defaults an empty submission to "upload" — this one doesn't). See
+  controller.js's own top comment and the plan this was built from for
+  the rest of what differs from v2.
+
+  Validation follows the same govukErrorSummary pattern already
+  established in this codebase for a real server-side check
+  (app/views/versions/v4/upload-metadata.html + its POST handler,
+  legacy/routes.js — frozen but a proven, working reference): errors.
+  <field> = { text, href }, errorList: Object.values(errors), the same
+  template re-rendered with the submission preserved on failure, "Error: "
+  prefixed onto pageName so an assistive-tech user's tab title reflects
+  it too. novalidate on the form so the server-side check is what
+  actually runs, not a browser-native "required" popup nothing else on
+  this page uses either.
+
+  "Create a new guide"/"Update existing guide" have no real destination
+  yet (placeholder, per the task) — selecting either and clicking
+  Continue re-renders this same page with that choice still selected, not
+  a redirect and not an error (see controller.js's post).
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "What would you like to do?" %}
+{% if errorList and errorList.length %}{% set pageName = "Error: " + pageName %}{% endif %}
+
+{% block columns %}
+
+  {% if errorList and errorList.length %}
+    {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+  {% endif %}
+
+  <form method="post" action="/v6/create-guidance" novalidate>
+
+    {{ govukRadios({
+      idPrefix: "create-guidance",
+      name: "createGuidance",
+      value: selected,
+      fieldset: {
+        legend: {
+          text: "What would you like to do?",
+          isPageHeading: true,
+          classes: "govuk-fieldset__legend--l"
+        }
+      },
+      errorMessage: errors.createGuidance,
+      items: [
+        {
+          value: "upload",
+          text: "Upload guidance",
+          hint: { text: "Upload a Word document and convert it to Markdown. You can then review, edit and publish it." }
+        },
+        {
+          value: "create-new",
+          text: "Create a new guide",
+          hint: { text: "Start a new guidance" }
+        },
+        {
+          value: "update-existing",
+          text: "Update existing guide",
+          hint: { text: "Make changes to guidance that's already been published" }
+        }
+      ]
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+
+  </form>
+
+{% endblock %}

@@ -1,0 +1,54 @@
+{#
+  The success page after converting — v6's own port of v4's
+  upload-converted.html. Reached from the check page via the POST-then-GET
+  redirect in controller.js, so refreshing doesn't resubmit.
+
+  "View the guidance" goes to /v6/editor-2-3-view (no ?id=) — the v6
+  editor entry point (every such link across v6 now points here rather
+  than at /v6/editor-experiment — see the audit this was built from) —
+  rather than v4's own read-only guide-view.html — a deliberate
+  difference, confirmed directly rather than assumed: the task this flow
+  was built from wants the converted guidance genuinely viewable/editable,
+  not read-only, and this is the same fallback (fixed sample content)
+  "Review and fix the issues" already used on the retired v2-based version
+  of this flow. It does not create a real tracked Draft document — this
+  page's own guideName is session-only, and the converted guidance does
+  not appear on the unified hub's Editing tab (an explicitly confirmed
+  scope choice, not an oversight). "Convert another document" restarts the
+  upload step.
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Guidance converted" %}
+
+{% block columns %}
+
+  {{ govukPanel({
+    titleText: "Guidance converted",
+    text: guideName
+  }) }}
+
+  <h2 class="govuk-heading-m">What happens next</h2>
+
+  <p class="govuk-body">
+    Your document is now markdown in the hub, saved as a draft. Only you can
+    see it until it is reviewed and published.
+  </p>
+
+  <p class="govuk-body">
+    Have a look at how it converted before you take it any further.
+  </p>
+
+  {{ govukButton({
+    text: "View the guidance",
+    href: "/v6/editor-2-3-view"
+  }) }}
+
+  <p class="govuk-body">
+    <a class="govuk-link" href="/v6/create-guidance/upload">Convert another document</a>
+  </p>
+
+{% endblock %}

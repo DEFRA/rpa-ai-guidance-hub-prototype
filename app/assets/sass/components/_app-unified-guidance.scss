@@ -1,0 +1,46 @@
+// /v6/unified-guidance (app/views/v6/unified-guidance/page.njk) — the v6
+// main entry point. Its four tabs (Recently opened/Saved guidance/
+// Editing/Awaiting approval) are real govuk-tabs markup, styled entirely
+// by GOV.UK Frontend's own compiled .govuk-tabs* component CSS (shipped
+// by default, no import needed here) — see the top-of-file comment on
+// page.njk for why that markup is hand-written rather than rendered
+// through the govukTabs() macro. Nothing in this file styles the tabs or
+// their panel; what's left here is just the search-bar row that sits
+// above them.
+
+// The search bar row — its own full-width govuk-grid-row above
+// .govuk-tabs (see page.njk), not inside any panel, and always visible
+// (one single search bar, not one per tab group any more — it routes
+// unconditionally to /v6/manage-guidance/search-guidance regardless of
+// the active tab). margin-bottom here separates it from the tabs+panel
+// below; margin-top: 0 on its first child keeps that spacing to exactly
+// this one value, not this plus the heading's own default top margin as
+// well.
+.app-unified-guidance__search {
+  margin-bottom: govuk-spacing(6);
+
+  > :first-child {
+    margin-top: 0;
+  }
+}
+
+// Narrower than .app-search-bar's own shared full-width default (defined
+// in _app-organic-search.scss — organic-search.html and
+// manage-guidance/search-guidance.html both still want that full-width
+// version, so this is scoped to this page's own search row rather than
+// changed on the shared component itself). Already left-aligned with no
+// extra rule needed — .app-search-bar is a plain block element with no
+// margin:auto, so a narrower width just leaves the remaining space empty
+// on its right, not centred.
+.app-unified-guidance__search .app-search-bar {
+  width: percentage(2/3);
+}
+
+@media (max-width: 640px) {
+  // Two-thirds of a mobile-width container is too narrow to usefully type
+  // into — back to the shared component's own full-width default below
+  // tablet.
+  .app-unified-guidance__search .app-search-bar {
+    width: 100%;
+  }
+}

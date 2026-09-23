@@ -10,14 +10,35 @@ const {
   buildEditorExperimentComments,
   buildAddedCommentAnchors
 } = require('../../../data/editor-experiment')
+const {
+  getAddedAwaitingApprovalIds,
+  lookupAnyManageGuidanceDocument
+} = require('../../../data/manage-guidance')
 
-// Same standalone design experiment as v5's, but driven by whichever
-// document ?id= names (the destination of "Continue editing" on
-// /v6/manage-guidance/document-overview.html) rather than always showing
-// the same fixed "SFI 23 Guidance document" sample. A direct visit with no
-// ?id=, or one that matches no guidance-documents.js entry, falls back to
-// rendering with neither variable set — see the template, which then shows
-// the exact same fixed sample content it always has.
+// The v6 editor entry point (every "Continue editing"/"Edit" link across
+// v6 now points here rather than at /v6/editor-experiment — see the audit
+// this was built from). A near-exact duplicate of
+// app/views/v6/editor-experiment/controller.js, not a wrapper around it —
+// same reasoning app/views/v6/manage-guidance/controller.js's own
+// getEditorExperimentNarrow already established for editor-experiment.html's
+// other duplicate (its own narrow-container comparison page): each page
+// gets its own controller, but all three share the same underlying
+// app/data/editor-experiment.js session helpers (getEditorExperimentReplies/
+// DeletedCommentIds/AddedComments, buildEditorExperimentComments,
+// buildAddedCommentAnchors) and the same session keys
+// (editorExperimentReplies/DeletedCommentIds/AddedComments,
+// editorExperimentPreview) — a comment, reply, delete or in-progress
+// Preview draft made on this page is visible on editor-experiment.html
+// too, and vice versa, intentionally: they're different visual treatments
+// of the same editing session, not independent ones.
+//
+// Driven by whichever document ?id= names (the destination of "Continue
+// editing" on /v6/manage-guidance/document-overview.html) rather than
+// always showing the same fixed "SFI 23 Guidance document" sample. A
+// direct visit with no ?id=, or one that matches no guidance-documents.js
+// entry, falls back to rendering with neither variable set — see the
+// template, which then shows the exact same fixed sample content it
+// always has.
 function get(req, res) {
   const guidanceDocument = guidanceDocuments.find(
     (candidate) => candidate.id === req.query.id
@@ -35,7 +56,7 @@ function get(req, res) {
     preview && preview.id === (req.query.id || '') ? preview.html : null
 
   if (!guidanceDocument) {
-    res.render('versions/v6/editor-experiment', {
+    res.render('versions/v6/editor-2-3-view', {
       comments,
       addedCommentAnchorsJson,
       restoredEditorHtml
@@ -43,7 +64,7 @@ function get(req, res) {
     return
   }
 
-  res.render('versions/v6/editor-experiment', {
+  res.render('versions/v6/editor-2-3-view', {
     documentTitle: guidanceDocument.title,
     guidanceDocumentId: guidanceDocument.id,
     editorSections: buildEditorSections(guidanceDocument),
@@ -88,7 +109,7 @@ function getPreview(req, res) {
   const preview = req.session.data.editorExperimentPreview
 
   if (!preview || !preview.steps.length) {
-    res.redirect('/v6/editor-experiment')
+    res.redirect('/v6/editor-2-3-view')
     return
   }
 
@@ -101,7 +122,7 @@ function getPreview(req, res) {
     requestedStep >= 1 && requestedStep <= totalSteps ? requestedStep : 1
 
   res.locals.backHref =
-    '/v6/editor-experiment' +
+    '/v6/editor-2-3-view' +
     (preview.id ? '?id=' + encodeURIComponent(preview.id) : '')
   res.locals.backLinkText = 'Back to editor'
 
@@ -115,7 +136,7 @@ function getPreview(req, res) {
     stepNumber,
     totalSteps,
     isPreview: true,
-    stepLinkBase: '/v6/editor-experiment/preview'
+    stepLinkBase: '/v6/editor-2-3-view/preview'
   })
 }
 
@@ -140,8 +161,7 @@ function postReply(req, res) {
 }
 
 // Removes a comment (and, for a threaded one, its whole thread) via a
-// card's "Delete" control, on either editor-experiment.html or its
-// narrow-container duplicate. The client already removes the card from the
+// card's "Delete" control. The client already removes the card from the
 // page instantly, this is fire-and-forget the same way postReply above is.
 function postDelete(req, res) {
   const commentId = req.body && req.body.commentId
@@ -156,15 +176,15 @@ function postDelete(req, res) {
 }
 
 // Persists a comment created live off the toolbar's own Comment icon
-// (data-tt-comment, editor-experiment.html's pageScripts) — either
-// anchored to a selection at the time it was clicked, or not, if nothing
-// was selected. anchorId/sectionId/selectedText are only sent for the
-// anchored kind (the client omits them entirely otherwise, so they arrive
-// here as undefined rather than empty strings): sectionId + selectedText
-// are what buildAddedCommentAnchors (app/data/editor-experiment.js) uses
-// to tell the client which substring to re-wrap in an app-editor-anchor
-// span inside which section on a later page load. commentId/anchorId are
-// both generated client-side and simply trusted here.
+// (data-tt-comment, pageScripts) — either anchored to a selection at the
+// time it was clicked, or not, if nothing was selected. anchorId/
+// sectionId/selectedText are only sent for the anchored kind (the client
+// omits them entirely otherwise, so they arrive here as undefined rather
+// than empty strings): sectionId + selectedText are what
+// buildAddedCommentAnchors (app/data/editor-experiment.js) uses to tell
+// the client which substring to re-wrap in an app-editor-anchor span
+// inside which section on a later page load. commentId/anchorId are both
+// generated client-side and simply trusted here.
 function postAddComment(req, res) {
   const commentId = req.body && req.body.commentId
   const anchorId = req.body && req.body.anchorId
@@ -187,11 +207,81 @@ function postAddComment(req, res) {
   res.status(204).end()
 }
 
+// "Send for approval" (footer bar) — captures the editor's current live
+// content first (same fetch, same payload shape, as "Save"/"Preview" —
+// see pageScripts), then navigates here rather than acting immediately:
+// a review step before the status actually changes, per the task this was
+// built from. Reads the just-captured req.session.data.editorExperimentPreview
+// (the same session object getPreview above reads) for title/steps.
+// lookupAnyManageGuidanceDocument (app/data/manage-guidance.js), not a
+// plain guidanceDocuments lookup, for the real description — an Editing
+// document opened here can be either a real guidanceDocuments entry or a
+// sample Published document moved into Editing via "Start editing" (only
+// ever in MANAGE_GUIDANCE_PUBLISHED_SAMPLES, never guidanceDocuments; see
+// that helper's own comment) — the same fallback
+// app/views/v6/manage-guidance/view-model.js already needed for exactly
+// this reason. A direct visit with nothing captured yet falls back to the
+// editor rather than erroring, the same guard getPreview above uses.
+function getSendForApproval(req, res) {
+  const preview = req.session.data.editorExperimentPreview
+
+  if (!preview) {
+    res.redirect('/v6/editor-2-3-view')
+    return
+  }
+
+  const document = preview.id
+    ? lookupAnyManageGuidanceDocument(preview.id)
+    : null
+
+  res.locals.backHref =
+    '/v6/editor-2-3-view' +
+    (preview.id ? '?id=' + encodeURIComponent(preview.id) : '')
+  res.locals.backLinkText = 'Back to editor'
+
+  res.render('v6/editor-2-3-view/send-for-approval.njk', {
+    id: preview.id,
+    documentName: preview.title || 'SFI 23 Guidance document',
+    description: document
+      ? document.description
+      : 'No description is available for this sample document.',
+    sections: preview.steps
+  })
+}
+
+// The confirmation page's own "Send for approval" button — the real state
+// change: adds the id to req.session.data.manageGuidanceAwaitingApprovalAddedIds
+// (app/data/manage-guidance.js), so buildManageGuidanceRows moves this row
+// out of Editing and into Awaiting approval for the rest of the session —
+// visible immediately on /v6/manage-guidance/document-overview (Awaiting
+// approval badge, no edit option) and the unified hub's own Awaiting
+// approval tab, not just a cosmetic label on this one page. A fixed-sample
+// draft (no real id) has nothing to move, so this just returns to the
+// editor for that case.
+function postSendForApproval(req, res) {
+  const preview = req.session.data.editorExperimentPreview
+  const id = (preview && preview.id) || ''
+
+  if (!id) {
+    res.redirect('/v6/editor-2-3-view')
+    return
+  }
+
+  const addedIds = getAddedAwaitingApprovalIds(req)
+  if (addedIds.indexOf(id) === -1) addedIds.push(id)
+
+  res.redirect(
+    '/v6/manage-guidance/document-overview?id=' + encodeURIComponent(id)
+  )
+}
+
 module.exports = {
   get,
   postPreview,
   getPreview,
   postReply,
   postDelete,
-  postAddComment
+  postAddComment,
+  getSendForApproval,
+  postSendForApproval
 }

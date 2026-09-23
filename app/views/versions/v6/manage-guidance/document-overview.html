@@ -1,53 +1,103 @@
 {#
   A guidance document's overview from the "Manage guidance" side of the hub
-  (v6 only) — what a Document name link on all-guidance-docs.html,
+  (v6 only) — what a Document name link on the unified guidance hub,
   manage-guidance-search.html or search-guidance.html now leads to, rather
-  than straight into Edit or a row's old Action buttons. GET
-  /v6/manage-guidance/document-overview?id=, see that route in
-  app/routes.js: document and status ("Editing"/"Awaiting approval"/
-  "Published", worked out there from which list — or, for a sample
+  than straight into Edit or a row's old Action buttons, and now the single
+  entry point for viewing a guidance document from anywhere (unified hub,
+  search results, etc.), not just the Manage guidance side. GET
+  /v6/manage-guidance/document-overview?id=, see
+  app/views/v6/manage-guidance/view-model.js: document/status/
+  defaultVersionKey/versionsJson (status one of "Published"/"Draft"/
+  "Awaiting approval", worked out there from which list — or, for a sample
   Published document, MANAGE_GUIDANCE_PUBLISHED_SAMPLES — the id matched)
-  are the only two things this page needs, though which other fields
-  document actually carries differs by status; see the two branches below.
+  are the only things this page needs, though which other fields document
+  actually carries differs by status; see the three states below.
 
-  Styled the same way as the find-guidance side's own document-overview.html
-  — breadcrumb, h1, a govukSummaryList of label/value rows, a button at the
-  bottom — but no description paragraph even on the Published branch,
-  which otherwise mirrors that page's own Version/Version notes/Last
-  updated/Published rows: unlike a guidance-documents.js entry, nothing in
-  app/routes.js's buildManageGuidanceRows()/MANAGE_GUIDANCE_PUBLISHED_SAMPLES
-  has any real description text to show, and inventing filler for it would
-  read as more content than there really is.
+  Three states, three layouts, all sharing the same overall shape (status
+  badge at the very top, above a "Title" caption + the page heading itself
+  — see the layout-order note further down — then a govukSummaryList of
+  label/value rows, a govuk-button-group, then "Save to search" on its own
+  line below that group rather than inside it) — see the statusTags map
+  and the status == ... branches below for the differences:
+    - Published (green badge): Version dropdown + Version notes/Last
+      updated/Published rows; View / Edit buttons. "Edit" is a real POST
+      to /v6/manage-guidance/start-editing (not a plain link — it needs to
+      change session state before it goes anywhere), adding this id to
+      req.session.data.manageGuidanceEditingAddedIds (see that route) and
+      redirecting straight into the editor; a later visit to this same
+      page for the same id then hits the editingMatch branch in
+      view-model.js instead (buildManageGuidanceRows() now includes it),
+      so it renders the Draft layout below from then on, not this one. The
+      govukInsetText above the buttons explains this move before it
+      happens.
+    - Draft (grey badge — an Editing-tab document, "Draft" is this page's
+      own name for the same state, matching search-guidance.html's own
+      State filter rather than the older "Editing" label this page used to
+      show; see view-model.js): same Version rows as Published, plus
+      Publishing checks/Changes requested (unaffected by this pass — kept
+      exactly as it already worked, just reordered under the new fields).
+      Continue editing / View buttons. "Continue editing" goes to
+      /v6/editor-2-3-view?id=document.id — the v6 editor entry point (every
+      such link across v6 now points here rather than at
+      /v6/editor-experiment — see the audit this was built from); that
+      route looks the id up in guidance-documents.js and renders that
+      document's own content into the editor.
+    - Awaiting approval (yellow badge — an Awaiting-approval-tab
+      document): same rows as Draft, but no edit option at all — View is
+      the only button. A document under review is not editable from here.
+  "Save to search" itself doesn't vary by state — it always renders, the
+  same link, on its own line below whichever buttons that state has.
 
-  status == "Published" is its own branch, not just a variant of the
-  Editing/Awaiting approval one below — different rows (Version/Version
-  notes/Last updated/Published, not Publishing checks/Changes
-  requested/Status), a govukInsetText warning that starting to edit moves
-  it into Draft, and "Start editing" (a real POST to
-  /v6/manage-guidance/start-editing, not a plain link — it needs to change
-  session state before it goes anywhere) in place of "Continue editing".
-  "Start editing" adds this id to
-  req.session.data.manageGuidanceEditingAddedIds (see that route) and
-  redirects straight into the editor; a later visit to this same page for
-  the same id then hits the editingMatch branch in the route instead (its
-  buildManageGuidanceRows() now includes it), so it renders the ordinary
-  Editing layout below from then on, not this one — "Draft"/"Editing" here
-  are the same thing, just named differently in two different places
-  (search-guidance.html's State filter says "Draft", this page's own
-  Status row says "Editing", matching what it already said before a
-  document could ever arrive here by this route).
+  "View" (every state) and "Save to search" (every state) are new to this
+  page, reused verbatim from the find-guidance side's own document-
+  overview.html (app/views/versions/v6/document-overview.html): "View"
+  goes to /v6/find-guidance/document/<id>, the same read-only viewer every
+  other "Open"/"View" action in the app already uses (falls back to
+  generic placeholder content for an id with no real guidance-documents.js
+  match — see that route's own savedDocumentViewModel — so this is safe
+  even for a Published sample id that only exists in
+  MANAGE_GUIDANCE_PUBLISHED_SAMPLES, not guidance-documents.js). "Save to
+  search" is the exact same instant client-side "Saved" state + banner +
+  fire-and-forget POST to /v6/find-guidance/save-to-search pattern that
+  page already uses too — copied rather than shared, matching how no
+  script in this project is shared between pages that both happen to want
+  the same interaction (see pageScripts below) — styled as a plain
+  govuk-link rather than a govukButton, and moved out of the
+  govuk-button-group onto its own line below it, per a later design pass;
+  see .app-link-button (_app-manage-guidance.scss) for the button-reset-to-
+  look-like-a-link technique that needed. Session data is genuinely shared
+  (req.session.data.savedGuidance, unmodified) — a document saved from
+  here really does show up on the unified hub's own Saved guidance tab
+  afterwards, the same as if it had been saved from find-guidance's own
+  document-overview.html. One known gap, not fixed here: a Published
+  sample id saved this way is added to session but never actually renders
+  on that tab, since buildFindGuidanceRows (guidance-lists.js) silently
+  skips any id it can't find in guidance-documents.js — a pre-existing
+  limitation of MANAGE_GUIDANCE_PUBLISHED_SAMPLES being a separate,
+  smaller sample set, not something this pass introduces or was asked to
+  fix.
 
-  For an Editing/Awaiting approval document (the original, still-default
-  branch): "Continue editing" goes to /v6/editor-experiment?id=document.id
-  — that route (app/routes.js) looks the id up in guidance-documents.js and
-  renders that document's own content into the editor, rather than the
-  fixed "SFI 23 Guidance document" sample it showed before this page
-  existed — and stays the sole button at the bottom of the page. "View
-  issues" (only shown once a simulated check run below completes) goes to
-  the same shared placeholder document (guidance-document.html for sfi-23)
-  every Start Checks/Open action on this page's tables already pointed at
-  before this change — the href is real and functional, it just does not
-  need to differ per document for this prototype.
+  No dedicated Back link — layouts/main.html only renders one when
+  res.locals.backHref is set, and nothing sets it for this route (see
+  app/views/v6/manage-guidance/controller.js) — navigation back to the hub
+  is the breadcrumb above (now "Home", /v6/unified-guidance — see
+  app/views/partials/defra-header.njk and the rest of the app's own v6
+  breadcrumbs) or the browser's own Back button, by design.
+
+  The Version dropdown (versionSelectCell, defaultVersionKey/versionsJson,
+  currentVersion) is the exact same govukSelect + data-version-select/
+  data-version-field pattern app/views/versions/v6/document-overview.html
+  already uses — copied, not shared, same reasoning as "Save to search"
+  above. Unlike that page, defaultVersionKey/versionsJson/document.versions
+  are not always a document's own real, already-published version history:
+  a Draft/Awaiting-approval document's is (its versions.version1/version2
+  comes straight from its real guidance-documents.js entry, looked up
+  again in view-model.js purely for this field, since
+  buildManageGuidanceRows' own rows don't carry it); a Published sample
+  document's is invented for this page specifically (see
+  MANAGE_GUIDANCE_PUBLISHED_SAMPLES in app/data/manage-guidance.js) —
+  either way the dropdown always has two real, distinct versions to
+  switch between, never a single-option stand-in.
 
   The Publishing checks row (.app-manage-guidance-checks-row,
   _app-manage-guidance.scss) is three states inside one
@@ -63,11 +113,14 @@
   data-issue-count on [data-checks-cell] carries document.publishingChecks
   through to the script, so the simulated result uses this document's own
   real stored count rather than a fully random one wherever that count
-  exists (every document reachable from all-guidance-docs.html has one;
-  the random fallback in the script is only for a document that somehow
-  does not). The severity breakdown (High/Medium/Low) is split randomly
-  but weighted toward Medium/Low each run, summing back to the total
-  exactly either way.
+  exists. The severity breakdown (High/Medium/Low) is split randomly but
+  weighted toward Medium/Low each run, summing back to the total exactly
+  either way. The status badge itself never changes once a run completes
+  (it did not before this pass either) — the old separate "(Checks
+  complete)" note that used to sit next to a "Status" summary row is gone
+  along with that row (now redundant with the badge above the summary
+  list); nothing replaces it, since [data-checks-complete]'s own headline
+  ("N issues found") already says as much on its own.
 
   .app-progress__track/.app-progress__bar (_app-progress.scss) are reused
   as-is for the bar itself — the same "div-based bar, CSS transition on
@@ -78,30 +131,57 @@
   behaviour (a different, shared, global script this page does not use or
   touch — this row has its own distinct data-checks-* attributes so the
   two can never collide).
-
-  A small "(Checks complete)" note appears next to the Status value once a
-  run finishes ([data-checks-status-note], hidden until then) — Status
-  itself stays "Editing"/"Awaiting approval" throughout; nothing here moves
-  a document between those two lists.
 #}
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 
 {% set pageName = document.name %}
 
 {#
-  Bare number, same convention as all-guidance-docs.html/search-guidance.html
-  — a "Version" row/column header already gives it context.
+  Published (green) / Draft (grey) / Awaiting approval (yellow) — the
+  three states this page renders a whole different layout for, per the
+  task this was built from. Grey/yellow match search-guidance.html's own
+  stateTags exactly (same govuk-tag--grey/--yellow modifiers, same
+  states); green for Published is a deliberate difference from that map's
+  own govuk-tag--turquoise — chosen for this page specifically to read as
+  the more conventional "everything is fine, this is live" colour a
+  status badge would use, rather than carrying that page's own colour
+  choice over unexamined.
 #}
-{% set versionTags = {
-  "Version 1": { text: "1", classes: "govuk-tag--green" },
-  "Version 2": { text: "2", classes: "govuk-tag--purple" }
+{% set statusTags = {
+  "Published": { text: "Published", classes: "govuk-tag--green govuk-!-margin-bottom-4" },
+  "Draft": { text: "Draft", classes: "govuk-tag--grey govuk-!-margin-bottom-4" },
+  "Awaiting approval": { text: "Awaiting approval", classes: "govuk-tag--yellow govuk-!-margin-bottom-4" }
 } %}
+
+{% set saveNotificationText = document.name + " has been saved to your Saved guidance." %}
+
+{% set currentVersion = document.versions[defaultVersionKey] %}
+
+{% set versionSelectCell %}
+  {{ govukSelect({
+    id: "document-version",
+    name: "version",
+    label: { text: "Version", classes: "govuk-visually-hidden" },
+    formGroup: { classes: "govuk-!-margin-bottom-0" },
+    attributes: { "data-version-select": true },
+    items: [
+      { value: "version1", text: "Version 1", selected: defaultVersionKey == "version1" },
+      { value: "version2", text: "Version 2", selected: defaultVersionKey == "version2" }
+    ]
+  }) }}
+{% endset %}
+
+{% set versionNotesCell %}<span data-version-field="versionNotes">{{ currentVersion.versionNotes }}</span>{% endset %}
+{% set lastUpdatedCell %}<span data-version-field="lastUpdated">{{ currentVersion.lastUpdated }}</span>{% endset %}
+{% set publishedCell %}<span data-version-field="published">{{ currentVersion.published }}</span>{% endset %}
 
 {% set checksValue %}
   <div data-checks-cell data-issue-count="{{ document.publishingChecks }}">
@@ -138,7 +218,6 @@
   </div>
 {% endset %}
 {% set changesValue %}{% if document.changesRequested == 0 %}None{% else %}{{ document.changesRequested }} change{{ "s" if document.changesRequested != 1 }} requested{% endif %}{% endset %}
-{% set statusValue %}{{ status }} <span class="govuk-body-s" data-checks-status-note hidden>(Checks complete)</span>{% endset %}
 
 {% block content %}
 
@@ -147,7 +226,7 @@
     {{ govukBreadcrumbs({
       classes: "govuk-!-margin-bottom-6",
       items: [
-        { text: "Manage guidance", href: "/v6/all-guidance-docs" },
+        { text: "Home", href: "/v6/unified-guidance" },
         { text: document.name }
       ]
     }) }}
@@ -157,70 +236,127 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-l">{{ document.name }}</h1>
+    {{ govukNotificationBanner({
+      type: "success",
+      text: saveNotificationText,
+      attributes: { hidden: true, tabindex: "-1", "data-save-notification-banner": true }
+    }) }}
+
+    {#
+      Layout order per a later design pass: status badge first (govuk-tag
+      is display:inline-block with a small negative default margin, meant
+      to sit inline inside running text/summary-list cells — a
+      govuk-!-margin-bottom-4 override on each statusTags entry above
+      gives it real standalone spacing instead), then a plain
+      govuk-caption-m "Title" label sitting directly above the heading
+      (GDS's own caption-above-heading convention, normally used for
+      service/section context — reused here as a literal field label
+      instead), then the heading itself downsized from govuk-heading-l to
+      -m ("a more modest size — closer to h2", per the task) while staying
+      a real, single <h1> — only its own font-size class changed, not the
+      tag or the page's heading hierarchy.
+    #}
+    {{ govukTag(statusTags[status]) }}
+
+    <span class="govuk-caption-m">Title</span>
+    <h1 class="govuk-heading-m">{{ document.name }}</h1>
+
+    {% set summaryRows = [
+      {
+        key: { text: "Version" },
+        value: { html: versionSelectCell }
+      },
+      {
+        key: { text: "Version notes" },
+        value: { html: versionNotesCell }
+      },
+      {
+        key: { text: "Last updated" },
+        value: { html: lastUpdatedCell }
+      },
+      {
+        key: { text: "Published" },
+        value: { html: publishedCell }
+      }
+    ] %}
+
+    {% if status != "Published" %}
+      {% set summaryRows = (summaryRows.push(
+        {
+          key: { text: "Publishing checks" },
+          value: { html: checksValue }
+        },
+        {
+          key: { text: "Changes requested" },
+          value: { text: changesValue }
+        }
+      ), summaryRows) %}
+    {% endif %}
+
+    {{ govukSummaryList({
+      classes: "govuk-!-margin-top-4",
+      rows: summaryRows
+    }) }}
 
     {% if status == "Published" %}
-
-      {% set versionCell %}{{ govukTag(versionTags[document.version]) }}{% endset %}
-      {{ govukSummaryList({
-        rows: [
-          {
-            key: { text: "Version" },
-            value: { html: versionCell }
-          },
-          {
-            key: { text: "Version notes" },
-            value: { text: document.versionNotes }
-          },
-          {
-            key: { text: "Last updated" },
-            value: { text: document.lastUpdated }
-          },
-          {
-            key: { text: "Published" },
-            value: { text: document.published }
-          }
-        ]
-      }) }}
-
       {{ govukInsetText({
-        text: "Starting to edit this guidance will change its status from Published to Draft, and it will be added to your Editing list on the Manage guidance page."
+        text: "Starting to edit this guidance will change its status from Published to Draft, and it will be added to the Editing tab on the guidance hub."
       }) }}
+    {% endif %}
 
-      <form method="post" action="/v6/manage-guidance/start-editing">
-        <input type="hidden" name="id" value="{{ document.id }}">
-        <div class="govuk-button-group">
-          {{ govukButton({ text: "Start editing" }) }}
-        </div>
-      </form>
+    {#
+      app-document-overview-actions: govuk-button-group's own default
+      centres its buttons below tablet width (align-items: center) —
+      overridden back to left, matching the title/fields/Save to search
+      link above and below, which are ordinary left-aligned block content
+      with no such centring of their own. See _app-manage-guidance.scss.
+    #}
+    <div class="govuk-button-group app-document-overview-actions">
 
-    {% else %}
+      {% if status == "Published" %}
 
-      {{ govukSummaryList({
-        rows: [
-          {
-            key: { text: "Publishing checks" },
-            value: { html: checksValue }
-          },
-          {
-            key: { text: "Changes requested" },
-            value: { text: changesValue }
-          },
-          {
-            key: { text: "Status" },
-            value: { html: statusValue }
-          }
-        ]
-      }) }}
+        {{ govukButton({
+          text: "View",
+          href: "/v6/find-guidance/document/" + document.id
+        }) }}
 
-      <div class="govuk-button-group">
+        <form method="post" action="/v6/manage-guidance/start-editing">
+          <input type="hidden" name="id" value="{{ document.id }}">
+          {{ govukButton({
+            text: "Edit",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
+
+      {% elif status == "Draft" %}
+
         {{ govukButton({
           text: "Continue editing",
-          href: "/v6/editor-experiment?id=" + document.id
+          href: "/v6/editor-2-3-view?id=" + document.id
         }) }}
-      </div>
+        {{ govukButton({
+          text: "View",
+          href: "/v6/find-guidance/document/" + document.id,
+          classes: "govuk-button--secondary"
+        }) }}
 
-    {% endif %}
+      {% else %}
+
+        {{ govukButton({
+          text: "View",
+          href: "/v6/find-guidance/document/" + document.id
+        }) }}
+
+      {% endif %}
+
+    </div>
+
+    <p class="govuk-body">
+      <button type="button" class="govuk-link app-link-button"
+              data-save-to-search data-document-id="{{ document.id }}">
+        Save to search
+      </button>
+    </p>
 
   </div>
 </div>
@@ -228,6 +364,60 @@
 {% endblock %}
 
 {% block pageScripts %}
+  <script type="application/json" data-version-data>{{ versionsJson | safe }}</script>
+  <script>
+    (function () {
+      var dataScript = document.querySelector('[data-version-data]')
+      var select = document.querySelector('[data-version-select]')
+      if (!dataScript || !select) return
+
+      var versions = JSON.parse(dataScript.textContent)
+      var fields = {
+        versionNotes: document.querySelector('[data-version-field="versionNotes"]'),
+        lastUpdated: document.querySelector('[data-version-field="lastUpdated"]'),
+        published: document.querySelector('[data-version-field="published"]')
+      }
+
+      select.addEventListener('change', function () {
+        var selected = versions[select.value]
+        if (!selected) return
+
+        if (fields.versionNotes) fields.versionNotes.textContent = selected.versionNotes
+        if (fields.lastUpdated) fields.lastUpdated.textContent = selected.lastUpdated
+        if (fields.published) fields.published.textContent = selected.published
+      })
+    })()
+  </script>
+  <script>
+    (function () {
+      var saveButton = document.querySelector('[data-save-to-search]')
+      var banner = document.querySelector('[data-save-notification-banner]')
+      if (!saveButton || !banner) return
+
+      saveButton.addEventListener('click', function () {
+        banner.hidden = false
+        banner.focus()
+
+        saveButton.textContent = 'Saved'
+        saveButton.disabled = true
+
+        // Persists this into req.session.data.savedGuidance server-side —
+        // see POST /v6/find-guidance/save-to-search — so it actually
+        // appears on the unified hub's "Saved guidance" tab afterwards.
+        // Fire-and-forget: the button's own instant "Saved" state above
+        // already doesn't wait on this, and there is nothing useful to do
+        // here if it fails.
+        var documentId = saveButton.getAttribute('data-document-id')
+        if (documentId && window.fetch) {
+          fetch('/v6/find-guidance/save-to-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: documentId })
+          }).catch(function () {})
+        }
+      })
+    })()
+  </script>
   <script>
     (function () {
       var checksCell = document.querySelector('[data-checks-cell]')
@@ -241,7 +431,6 @@
       var bar = checksCell.querySelector('[data-checks-bar]')
       var headline = checksCell.querySelector('[data-checks-headline]')
       var breakdown = checksCell.querySelector('[data-checks-breakdown]')
-      var statusNote = document.querySelector('[data-checks-status-note]')
 
       if (!startButton || !idleState || !runningState || !completeState) return
 
@@ -311,8 +500,6 @@
 
           runningState.hidden = true
           completeState.hidden = false
-
-          if (statusNote) statusNote.hidden = false
         }, DURATION_SECONDS * 1000)
       })
     })()

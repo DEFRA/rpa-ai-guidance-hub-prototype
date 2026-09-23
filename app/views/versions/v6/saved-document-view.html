@@ -167,13 +167,14 @@
   Every ?step= link (both sidebar shapes, Back/Next) is built from this
   rather than a literal "/v6/find-guidance/document/" + id in four separate
   places —
-  overridable by the route so /v6/editor-experiment/preview (editor-
-  experiment.html's "Preview" button, app/routes.js) can reuse this exact
-  customSteps rendering for live/unsaved editor content while keeping its
-  own step navigation inside the preview flow, without that route's own id
-  (there often isn't a real guidance-documents.js one) leaking into these
-  links. Unset for every real document, which keeps getting the exact same
-  href it always has. The two client-side navigation paths — the "Jump to
+  overridable by the route so /v6/editor-experiment/preview and
+  /v6/editor-2-3-view/preview (each page's own "Preview" button, their own
+  controller.js) can both reuse this exact customSteps rendering for
+  live/unsaved editor content while keeping their own step navigation
+  inside the preview flow, without that route's own id (there often isn't
+  a real guidance-documents.js one) leaking into these links. Unset for
+  every real document, which keeps getting the exact same href it always
+  has. The two client-side navigation paths — the "Jump to
   part" dropdown and search result selection, both in pageScripts below —
   already use window.location.pathname rather than this, so they need no
   such override.
@@ -226,12 +227,13 @@
 {% block content %}
 
 {#
-  Not shown for the Preview flow (/v6/editor-experiment/preview,
-  app/routes.js, isPreview) — a completely different context sharing this
-  same template (an in-progress, unsaved editor draft, not a real Find
-  guidance result), which already has its own "Back to editor" link
-  instead. Deliberately its own flag rather than checking stepLinkBase
-  directly: this template's own {% set stepLinkBase = stepLinkBase if
+  Not shown for the Preview flow (/v6/editor-experiment/preview or
+  /v6/editor-2-3-view/preview, each page's own controller.js, isPreview) —
+  a completely different context sharing this same template (an
+  in-progress, unsaved editor draft, not a real Find guidance result),
+  which already has its own "Back to editor" link instead. Deliberately
+  its own flag rather than checking stepLinkBase directly: this template's
+  own {% set stepLinkBase = stepLinkBase if
   stepLinkBase else ... %} above gives it a real value regardless, so it is
   never actually falsy by the time this runs.
 #}
@@ -241,7 +243,7 @@
       {{ govukBreadcrumbs({
         classes: "govuk-!-margin-bottom-6",
         items: [
-          { text: "Find guidance", href: "/v6/find-guidance" },
+          { text: "Home", href: "/v6/unified-guidance" },
           { text: documentName }
         ]
       }) }}

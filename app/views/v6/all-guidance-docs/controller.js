@@ -1,15 +1,11 @@
 const { buildManageGuidanceRows } = require('../../../data/manage-guidance')
 
-// No backHref — all-guidance-docs.html shows breadcrumbs instead of a Back
-// link now (see the template).
+// Retired as its own page — /v6/unified-guidance (app/views/v6/unified-guidance/)
+// replaces this and /v6/find-guidance with one screen, four sidebar tabs
+// instead of two peer pages. Kept as a redirect, not removed, so existing
+// bookmarks/links elsewhere in the app still land somewhere real.
 function get(req, res) {
-  const { editingDocuments, awaitingApprovalDocuments } =
-    buildManageGuidanceRows(req)
-
-  res.render('versions/v6/all-guidance-docs', {
-    editingDocuments,
-    awaitingApprovalDocuments
-  })
+  res.redirect('/v6/unified-guidance')
 }
 
 // The search box on all-guidance-docs.html, directly below "Create or

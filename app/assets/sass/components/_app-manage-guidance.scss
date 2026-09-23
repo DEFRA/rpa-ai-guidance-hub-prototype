@@ -1,12 +1,77 @@
-// "Manage guidance" (v5 only) — currently just the "Publishing checks" row
-// on document-overview.html, where "Checks not run" and the "Start Checks"
-// button now sit inline together (see app/views/versions/v5/
-// manage-guidance/document-overview.html), rather than that button being
-// down with "Continue editing" at the bottom of the page.
+// "Manage guidance" — the "Publishing checks" row on document-overview.html
+// (v5's own version and v6's state-based rewrite,
+// app/views/versions/v6/manage-guidance/document-overview.html, alike),
+// where "Checks not run" and the "Start Checks" button now sit inline
+// together, rather than that button being down with "Continue editing" at
+// the bottom of the page.
 
 .app-manage-guidance-checks-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: govuk-spacing(3);
+}
+
+// "Save to search" on v6's document-overview.html (both the manage-
+// guidance and find-guidance sides) — a real <button> (a JS action, not
+// navigation: it flips its own text to "Saved" instantly and fires a
+// background POST, so there is no href for a plain <a> to point at),
+// styled to read as a plain GDS text link per
+// https://design-system.service.gov.uk/styles/links/ — underline, and a
+// thicker underline + colour change on hover/focus — matching the
+// standard GOV.UK link exactly.
+//
+// The .govuk-link class alone is NOT enough here, despite being applied
+// alongside this one in the markup: GOV.UK Frontend's own link colours
+// come from `a:link`/`a:visited`-style rules (see
+// node_modules/govuk-frontend/dist/govuk/helpers/_links.scss,
+// govuk-link-style-default) — `:link`/`:visited` are anchor-only
+// pseudo-classes that never match a <button>, link or not, so a plain
+// .govuk-link button silently rendered with the browser's own default
+// button text colour and no underline at all (caught and fixed here,
+// not a deliberate choice). govuk-link-common (the same file) is safe to
+// reuse as-is — its underline and :hover/:focus rules use ordinary
+// selectors — so this class takes that mixin for the decoration/focus
+// treatment, then restates the colour states itself using plain
+// selectors instead of the anchor-only ones (no genuine "visited" state
+// for a button that doesn't navigate anywhere, so none is set).
+.app-link-button {
+  @include govuk-link-common;
+
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  color: $govuk-link-colour;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:active {
+    color: $govuk-link-active-colour;
+  }
+
+  // The "already saved" state after a click — no equivalent button state
+  // to reuse now this isn't a govukButton any more, so a plain muted
+  // colour/no-underline stands in for govuk-button--disabled's own greyed-
+  // out look.
+  &:disabled {
+    color: $govuk-secondary-text-colour;
+    text-decoration: none;
+    cursor: default;
+  }
+}
+
+// document-overview.html's own View/Edit/Continue editing button row —
+// govuk-button-group's own default centres its buttons horizontally below
+// tablet width (align-items: center, its own mobile treatment — flex-row/
+// baseline only kicks in from 40.0625em up). Everything else on this page
+// (the "Title" caption, heading, summary list, "Save to search" link) is
+// ordinary left-aligned block content with no such centring, so left is
+// restored here at every width to keep the whole column's content on one
+// shared left edge.
+.app-document-overview-actions {
+  align-items: flex-start;
 }

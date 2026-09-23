@@ -15,20 +15,6 @@ const DEFAULT_AI_SEARCH_QUERY =
 const DEFAULT_TOTAL_STEPS = 4
 const DEFAULT_STEP = 1
 
-// Both tabs' rows are session-backed lists of { id, lastModified } — see
-// app/data/guidance-lists.js for the seeding/capping/update rules — each
-// looked up in app/data/guidance-documents.js for its title/version.
-function fromSession(req) {
-  return {
-    recentlyOpenedDocuments: guidanceLists.buildFindGuidanceRows(
-      guidanceLists.getRecentlyOpened(req)
-    ),
-    savedGuidanceDocuments: guidanceLists.buildFindGuidanceRows(
-      guidanceLists.getSavedGuidance(req)
-    )
-  }
-}
-
 function removeConfirmViewModel(req) {
   const document = guidanceDocuments.find(
     (candidate) => candidate.id === req.query.id
@@ -225,7 +211,6 @@ function aiSearchResultsViewModel(req) {
 }
 
 module.exports = {
-  fromSession,
   removeConfirmViewModel,
   savedDocumentViewModel,
   organicSearchViewModel,

@@ -4,14 +4,16 @@
 // from guidance-documents.js entries, a small set of sample "Published"
 // documents local to this page (not real guidance-documents.js entries —
 // see MANAGE_GUIDANCE_PUBLISHED_SAMPLES below), and the session lists that
-// track "Start editing"/"Remove" moving a document between those states.
+// track "Start editing"/"Remove"/"Send for approval" moving a document
+// between those states.
 //
 // Shared, unmodified, by v5's /v5/manage-guidance/... routes (see
-// app/views/legacy/routes.js) and v6's /v6/manage-guidance/... routes (see
-// app/views/v6/manage-guidance/) — session data is not namespaced per
-// version, so moving a document via "Start editing"/"Remove" in one also
-// shows up in the other, the same reasoning app/data/guidance-lists.js
-// documents for find-guidance's own session lists.
+// app/views/legacy/routes.js) and v6's /v6/manage-guidance/... and
+// /v6/editor-2-3-view/ routes — session data is not namespaced per
+// version, so moving a document via "Start editing"/"Remove"/"Send for
+// approval" in one also shows up in the other, the same reasoning
+// app/data/guidance-lists.js documents for find-guidance's own session
+// lists.
 //
 
 const { guidanceDocuments } = require('./guidance-documents')
@@ -61,6 +63,22 @@ function getAddedEditingIds(req) {
     req.session.data.manageGuidanceEditingAddedIds = []
   }
   return req.session.data.manageGuidanceEditingAddedIds
+}
+
+// Ids of real Editing-tab documents "Send for approval"
+// (app/views/v6/editor-2-3-view/) has moved to Awaiting approval this
+// session — the same session-backed move-by-id approach getAddedEditingIds
+// above already uses for Published → Draft, just one state further along.
+// buildManageGuidanceRows below moves the whole row (not a rebuilt one) out
+// of editingDocuments and into awaitingApprovalDocuments, so its own
+// publishingChecks/changesRequested/lastModified carry over unchanged —
+// this is a real document that was already being edited, not a fresh start
+// the way a moved Published sample is.
+function getAddedAwaitingApprovalIds(req) {
+  if (!req.session.data.manageGuidanceAwaitingApprovalAddedIds) {
+    req.session.data.manageGuidanceAwaitingApprovalAddedIds = []
+  }
+  return req.session.data.manageGuidanceAwaitingApprovalAddedIds
 }
 
 function buildManageGuidanceRows(req) {
@@ -185,11 +203,27 @@ function buildManageGuidanceRows(req) {
 
   const removedEditingIds = getRemovedEditingIds(req)
 
+  const allEditingRows = buildRows(editing)
+    .concat(addedFromPublished)
+    .filter((document) => removedEditingIds.indexOf(document.id) === -1)
+
+  // "Send for approval" moves a row out of editingDocuments and into
+  // awaitingApprovalDocuments — the whole row, carried over as-is (not
+  // rebuilt with fresh placeholder counts the way addedFromPublished
+  // above is), since this is an already-in-progress Editing document, not
+  // a newly-started one.
+  const addedAwaitingApprovalIds = getAddedAwaitingApprovalIds(req)
+  const movedToAwaitingApproval = allEditingRows.filter(
+    (document) => addedAwaitingApprovalIds.indexOf(document.id) !== -1
+  )
+
   return {
-    editingDocuments: buildRows(editing)
-      .concat(addedFromPublished)
-      .filter((document) => removedEditingIds.indexOf(document.id) === -1),
-    awaitingApprovalDocuments: buildRows(awaitingApproval)
+    editingDocuments: allEditingRows.filter(
+      (document) => addedAwaitingApprovalIds.indexOf(document.id) === -1
+    ),
+    awaitingApprovalDocuments: buildRows(awaitingApproval).concat(
+      movedToAwaitingApproval
+    )
   }
 }
 
@@ -205,6 +239,18 @@ function buildManageGuidanceRows(req) {
 // guidance-only concept, and adding these to the shared file would make
 // them show up on the Find guidance side too (organic-search.html,
 // find-guidance.html), which nothing asked for.
+//
+// versions.version1/version2 (added for document-overview.html's own
+// Version dropdown — see app/views/v6/manage-guidance/view-model.js) follow
+// the exact same shape and convention every guidance-documents.js entry
+// already uses: both are always present regardless of which one the
+// document's own top-level `version` field currently points at as
+// "current" — that field is only ever a highlight, not a statement that
+// the other one doesn't exist (see e.g. cs-ma-revenue-options-claim-rule-
+// signoff-2026 in guidance-documents.js, "Version 1" at the top level with
+// a full version2 entry sitting right below it). version1's own
+// versionNotes is always the exact literal "Initial published version of
+// this guidance." there too — kept identical here for the same reason.
 const MANAGE_GUIDANCE_PUBLISHED_SAMPLES = [
   {
     id: 'cs-mid-tier-hedgerow-and-boundary-options',
@@ -218,7 +264,22 @@ const MANAGE_GUIDANCE_PUBLISHED_SAMPLES = [
     published: '3 February 2025',
     category: 'Countryside Stewardship',
     scheme: 'Countryside Stewardship',
-    year: 2026
+    year: 2026,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '18 June 2024',
+        published: '18 June 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '12 July 2026',
+        published: '3 February 2025',
+        versionNotes:
+          'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
   },
   {
     id: 'sfi-nutrient-management-actions',
@@ -231,7 +292,22 @@ const MANAGE_GUIDANCE_PUBLISHED_SAMPLES = [
     published: '9 January 2025',
     category: 'Sustainable Farming Incentive',
     scheme: 'Sustainable Farming Incentive',
-    year: 2026
+    year: 2026,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '28 May 2026',
+        published: '9 January 2025',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '30 August 2026',
+        published: '30 August 2026',
+        versionNotes:
+          'Updated to clarify record-keeping requirements and how this action combines with other SFI actions on the same land.'
+      }
+    }
   },
   {
     id: 'cs-higher-tier-wetland-and-grassland-options',
@@ -244,7 +320,22 @@ const MANAGE_GUIDANCE_PUBLISHED_SAMPLES = [
     published: '21 November 2024',
     category: 'Countryside Stewardship',
     scheme: 'Countryside Stewardship',
-    year: 2026
+    year: 2026,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '4 April 2026',
+        published: '21 November 2024',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '15 July 2026',
+        published: '15 July 2026',
+        versionNotes:
+          'Updated to clarify evidence requirements for wetland and species-rich grassland options.'
+      }
+    }
   },
   {
     id: 'sfi-integrated-pest-management-actions',
@@ -258,7 +349,22 @@ const MANAGE_GUIDANCE_PUBLISHED_SAMPLES = [
     published: '14 October 2025',
     category: 'Sustainable Farming Incentive',
     scheme: 'Sustainable Farming Incentive',
-    year: 2025
+    year: 2025,
+    versions: {
+      version1: {
+        label: 'Version 1',
+        lastUpdated: '5 February 2025',
+        published: '5 February 2025',
+        versionNotes: 'Initial published version of this guidance.'
+      },
+      version2: {
+        label: 'Version 2',
+        lastUpdated: '19 August 2026',
+        published: '14 October 2025',
+        versionNotes:
+          'Updated to reflect revised scheme requirements and clarify eligibility criteria.'
+      }
+    }
   }
 ]
 
@@ -336,6 +442,7 @@ function buildManageGuidanceSearchResults(req, overviewHrefBase) {
 module.exports = {
   getRemovedEditingIds,
   getAddedEditingIds,
+  getAddedAwaitingApprovalIds,
   buildManageGuidanceRows,
   MANAGE_GUIDANCE_PUBLISHED_SAMPLES,
   lookupAnyManageGuidanceDocument,

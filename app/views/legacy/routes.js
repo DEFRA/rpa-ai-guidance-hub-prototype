@@ -116,29 +116,6 @@ const V5_NAVIGATION = [
   }
 ]
 
-// v6's own copy of V5_NAVIGATION above, /v6/-prefixed — v5 is now frozen
-// (see the "Version 6" comment on app/views/v6/'s route modules), so this
-// is kept as its own separate constant rather than v6 reusing V5_NAVIGATION
-// with its hrefs patched at render time, the same reasoning the routes
-// themselves are not shared: v5's own nav should not change if this one is
-// edited later.
-const V6_NAVIGATION = [
-  {
-    text: 'Find guidance',
-    href: '/v6/find-guidance',
-    prefixes: ['/v6/find-guidance', '/v6/document-overview']
-  },
-  {
-    text: 'Manage guidance',
-    href: '/v6/all-guidance-docs',
-    prefixes: [
-      '/v6/all-guidance-docs',
-      '/v6/guidance-document',
-      '/v6/manage-guidance'
-    ]
-  }
-]
-
 router.use((req, res, next) => {
   if (req.path.startsWith('/v1/')) {
     res.locals.serviceName = 'RPA AI Guidance Hub'
@@ -160,22 +137,15 @@ router.use((req, res, next) => {
 
     if (req.path === '/v6/sign-in') {
       res.locals.isV6SignIn = true
-    } else if (
-      req.path === '/v6/find-guidance' ||
-      req.path === '/v6/all-guidance-docs'
-    ) {
-      // The only two v6 pages with any header navigation at all — the
-      // taller "home header" (isV6Home, defra-header.njk), not the plain
-      // service-navigation bar v5 shows on every non-sign-in page. Every
-      // other v6 page shows neither: a govukBreadcrumbs component in its
-      // own content takes over as its wayfinding instead (see each
-      // template), so `navigation` deliberately stays unset there.
+    } else if (req.path === '/v6/unified-guidance') {
+      // The only v6 page with the taller "home header" (isV6Home,
+      // defra-header.njk) — no `navigation` set here, since the sidebar on
+      // that page itself is the navigation now (see
+      // app/views/v6/unified-guidance/page.njk), not a tabs list in the
+      // header. Every other v6 page shows neither: a govukBreadcrumbs
+      // component in its own content takes over as its wayfinding instead
+      // (see each template).
       res.locals.isV6Home = true
-      res.locals.navigation = V6_NAVIGATION.map((item) => ({
-        text: item.text,
-        href: item.href,
-        current: item.prefixes.some((prefix) => req.path.startsWith(prefix))
-      }))
     }
   }
   next()

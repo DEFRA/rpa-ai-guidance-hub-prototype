@@ -59,6 +59,7 @@
   Changes panel's old "Show changes" button (for undoing "Hide") has been
   removed entirely, having had no function; "Hide" itself is unchanged.
 #}
+
 {% extends "layouts/main.html" %}
 
 {% from "govuk/components/button/macro.njk" import govukButton %}
@@ -110,6 +111,8 @@
       <path d="M9.5 15.5L15 4.7l3.6 1.8-5.5 10.8z"/><path d="M5 20.5l2.7-5.4 2.8 1.8-2.7 5.4z"/>
     {% elif name == "link" %}
       <path d="M9.5 14.5l5-5"/><path d="M8 11.3l-2.3 2.3a3.4 3.4 0 0 0 4.8 4.8L13 16"/><path d="M16 12.7l2.3-2.3a3.4 3.4 0 0 0-4.8-4.8L11 8"/>
+    {% elif name == "comment" %}
+      <rect x="3" y="4.5" width="18" height="11" rx="1.5"/><path d="M8 15.5v3.3l4-3.3"/>
     {% elif name == "superscript" %}
       <path d="M4 7.5l8 10"/><path d="M12 7.5l-8 10"/><path d="M15 5.5h4"/><path d="M15 5.4c0-1 .8-1.6 2-1.6s2 .6 2 1.6c0 1.4-4.7 2.7-4.7 4.7h4.7"/>
     {% elif name == "subscript" %}
@@ -154,7 +157,7 @@
   sample) has no such document to link to, so that crumb is left out
   rather than pointing nowhere.
 #}
-{% set editorBreadcrumbItems = [{ text: "Manage guidance", href: "/v6/all-guidance-docs" }] %}
+{% set editorBreadcrumbItems = [{ text: "Home", href: "/v6/unified-guidance" }] %}
 {% if guidanceDocumentId %}
   {% set editorBreadcrumbItems = (editorBreadcrumbItems.push({ text: documentTitle, href: "/v6/guidance-document/" + guidanceDocumentId }), editorBreadcrumbItems) %}
 {% endif %}
@@ -336,21 +339,27 @@
       (template.tiptap.dev/preview/templates/simple) — grouping, icon set
       and dropdown pattern, not their component library (no dependency
       pulled in, every icon here is a hand-drawn SVG via the ttIcon macro
-      above). Visual/styling only: see wireTiptapToolbar() in pageScripts
-      for exactly what each button does (a CSS toggle at most) and does
-      not do (nothing here reads or writes the contenteditable region's
-      actual content or formatting — no document.execCommand wiring
-      underneath any of it). Icon set: a single heading-level dropdown
-      (Heading 1/2/3, Paragraph — replacing an earlier Font family + Font
-      size dropdown pair, and before that a fuller heading dropdown that
-      pair itself had replaced), Bold/Italic/Underline, Bullet list and
-      Link — a combined text/highlight colour swatch, Align left/centre
-      and Image have all since been removed, per the specific set asked
-      for each time this list was revised. The heading dropdown reuses
-      the exact same data-tt-dropdown/-trigger/-menu/-label/-option
-      markup and generic wireTiptapToolbar() wiring every dropdown this
-      toolbar has ever had already used, so it opens, closes and updates
-      its own label with no new JS needed.
+      above). Icon set: a single heading-level dropdown (Heading 1/2/3,
+      Paragraph — replacing an earlier Font family + Font size dropdown
+      pair, and before that a fuller heading dropdown that pair itself
+      had replaced), Bold/Italic/Underline, Bullet list, Link and Comment
+      — a combined text/highlight colour swatch, Align left/centre and
+      Image have all since been removed, per the specific set asked for
+      each time this list was revised. The heading dropdown reuses the
+      exact same data-tt-dropdown/-trigger/-menu/-label/-option markup
+      and generic wireTiptapToolbar() wiring every dropdown this toolbar
+      has ever had already used, so it opens, closes and updates its own
+      label with no new JS needed.
+
+      Every button here except Comment (data-tt-comment) is purely
+      visual: see wireTiptapToolbar() in pageScripts for exactly what
+      each one does (a CSS toggle at most) and does not do (nothing in
+      that function reads or writes the contenteditable region's actual
+      content or formatting — no document.execCommand wiring underneath
+      any of it). Comment is the one exception, wired separately
+      (wireAddCommentButton, pageScripts) — it is the only thing on this
+      whole page that reads the editor's current text selection at all,
+      now that selecting text no longer does anything on its own.
 
       A separate card above .app-experiment-box again, not fused into
       .app-experiment-editor — its own border/radius/background and
@@ -413,6 +422,18 @@
 
       <div class="tiptap-toolbar__group">
         <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Link" aria-pressed="false">{{ ttIcon("link") }}</button>
+      </div>
+
+      <div class="tiptap-toolbar__divider"></div>
+
+      {#
+        The one button in this toolbar that is not purely visual — see
+        wireAddCommentButton in pageScripts. Its own group/divider/button
+        styling is identical to every other icon here, deliberately, so it
+        reads as part of the same toolbar rather than a bolted-on extra.
+      #}
+      <div class="tiptap-toolbar__group">
+        <button type="button" class="tiptap-toolbar__button" data-tt-comment aria-label="Add comment">{{ ttIcon("comment") }}</button>
       </div>
 
     </div>
@@ -633,9 +654,13 @@
             [data-editor-content] (querySelectorAll always returns
             elements in that order, which is what this reads rather than
             trusting comments, app/routes.js, to already be in that
-            order); a comment created live afterwards (text selection) is
-            inserted at the matching index via insertCommentInOrder, not
-            appended to the end. Ordinary CSS margin (each card's own
+            order); a comment created live afterwards (the toolbar's own
+            Comment icon, with text selected) is inserted at the matching
+            index via insertCommentInOrder, not appended to the end — one
+            added with nothing selected has no anchor span to match
+            against, so it always lands at the very end instead, the same
+            place insertCommentInOrder's own fallback for an unresolved
+            anchor already puts a card. Ordinary CSS margin (each card's own
             margin-bottom, .app-editor-experiment.scss) is the only
             spacing between cards — no artificial gap simulating document
             distance the way margin-top once did here.
@@ -781,16 +806,17 @@
   }) }}
 </div>
 
-
 {% endblock %}
 
 {% block pageScripts %}
   {#
     {anchorId, sectionId, selectedText} for every comment created live via
-    a text selection and still around (app/routes.js —
-    buildAddedCommentAnchors) — restoreAddedCommentAnchors() below reads
-    this once, on load, to re-wrap each selectedText inside section
-    sectionId in a fresh app-editor-anchor span before
+    the toolbar's own Comment icon (with text selected — buildAddedCommentAnchors,
+    app/data/editor-experiment.js, already excludes the "nothing selected"
+    kind, which have no anchor to restore) and still around —
+    restoreAddedCommentAnchors() below reads this once, on load, to
+    re-wrap each selectedText inside section sectionId in a fresh
+    (invisible — see wrapRangeInAnchor) app-editor-anchor span before
     sortCommentsByAnchorOrder (further down) reads every anchor's own
     document position, since the card itself is already server-rendered
     (via the ordinary comments loop above) but its anchor span in the
@@ -1117,29 +1143,28 @@
           .replace(/'/g, '&#39;')
       }
 
-      // The SVG used for every app-editor-anchor__icon, whether hand-
-      // written into the fixed sample's own markup, or (both cases
-      // below) built here in JS — identical either way, so a comment
-      // created live looks no different from one that was always there.
-      var ANCHOR_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>'
-
-      function buildAnchorIconHTML (anchorId, author) {
-        return '<button type="button" class="app-editor-anchor__icon" data-anchor-icon="' + anchorId + '" aria-label="View ' + escapeHtml(author) + '’s comment">' + ANCHOR_ICON_SVG + '</button>'
-      }
-
-      // Wraps range in a new app-editor-anchor span + trailing icon —
-      // the exact same pair the fixed sample's own three anchors already
-      // are (see that markup) and EDITOR_HEADING_ANCHORS wraps a real
-      // document's section heading in (app/routes.js) — this is the
-      // third source of the same two elements, not a parallel mechanism.
+      // Wraps range in a new app-editor-anchor span — the same element
+      // the fixed sample's own hand-placed anchors and
+      // EDITOR_HEADING_ANCHORS's own real-document anchors already are
+      // (see that markup/app/routes.js), but every live-JS caller now
+      // wants one with no visible trace in the editor: getAnchorOrder()/
+      // sortCommentsByAnchorOrder further down only need the span to
+      // exist at the right DOM position (so a comment card can be placed
+      // in document order against it), not to look like anything. The
+      // .app-editor-anchor--hidden modifier (_app-editor-experiment.scss)
+      // is what actually suppresses the grey background .app-editor-
+      // anchor would otherwise apply — a comment created this way
+      // deliberately looks no different from unselected text, unlike the
+      // fixed sample's own anchors (still grey, with their own trailing
+      // icon — untouched static markup, not built by this function).
       // Returns the new span, or null if range can't be wrapped as a
       // single element (surroundContents throws if it crosses element
       // boundaries, e.g. a selection spanning two paragraphs) — same
       // failure mode and same "just don't create it" handling this
       // page's very first selection-wrapping code already established.
-      function wrapRangeInAnchor (range, anchorId, author) {
+      function wrapRangeInAnchor (range, anchorId) {
         var span = document.createElement('span')
-        span.className = 'app-editor-anchor'
+        span.className = 'app-editor-anchor app-editor-anchor--hidden'
         span.setAttribute('data-anchor-id', anchorId)
 
         try {
@@ -1148,7 +1173,6 @@
           return null
         }
 
-        span.insertAdjacentHTML('afterend', ' ' + buildAnchorIconHTML(anchorId, author))
         return span
       }
 
@@ -1203,103 +1227,141 @@
         }
 
         anchors.forEach(function (entry) {
-          var card = document.querySelector('.app-experiment-comment[data-anchor-id="' + entry.anchorId + '"]')
-          var author = card ? card.dataset.commentAuthor : ''
           var range = findTextRangeInSection(entry.sectionId, entry.selectedText)
-          if (range) wrapRangeInAnchor(range, entry.anchorId, author)
+          if (range) wrapRangeInAnchor(range, entry.anchorId)
         })
       }
 
       restoreAddedCommentAnchors()
 
-      // Selecting text now creates the pending comment directly — no
-      // intermediate "click a floating icon" step any more (that whole
-      // step, including app-editor-selection-trigger/pendingSelectionRange/
-      // hideSelectionTrigger, is gone; buildDraftCommentCardHTML/
+      // Adding a comment is a deliberate action off the toolbar's own
+      // Comment icon (data-tt-comment above) now, not an automatic side
+      // effect of selecting text — that whole mouseup-driven flow, this
+      // feature's very first version, is gone: selecting text no longer
+      // does anything on its own. buildDraftCommentCardHTML/
       // wireDraftCommentCard/insertCommentInOrder below and further down
-      // are unchanged in what they do, just called straight from mouseup
-      // instead of from a trigger's own click). Each draft this creates is
+      // are unchanged in what they do, just called from this click
+      // handler instead of from mouseup. Each draft this creates is
       // tracked purely by being its own DOM node plus its own
       // closure-captured `meta` (passed to wireDraftCommentCard, one call
-      // per draft, further down) — there is no shared "current pending"
-      // variable left anywhere in this file for a later selection to
-      // clobber, which is what lets any number of drafts stay open at
-      // once, each anchored to its own selection, regardless of what else
-      // gets selected afterwards.
-      var addedCommentCounter = 0
+      // per draft) — there is no shared "current pending" variable left
+      // anywhere in this file for a later click to clobber, which is
+      // what lets any number of drafts stay open at once, each anchored
+      // to its own selection (or, for one added with nothing selected,
+      // to none at all), regardless of what else gets selected/clicked
+      // afterwards.
+      function wireAddCommentButton () {
+        var commentButton = document.querySelector('[data-tt-comment]')
+        if (!commentButton || !editorContent) return
 
-      if (editorContent) {
-        editorContent.addEventListener('mouseup', function () {
-          // A tick after mouseup, not on it directly — the browser hasn't
-          // always finished updating window.getSelection() by the time
-          // this event itself fires.
-          window.setTimeout(function () {
-            var selection = window.getSelection()
-            if (!selection || selection.isCollapsed || !selection.anchorNode || !selection.focusNode ||
-                !editorContent.contains(selection.anchorNode) || !editorContent.contains(selection.focusNode)) {
-              return
-            }
+        var addedCommentCounter = 0
 
-            var text = selection.toString().trim()
-            if (!text) return
+        // mousedown, not click, is where the current selection actually
+        // needs protecting: without preventDefault() here, the browser's
+        // own default mousedown behaviour (shifting focus to this
+        // button) collapses whatever was selected in editorContent
+        // before the click handler below ever runs — the same reason
+        // every real rich-text toolbar (Tiptap's own included) calls
+        // preventDefault() on mousedown for a button that needs to act
+        // on the editor's current selection rather than on itself.
+        commentButton.addEventListener('mousedown', function (event) {
+          event.preventDefault()
+        })
 
+        commentButton.addEventListener('click', function () {
+          var selection = window.getSelection()
+          var hasSelection = !!(
+            selection && !selection.isCollapsed && selection.anchorNode && selection.focusNode &&
+            editorContent.contains(selection.anchorNode) && editorContent.contains(selection.focusNode) &&
+            selection.toString().trim()
+          )
+
+          addedCommentCounter += 1
+          var commentId = 'live-comment-' + addedCommentCounter
+          var anchorId = null
+          var sectionId = ''
+          var selectedText = ''
+
+          if (hasSelection) {
             var range = selection.getRangeAt(0).cloneRange()
-            // Clears the browser's own native (blue) selection highlight
-            // now that wrapRangeInAnchor below is about to mark the same
-            // text its own way (grey shading + icon) — without this the
-            // two would sit visibly on top of each other until whatever
-            // next click happened to clear the native one anyway.
+            // Clears the browser's own native (blue) selection now that
+            // it has done its job — marking what this new comment refers
+            // to — since nothing replaces it in the editor text itself;
+            // unlike the removed mouseup flow, wrapRangeInAnchor below
+            // leaves no grey shading or icon behind to take its place.
             selection.removeAllRanges()
 
-            addedCommentCounter += 1
-            var anchorId = 'anchor-live-' + addedCommentCounter
-            var commentId = 'live-comment-' + addedCommentCounter
+            var liveAnchorId = 'anchor-live-' + addedCommentCounter
+            var span = wrapRangeInAnchor(range, liveAnchorId)
 
-            var span = wrapRangeInAnchor(range, anchorId, 'You')
-            if (!span) return
+            // span is null if the selection couldn't be wrapped as a
+            // single element (e.g. it crosses a paragraph boundary) —
+            // same "just don't anchor it" fallback this page's very
+            // first selection-wrapping code already established. The
+            // comment below still gets created either way, just without
+            // a working anchor (falling in at the end of the list, same
+            // as "4. Clicking with no text selected") rather than not at
+            // all.
+            if (span) {
+              var sectionEl = span.closest('[id^="section-"]')
+              anchorId = liveAnchorId
+              sectionId = sectionEl ? sectionEl.id : ''
+              selectedText = span.textContent
+            }
+          }
 
-            var sectionEl = span.closest('[id^="section-"]')
-            var sectionId = sectionEl ? sectionEl.id : ''
-            var selectedText = span.textContent
+          var wrapper = document.createElement('div')
+          wrapper.innerHTML =
+            '<div class="app-experiment-comment" data-comment-id="' + commentId + '"' +
+              (anchorId ? ' data-anchor-id="' + anchorId + '"' : '') +
+              ' data-target-section="' + escapeHtml(sectionId) + '">' +
+              buildDraftCommentCardHTML(commentId) +
+            '</div>'
+          var card = wrapper.firstElementChild
 
-            var wrapper = document.createElement('div')
-            wrapper.innerHTML =
-              '<div class="app-experiment-comment" data-comment-id="' + commentId + '" data-anchor-id="' + anchorId + '" data-target-section="' + escapeHtml(sectionId) + '">' +
-                buildDraftCommentCardHTML(commentId) +
-              '</div>'
-            var card = wrapper.firstElementChild
+          // insertCommentInOrder already appends at the end when its own
+          // anchorId argument doesn't resolve to anything in
+          // getAnchorOrder() — true here both when span couldn't be
+          // created above and, always, when anchorId is still null
+          // because nothing was selected in the first place ("4.
+          // Clicking with no text selected") — so no separate branch is
+          // needed for that case, it falls out of the same fallback.
+          insertCommentInOrder(card, anchorId)
+          wireDraftCommentCard(card, { anchorId: anchorId, sectionId: sectionId, selectedText: selectedText })
 
-            insertCommentInOrder(card, anchorId)
-            wireDraftCommentCard(card, { anchorId: anchorId, sectionId: sectionId, selectedText: selectedText })
+          // "5. Switch to Comments tab" — reuses the tab button's own
+          // click handler (wireTiptapToolbar's sibling, further up)
+          // rather than duplicating its active-class/aria-selected/hidden
+          // logic here; harmless to call when Comments is already the
+          // active tab.
+          if (commentsTabButton) commentsTabButton.click()
 
-            var draftInput = card.querySelector('[data-draft-input]')
-            if (draftInput) draftInput.focus()
-          }, 0)
+          var draftInput = card.querySelector('[data-draft-input]')
+          if (draftInput) draftInput.focus()
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' })
         })
       }
+
+      wireAddCommentButton()
 
       // Undoes wrapRangeInAnchor completely — the span's own text goes
       // back to being a plain text node (parent.normalize() merges it
       // back into whichever text nodes now sit either side of it, rather
       // than leaving the DOM more fragmented than it was before the
-      // selection), and the icon plus the single space wrapRangeInAnchor
-      // inserted between the span and it (its own insertAdjacentHTML
-      // call) are both removed too. Used only by a draft's own Cancel
-      // button below — a draft is never sent to the server until Add is
-      // clicked (wireDraftCommentCard), so cancelling one has nothing
+      // selection). Nothing else to remove alongside it: unlike the
+      // fixed sample's own (untouched, still visible) anchors, a span
+      // wrapRangeInAnchor creates is always the invisible
+      // app-editor-anchor--hidden kind now, with no icon of its own.
+      // Used only by a draft's own Cancel button below (called only when
+      // meta.anchorId is set — a draft added with nothing selected has
+      // no span to undo) — a draft is never sent to the server until Add
+      // is clicked (wireDraftCommentCard), so cancelling one has nothing
       // server-side to undo, just this.
       function unwrapAnchorSpan (anchorId) {
         var span = document.querySelector('.app-editor-anchor[data-anchor-id="' + anchorId + '"]')
         if (!span) return
         var parent = span.parentNode
         if (!parent) return
-
-        var icon = document.querySelector('.app-editor-anchor__icon[data-anchor-icon="' + anchorId + '"]')
-        if (icon) {
-          var spacer = icon.previousSibling
-          if (spacer && spacer.nodeType === Node.TEXT_NODE && spacer.nodeValue === ' ') spacer.remove()
-          icon.remove()
-        }
 
         parent.replaceChild(document.createTextNode(span.textContent), span)
         parent.normalize()
@@ -1436,7 +1498,10 @@
         if (cancelButton) {
           cancelButton.addEventListener('click', function (event) {
             event.stopPropagation()
-            unwrapAnchorSpan(meta.anchorId)
+            // No anchor to remove for a draft added with nothing
+            // selected ("4. Clicking with no text selected") — meta.anchorId
+            // is null in that case.
+            if (meta.anchorId) unwrapAnchorSpan(meta.anchorId)
             card.remove()
           })
         }
