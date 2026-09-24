@@ -221,21 +221,30 @@
 
 {#
   From all-guidance-docs.html, with a status badge (statusCell, "Draft" for
-  the Editing tab or "Awaiting approval" for the Awaiting approval one —
-  see statusTags' own comment above) added above the document name link,
-  otherwise unchanged, including its own column split: columns == "checks"
-  (Awaiting approval) shows Publishing checks/Changes requested with no
-  Action column; the other branch (Editing, called with "lastModified")
-  shows Last modified plus a Remove link instead. The two tabs diverged
-  enough on the old page that one shared column set never fit both — that
-  is still true here, so this keeps taking which columns to render as its
-  own argument rather than assuming.
+  the Editing tab — see statusTags' own comment above) added above the
+  document name link, otherwise unchanged, including its own column split:
+  columns == "checks" (Awaiting approval) shows Publishing checks/Changes
+  requested with no Action column; the other branch (Editing, called with
+  "lastModified") shows Last modified plus a Remove link instead. The two
+  tabs diverged enough on the old page that one shared column set never
+  fit both — that is still true here, so this keeps taking which columns
+  to render as its own argument rather than assuming.
+
+  No badge on the Awaiting approval tab specifically (columns == "checks")
+  — every row there is already, by definition, awaiting approval, so a
+  repeated "Awaiting approval" tag above each title added nothing the tab
+  itself doesn't already say. The Editing tab keeps its "Draft" badge:
+  unlike Awaiting approval, a document only lands there because it is
+  Draft, but "Draft" is still a real status distinction worth restating
+  next to a title (a document can leave Editing by either publishing or
+  moving to Awaiting approval, so the badge is not pure repetition the way
+  it was here).
 #}
 {% macro manageGuidanceTable(documents, columns, status) %}
   {% set rows = [] %}
   {% set statusCell %}<div class="govuk-!-margin-bottom-1">{{ govukTag(statusTags[status]) }}</div>{% endset %}
   {% for document in documents %}
-    {% set nameCell %}{{ statusCell | safe }}<a class="govuk-link" href="/v6/manage-guidance/document-overview?id={{ document.id }}">{{ document.name }}</a>{% endset %}
+    {% set nameCell %}{{ (statusCell | safe) if columns != "checks" }}<a class="govuk-link" href="/v6/manage-guidance/document-overview?id={{ document.id }}">{{ document.name }}</a>{% endset %}
     {% set versionCell %}{{ govukTag(versionTags[document.version]) }}{% endset %}
     {% if columns == "checks" %}
       {% set checksText %}{% if document.publishingChecks == 0 %}No issues{% else %}{{ document.publishingChecks }} issue{{ "s" if document.publishingChecks != 1 }}{% endif %}{% endset %}
@@ -285,14 +294,16 @@
 {% endmacro %}
 
 {#
-  A plain "Search guidance" <h2 class="govuk-heading-m"> — no explanatory
-  body text any more (removed, not just replaced by the heading — a
-  previous pass here read "No heading" for the opposite reason, before the
-  heading was added; see the design refinement note at the top of this
-  file for that history). govuk-heading-m, not -l, for the same reason the
-  per-tab panel headings further down use -m: a real GDS heading step, but
-  one step below the page's actual <h1> in the green banner rather than
-  matching its size.
+  A plain "Search guidance" <h2 class="govuk-heading-m"> plus a one-line
+  govuk-hint underneath it ("Search using guidance title or description")
+  — a later pass re-added a subtext line here, styled as GDS hint text
+  (secondary/muted, smaller than govuk-body) rather than the fuller
+  explanatory paragraph an earlier pass removed entirely (see the design
+  refinement note at the top of this file for that history) — a short
+  hint, not a repeat of that longer copy. govuk-heading-m, not -l, for the
+  same reason the per-tab panel headings further down use -m: a real GDS
+  heading step, but one step below the page's actual <h1> in the green
+  banner rather than matching its size.
 
   One search bar now, not two — routed unconditionally to
   /v6/manage-guidance/search-guidance (the filterable Category/State/
@@ -307,6 +318,7 @@
 #}
 {% set searchGuidance %}
   <h2 class="govuk-heading-m">Search guidance</h2>
+  <p class="govuk-hint">Search using guidance title or description</p>
   <form method="get" action="/v6/manage-guidance/search-guidance">
     <div class="app-search-bar">
       <div class="app-search-bar__input">
@@ -409,6 +421,7 @@
            data-tab-panel="editing" id="tab-panel-editing"
            role="tabpanel" aria-labelledby="tab-button-editing">
         <h2 class="govuk-heading-m">Editing</h2>
+        <p class="govuk-hint">All your guidance in edit mode appears here. Make changes and save progress as you work.</p>
         {{ manageGuidanceTable(editingDocuments, "lastModified", "Draft") }}
       </div>
 
@@ -416,6 +429,7 @@
            data-tab-panel="awaiting-approval" id="tab-panel-awaiting-approval"
            role="tabpanel" aria-labelledby="tab-button-awaiting-approval">
         <h2 class="govuk-heading-m">Awaiting approval</h2>
+        <p class="govuk-hint">Guidance pending review and approval before publishing. Publishing checks verify that your guidance meets quality standards before publishing.</p>
         {{ manageGuidanceTable(awaitingApprovalDocuments, "checks", "Awaiting approval") }}
       </div>
 

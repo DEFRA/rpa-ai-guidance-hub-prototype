@@ -1414,6 +1414,13 @@
 // than the previous row (text left, tag pushed right via space-between),
 // swapped to match in markup order too, so this is a real top-to-bottom
 // reading order, not just a visual stack with the DOM order unchanged.
+//
+// transition here (not on .text-highlight-active itself) for the same
+// reason every other .text-highlight-active target declares its own —
+// see that class's own comment: opening /v6/editor-2-3-view with
+// ?checkId= set (guidance-document.html's own "Issue" links) flashes the
+// matching check here the same amber-then-fade way clicking one already
+// flashes its target editor section.
 .app-experiment-check {
   display: flex;
   flex-direction: column;
@@ -1423,6 +1430,7 @@
   margin-bottom: govuk-spacing(2);
   border: 1px solid $govuk-mid-grey;
   cursor: pointer;
+  transition: background-color 400ms ease-out;
 
   &:focus {
     outline: 3px solid $govuk-yellow;
@@ -1490,30 +1498,14 @@
   justify-content: flex-start;
 }
 
-// The title's own row, mirroring .app-editor-2-3-view__row's two-column
-// split below it so the title lines up with .app-editor-2-3-view__editor
-// specifically, not the whole (govuk-grid-column-full) container's left
-// edge — see editor-2-3-view.html's own comment on
-// [data-title-spacer]/[data-title-content] for why. gap matches that row's
-// own value so the two rows' column boundaries land at the same x
-// position.
+// The title's own row — flush with the row's own left edge (the same
+// edge .app-editor-2-3-view__panel-header/panel below start at), not
+// offset to line up with .app-editor-2-3-view__editor the way an earlier
+// version of this (with a .app-editor-2-3-view__title-spacer flex item
+// reserving the sidebar's own width) had it.
 .app-editor-2-3-view__title-row {
   display: flex;
   gap: govuk-spacing(4);
-}
-
-// Empty — purely reserves the same width .app-editor-2-3-view__panel
-// takes below, so .app-editor-2-3-view__title-content starts where
-// .app-editor-2-3-view__editor does. flex-basis must stay in sync with
-// that class's own 380px if it's ever changed. No [hidden] override
-// needed: like .app-editor-2-3-view__panel itself, this sets no display
-// property of its own to out-specificity the browser's default [hidden] {
-// display: none }, so pageScripts' setLeftPanelHidden toggling this
-// element's own hidden attribute (in step with the real panel) already
-// works with nothing extra.
-.app-editor-2-3-view__title-spacer {
-  flex: 0 1 380px;
-  min-width: 0;
 }
 
 .app-editor-2-3-view__title-content {

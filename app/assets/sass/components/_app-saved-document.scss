@@ -38,6 +38,44 @@
   overflow-y: auto;
 }
 
+// Content/Case notes — a horizontal underlined-tab strip, the same visual
+// language editor-2-3-view.html's own Content/Comments/Checks tabs use
+// (.app-experiment-tab/-tabs, _app-editor-experiment.scss), copied under
+// this page's own class names rather than reused directly — no visual
+// pattern in this project is shared across page families by importing the
+// other family's own classes, even where the styling ends up identical.
+.app-document-content__tabs {
+  display: flex;
+  gap: govuk-spacing(4);
+  margin-bottom: govuk-spacing(4);
+  border-bottom: 1px solid $govuk-mid-grey;
+}
+
+.app-document-content__tab {
+  padding: 0 0 govuk-spacing(2);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+  }
+}
+
+.app-document-content__tab--active {
+  border-bottom-color: govuk-colour("blue");
+  color: govuk-colour("blue");
+  font-weight: 700;
+}
+
 .app-document-content__nav {
   margin: 0 0 govuk-spacing(6);
   padding: 0;
@@ -253,22 +291,19 @@
   margin-bottom: 0;
 }
 
-// A fixed bar pinned to the bottom of the viewport holding Back/Next and
-// Save progress, so the primary step actions stay reachable without
-// scrolling down a long step. govuk-width-container (reused, not
-// reinvented) gives the inner row the same max-width and responsive side
-// padding as the rest of the page's content, so Back/Next line up under
-// the column above them rather than sitting flush against the screen
-// edges.
+// Back/Next and Save progress, in normal document flow after the step
+// content — previously position: fixed, pinned to the bottom of the
+// viewport regardless of scroll position; a later pass moved it back into
+// the ordinary page flow (per an explicit request that it not stay fixed
+// to the screen), so this is now just a plain border-top separator, no
+// different from any other section boundary on the page. govuk-width-
+// container on the inner row (kept, not removed) still gives it the same
+// max-width and responsive side padding as the rest of the page's
+// content, so Back/Next line up under the column above them rather than
+// sitting flush against the page edges.
 .app-document-footer-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  z-index: 10;
-  background-color: $govuk-white;
+  margin-top: govuk-spacing(6);
   border-top: 1px solid $govuk-mid-grey;
-  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .app-document-footer-bar__inner {
@@ -290,17 +325,6 @@
 
 .app-document-footer-bar .app-document-step-actions__save {
   margin-bottom: 0;
-}
-
-// Keeps the last of a step's own content, and the "Saving your progress…"
-// inset text below it, clear of the fixed bar now covering the bottom of
-// the viewport. Generous rather than an exact match to the bar's rendered
-// height, since GDS's .govuk-button-group stacks Back/Next into two full
-// rows on narrow screens (button-group's own responsive
-// flex-direction: column), making the bar taller on mobile than the
-// desktop two-button row this value is roughly sized against.
-[data-document-text-column] {
-  padding-bottom: govuk-spacing(9);
 }
 
 // Looks like a link, not a button — same treatment as
@@ -422,6 +446,47 @@
 
 .app-case-note__caption {
   color: $govuk-secondary-text-colour;
+}
+
+// The sidebar's own "Case notes" tab panel (alongside "Content", both
+// under .app-document-content__tab-panel above) — an example of the
+// format a note should follow, then any the reviewer has actually added
+// via "Add case notes here" (.app-link-button).
+.app-case-notes-panel__example-label {
+  font-weight: bold;
+  margin-bottom: govuk-spacing(1);
+}
+
+.app-case-notes-panel__example {
+  color: $govuk-secondary-text-colour;
+  padding-bottom: govuk-spacing(3);
+  border-bottom: 1px solid $govuk-border-colour;
+}
+
+.app-case-notes-panel__list {
+  margin-top: govuk-spacing(3);
+}
+
+.app-case-notes-panel__note {
+  padding: govuk-spacing(2) 0;
+  border-bottom: 1px solid $govuk-border-colour;
+
+  > *:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.app-case-notes-panel__note-meta {
+  font-weight: bold;
+  margin-bottom: govuk-spacing(1);
+}
+
+.app-case-notes-panel__form {
+  margin-top: govuk-spacing(3);
+}
+
+.app-case-notes-panel__input {
+  width: 100%;
 }
 
 // "Search this guidance" — sits at the top of the main content column, so
