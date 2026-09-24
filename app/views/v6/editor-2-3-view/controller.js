@@ -8,7 +8,8 @@ const {
   getEditorExperimentDeletedCommentIds,
   getEditorExperimentAddedComments,
   buildEditorExperimentComments,
-  buildAddedCommentAnchors
+  buildAddedCommentAnchors,
+  EDITOR_EXPERIMENT_CHECKS
 } = require('../../../data/editor-experiment')
 const {
   getAddedAwaitingApprovalIds,
@@ -39,12 +40,32 @@ const {
 // entry, falls back to rendering with neither variable set — see the
 // template, which then shows the exact same fixed sample content it
 // always has.
+//
+// checks (EDITOR_EXPERIMENT_CHECKS) is the same fixed Checks-tab list
+// regardless of which document is showing — see that constant's own
+// comment for why. checkId (?checkId=, from guidance-document.html's own
+// "Issue" links — app/views/v6/guidance-document/controller.js) tells the
+// template's own pageScripts which one to switch to the Checks tab for
+// and highlight on load; not validated against EDITOR_EXPERIMENT_CHECKS
+// here, since an id matching nothing simply highlights nothing client-side
+// rather than needing a server-side error path. checkSeverity is looked
+// up from it here (server-side, unlike checkId's own client-side lookup)
+// purely so the template's own "Go to publishing checks page" link can
+// carry &severity= back to guidance-document.html — round-tripping which
+// severity tab the check being reviewed came from, not just which
+// document, so that link returns to the same tab rather than always the
+// default one.
 function get(req, res) {
   const guidanceDocument = guidanceDocuments.find(
     (candidate) => candidate.id === req.query.id
   )
   const comments = buildEditorExperimentComments(req)
   const addedCommentAnchorsJson = JSON.stringify(buildAddedCommentAnchors(req))
+  const checkId = req.query.checkId || null
+  const matchedCheck = checkId
+    ? EDITOR_EXPERIMENT_CHECKS.find((candidate) => candidate.id === checkId)
+    : null
+  const checkSeverity = matchedCheck ? matchedCheck.severity : null
 
   // Restores in-progress edits when returning via "Back to editor" from the
   // Preview flow — only when the stored preview's id still matches the
@@ -59,7 +80,10 @@ function get(req, res) {
     res.render('versions/v6/editor-2-3-view', {
       comments,
       addedCommentAnchorsJson,
-      restoredEditorHtml
+      restoredEditorHtml,
+      checks: EDITOR_EXPERIMENT_CHECKS,
+      checkId,
+      checkSeverity
     })
     return
   }
@@ -70,7 +94,10 @@ function get(req, res) {
     editorSections: buildEditorSections(guidanceDocument),
     comments,
     addedCommentAnchorsJson,
-    restoredEditorHtml
+    restoredEditorHtml,
+    checks: EDITOR_EXPERIMENT_CHECKS,
+    checkId,
+    checkSeverity
   })
 }
 

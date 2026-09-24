@@ -229,13 +229,16 @@
 #}
 {% set comments = comments | default([]) %}
 
-{% set checks = [
-  { text: "Payment rate figure is outdated", severity: "High", section: "section-3" },
-  { text: "Missing alt text on supporting image", severity: "Medium", section: "section-5" },
-  { text: "Heading level skips from H2 to H4", severity: "Low", section: "section-4" },
-  { text: "Broken internal link to related guidance", severity: "Medium", section: "section-6" },
-  { text: "Sentence exceeds recommended reading age", severity: "Low", section: "section-2" }
-] %}
+{#
+  checks (EDITOR_EXPERIMENT_CHECKS, app/data/editor-experiment.js) comes
+  from app/views/v6/editor-2-3-view/controller.js now, not hardcoded here
+  — the same fixed list guidance-document.html's own severity tabs render
+  too, so the two pages' Checks content genuinely matches rather than each
+  keeping its own independently-hardcoded copy. default([]) is a safety
+  net for that route always passing it, the same reason comments above has
+  one.
+#}
+{% set checks = checks | default([]) %}
 
 {% set severityTags = {
   "High": { text: "High", classes: "govuk-tag--red" },
@@ -271,22 +274,17 @@
       too: nothing here is session-persisted, consistent with how every
       other "rename" on this page already works, not a new exception.
 
-      Deliberately NOT flush with the row's own left edge (where
-      .app-editor-2-3-view__panel-header/"Hide sidebar" below still sits,
-      aligned with the panel it controls) — the title instead lines up
-      with .app-editor-2-3-view__editor specifically, per an explicit
-      request that it sit above the editor/toolbar rather than spanning
-      the whole row above both columns. [data-title-spacer] is an empty
-      flex item mirroring .app-editor-2-3-view__panel's own flex-basis
-      (380px — the two must be kept in sync if that value ever changes) so
-      the title content beside it starts exactly where the editor column
-      does; pageScripts' setLeftPanelHidden toggles this spacer's own
-      [hidden] in step with the real panel, so once "Hide sidebar" is
-      clicked and the editor grows to fill the whole row, the title grows
-      to match it rather than staying offset above empty space.
+      Flush with the row's own left edge — the same edge
+      .app-editor-2-3-view__panel-header/"Hide sidebar" below and
+      .app-editor-2-3-view__panel itself both start at — rather than
+      offset to line up with .app-editor-2-3-view__editor instead (an
+      earlier explicit request had it starting there; a later one asked
+      for it flush left with the sidebar/main content area instead, which
+      is what this is now). No spacer item needed to achieve that: with
+      only .app-editor-2-3-view__title-content in this row,
+      it starts at the row's own left edge on its own.
     #}
     <div class="app-editor-2-3-view__title-row">
-      <div class="app-editor-2-3-view__title-spacer" data-title-spacer></div>
       <div class="app-editor-2-3-view__title-content">
         <span class="govuk-caption-m">Guidance title</span>
         <div class="app-experiment-title-wrapper" data-title-wrapper>
@@ -500,9 +498,39 @@
 
           <div data-tab-panel="checks" hidden>
 
+            {#
+              Back to guidance-document.html — the reverse of the trip
+              that brought someone here in the first place (that page's
+              own Issue links → ?checkId=/&id= here, see this page's own
+              controller.js). severity= (from checkSeverity, looked up
+              there from checkId) carries the severity tab the check being
+              reviewed came from, so this returns to the same tab rather
+              than always guidance-document.html's own default (High) —
+              both as a real ?severity= query param (that page's own
+              server-rendered initial state, and its no-JS fallback) and
+              as a matching #high/#medium/#low hash (so govuk-tabs' own
+              client-side init, which only ever honours a real
+              window.location.hash and otherwise resets to its first tab
+              regardless of server-rendered classes, lands on the same tab
+              rather than flashing back to High — see that page's own
+              comment on its tabs). Both omitted when there is no
+              checkSeverity to carry (a direct visit here, or one with no
+              ?checkId=), same as ?id= is omitted below when there is no
+              guidanceDocumentId. Only rendered when guidanceDocumentId is
+              real: the fixed sample (no ?id=, or one matching nothing)
+              has no guidance-document page of its own to go back to.
+              Above the checks list, not below it — the top of the panel,
+              before any individual check.
+            #}
+            {% if guidanceDocumentId %}
+              <p class="govuk-body-s govuk-!-margin-bottom-3">
+                <a class="govuk-link" href="/v6/guidance-document/{{ guidanceDocumentId }}{{ ('?severity=' + checkSeverity + '#' + (checkSeverity | lower)) if checkSeverity else '' }}">Go to publishing checks page</a>
+              </p>
+            {% endif %}
+
             <ul class="app-experiment-checks">
               {% for check in checks %}
-                <li class="app-experiment-check" data-highlight-trigger data-target-section="{{ check.section }}" tabindex="0" role="button">
+                <li class="app-experiment-check" data-highlight-trigger data-target-section="{{ check.section }}" data-check-id="{{ check.id }}" tabindex="0" role="button">
                   {{ govukTag(severityTags[check.severity]) }}
                   <span class="app-experiment-check__text">{{ check.text }}</span>
                 </li>
@@ -1186,6 +1214,36 @@
       }
 
       document.querySelectorAll('[data-highlight-trigger]').forEach(wireHighlightTrigger)
+
+      // ?checkId= (from guidance-document.html's own "Issue" links — app/
+      // views/v6/guidance-document/controller.js) opens straight onto the
+      // Checks tab with that one check highlighted, rather than landing
+      // on the Content tab with no indication of which finding was
+      // actually clicked. dataset comparison rather than a
+      // querySelector('[data-check-id="' + initialCheckId + '"]') lookup
+      // — the id comes straight from the URL, so building a selector
+      // string out of it is worth avoiding even though every id here is
+      // in practice a plain "check-N" slug. flashHighlight is called once
+      // with both the check <li> and its target editor section together
+      // (the same two-element-at-once pattern wireHighlightTrigger's own
+      // click handler already uses for a comment card + its target) —
+      // calling it twice, once per element, would just have the second
+      // call clear the first flash straight back off again, since it
+      // always clears every currently-flashed element before adding its
+      // own.
+      var initialCheckId = new URLSearchParams(window.location.search).get('checkId')
+      if (initialCheckId) {
+        var initialCheck = Array.prototype.filter.call(
+          document.querySelectorAll('[data-check-id]'),
+          function (item) { return item.dataset.checkId === initialCheckId }
+        )[0]
+
+        if (initialCheck && checksTabButton) {
+          checksTabButton.click()
+          flashHighlight(initialCheck, document.getElementById(initialCheck.dataset.targetSection))
+          initialCheck.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }
 
       function escapeHtml (value) {
         return String(value)
@@ -2313,17 +2371,10 @@
       // otherwise.
       function setLeftPanelHidden (hidden) {
         var panel = document.querySelector('[data-left-panel]')
-        var titleSpacer = document.querySelector('[data-title-spacer]')
         var link = document.querySelector('[data-hide-left-panel]')
         if (!panel || !link) return
 
         panel.hidden = hidden
-        // Keeps the title's own left offset in step with the real panel —
-        // see that spacer's own comment in editor-2-3-view.html — so the
-        // title grows to the row's full width alongside the editor
-        // (rather than staying offset above now-empty space) whenever the
-        // sidebar itself is hidden, and back again when it's shown.
-        if (titleSpacer) titleSpacer.hidden = hidden
         link.textContent = hidden ? 'Show sidebar' : 'Hide sidebar'
         link.setAttribute('aria-expanded', String(!hidden))
       }

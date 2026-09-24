@@ -63,11 +63,33 @@
 
   "View" (labelled "Open" until a later pass renamed it, matching the same
   rename made across the manage-guidance side's own document-overview.html)
-  carries the same ?from= forward too (app/routes.js reads it back on the
-  way in there, and uses it to send this page's own Back link — normally
-  rendered by layouts/main.html from res.locals.backHref — to this exact
-  document-overview.html rather than to /v6/find-guidance), so the trail a
-  designer arrived on stays intact one page further than this one.
+  now goes to /v6/guidance-document-choice/<id> rather than straight to the
+  viewer — the same choice-of-layout step manage-guidance's own Published
+  state already sends "View" through — so a reviewer reaching this page
+  from Recently opened/Saved guidance on the unified hub, or from a search
+  result, gets the exact same choice-then-viewer flow either side of the
+  hub leads to for the same document; ?from= is no longer carried onto it
+  (that page has no use for it — it shows the same breadcrumb regardless
+  of how it was reached), so the trail this page's own breadcrumb built up
+  ends here rather than continuing one page further.
+
+  "Edit" is new alongside it, for the same reason: manage-guidance's own
+  Published state already shows View and Edit together, not View alone,
+  so this page — the find-guidance side's equivalent stop for the same
+  underlying guidance-documents.js documents — now does too, rather than
+  a document's available actions depending on which side of the hub led
+  here. Reuses that same /v6/manage-guidance/start-editing POST as-is
+  (adds this id to req.session.data.manageGuidanceEditingAddedIds and
+  redirects into /v6/editor-2-3-view?id=<id> with the document's real
+  content) rather than a separate route — one real "start editing" action
+  for the app, not two. One known gap, not fixed here: unlike a document
+  reached via the manage-guidance side (where the analogous MANAGE_
+  GUIDANCE_PUBLISHED_SAMPLES id is folded back into buildManageGuidanceRows'
+  own editingDocuments afterwards), an id only ever seen here has no
+  matching entry in that sample list, so it does not then show up as a
+  Draft row on the unified hub's own Editing tab — the edit itself still
+  works (the editor opens with the real document), it just is not tracked
+  as an in-progress edit anywhere else yet.
 #}
 {% extends "layouts/main.html" %}
 
@@ -157,8 +179,16 @@
     <div class="govuk-button-group">
       {{ govukButton({
         text: "View",
-        href: "/v6/find-guidance/document/" + document.id + ("?from=" + from if from else "")
+        href: "/v6/guidance-document-choice/" + document.id
       }) }}
+
+      <form method="post" action="/v6/manage-guidance/start-editing">
+        <input type="hidden" name="id" value="{{ document.id }}">
+        {{ govukButton({
+          text: "Edit",
+          classes: "govuk-button--secondary"
+        }) }}
+      </form>
     </div>
 
     <p class="govuk-body">
