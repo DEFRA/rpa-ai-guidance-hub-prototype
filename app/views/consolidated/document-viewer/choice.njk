@@ -1,0 +1,115 @@
+{#
+  An intermediary step between "View" on manage-guidance/document-
+  overview.html and the guidance viewer itself — lets a reviewer pick a
+  viewer layout rather than "View" going straight to one. See
+  controller.js's own top comment for the two destinations' exact routes.
+
+  Native govukRadios + Continue, not the earlier card-based version
+  (.app-card) — the task asked for the standard GDS radio-button pattern
+  ("Where do you live?") instead, so a real <form method="post"> is
+  needed here now: choosing an option no longer navigates directly, it
+  selects a radio, and Continue is what submits to controller.js's own
+  post, which validates a selection was made and redirects to the chosen
+  viewer. Validation follows the same govukErrorSummary pattern already
+  established for a radios-with-Continue page in this codebase (app/
+  views/v6/create-guidance/page.njk + its controller): errors.viewer =
+  { text, href }, errorList: Object.values(errors), the same template
+  re-rendered with the selection preserved on failure, novalidate on the
+  form since the server-side check is what actually runs.
+
+  Breadcrumbs (Home > <guidance title>), not a Back link — GOV.UK
+  guidance is not to use both on the same page, same choice every other
+  breadcrumb-bearing page in this app already makes. The breadcrumb is
+  this page's only mention of which guidance it's about — no separate
+  "Title" caption/heading repeating it in the body. Extends common/
+  layouts/base.njk directly and hand-rolls its own grid, not common/
+  layouts/content.njk — that layout's single two-thirds column has no
+  room above it for a full-width breadcrumb row, the same reason manage-
+  guidance/document-overview.html and saved-document-view.html both do
+  the same thing.
+
+  The fieldset legend itself is this page's <h1> (isPageHeading: true,
+  the same technique create-guidance/page.njk uses) rather than a
+  separate heading above the radios — GOV.UK's own radios pattern always
+  treats the question being asked as the page heading when the radios
+  are the whole page. The explanatory paragraph becomes the fieldset's
+  own hint text, rendered directly under that heading and above the
+  options, which is exactly what a fieldset hint is for.
+
+  Both destinations carry the guidance id through in their own URL, both
+  under /v6/find-guidance/ (/v6/find-guidance/document/<id> — the real
+  step-by-step guidance viewer — and /v6/find-guidance/document-
+  experiment/<id> — a single-page layout being trialled alongside it,
+  still fixed placeholder content regardless of which id reaches it) —
+  see controller.js's own top comment for exactly what each renders.
+#}
+{% extends "common/layouts/base.njk" %}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Choose how you'd like to view this guidance" %}
+{% if errorList and errorList.length %}{% set pageName = "Error: " + pageName %}{% endif %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Home", href: "/consolidated/hub" },
+        { text: documentTitle }
+      ]
+    }) }}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {% if errorList and errorList.length %}
+      {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+    {% endif %}
+
+    <form method="post" action="/consolidated/document/{{ id }}/view" novalidate>
+
+      {{ govukRadios({
+        idPrefix: "guidance-viewer",
+        name: "viewer",
+        value: selected,
+        fieldset: {
+          legend: {
+            text: "Choose how you'd like to view this guidance",
+            isPageHeading: true,
+            classes: "govuk-fieldset__legend--l"
+          }
+        },
+        hint: {
+          text: "Two ways to view this guidance are available while a new layout is being tried out. Pick either one — you can come back and try the other at any time."
+        },
+        errorMessage: errors.viewer,
+        items: [
+          {
+            value: "stepper",
+            text: "Stepper format",
+            hint: { text: "The current guidance viewer layout." }
+          },
+          {
+            value: "traditional",
+            text: "Traditional viewer",
+            hint: { text: "A new layout being tried out for viewing guidance." }
+          }
+        ]
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}
