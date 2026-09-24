@@ -1,0 +1,365 @@
+{#
+  One canonical "Document overview" page — see view-model.js's own top
+  comment for which three implementations this replaces and why this one
+  (the old /v6/manage-guidance/document-overview, the superset of the
+  three: Published/Draft/Awaiting approval all in one place) was kept as
+  the base rather than either of the other two.
+
+  Three states, three layouts, sharing one overall shape (status badge,
+  "Title" caption + heading, a description, a govukSummaryList of version
+  fields — plus Publishing checks/Changes requested for Draft/Awaiting
+  approval — a govuk-button-group, then "Save to search" on its own line):
+    - Published (green): Version dropdown + Version notes/Last updated/
+      Published rows; View / Edit buttons. "Edit" POSTs to start-editing,
+      which moves this id into Draft for the rest of the session and opens
+      the editor — a later visit here for the same id then hits the Draft
+      branch instead.
+    - Draft (grey): same Version rows, plus Publishing checks (an inline
+      simulate-then-reveal widget, unchanged from the version this was
+      ported from) and Changes requested. Continue editing / View buttons.
+    - Awaiting approval (yellow): same rows as Draft. View / Edit buttons,
+      same pairing as Published — Edit here is a plain link straight into
+      the editor (?id=, no form/POST), not "Start editing": unlike
+      Published→Draft, there's no session-state move to make (this
+      document's row already lives in the Awaiting approval tab; editing
+      it doesn't change that), so this is deliberately simpler than the
+      Published branch's own start-editing action.
+
+  "View" (every state) goes to the viewer choice page
+  (document-viewer/choice.njk) — the consolidation plan's "keep the A/B"
+  decision, not straight to either viewer. "View issues" (Draft/Awaiting
+  approval, once a simulated check run completes) now goes to
+  /consolidated/issues — the canonical quality-check page (V2's Issues/
+  Findings, the plan's other "no debate" decision) — rather than the
+  fourth quality-check implementation this page used to open.
+#}
+{% extends "common/layouts/base.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% set pageName = document.name %}
+
+{% set statusTags = {
+  "Published": { text: "Published", classes: "govuk-tag--green govuk-!-margin-bottom-4" },
+  "Draft": { text: "Draft", classes: "govuk-tag--grey govuk-!-margin-bottom-4" },
+  "Awaiting approval": { text: "Awaiting approval", classes: "govuk-tag--yellow govuk-!-margin-bottom-4" }
+} %}
+
+{% set saveNotificationText = document.name + " has been saved to your Saved guidance." %}
+
+{% set currentVersion = document.versions[defaultVersionKey] %}
+
+{% set versionSelectCell %}
+  {{ govukSelect({
+    id: "document-version",
+    name: "version",
+    label: { text: "Version", classes: "govuk-visually-hidden" },
+    formGroup: { classes: "govuk-!-margin-bottom-0" },
+    attributes: { "data-version-select": true },
+    items: [
+      { value: "version1", text: "Version 1", selected: defaultVersionKey == "version1" },
+      { value: "version2", text: "Version 2", selected: defaultVersionKey == "version2" }
+    ]
+  }) }}
+{% endset %}
+
+{% set versionNotesCell %}<span data-version-field="versionNotes">{{ currentVersion.versionNotes }}</span>{% endset %}
+{% set lastUpdatedCell %}<span data-version-field="lastUpdated">{{ currentVersion.lastUpdated }}</span>{% endset %}
+{% set publishedCell %}<span data-version-field="published">{{ currentVersion.published }}</span>{% endset %}
+
+{% set checksValue %}
+  <div data-checks-cell data-issue-count="{{ document.publishingChecks }}">
+
+    <div class="app-manage-guidance-checks-row" data-checks-idle>
+      <span>Checks not run</span>
+      {{ govukButton({
+        text: "Start Checks",
+        type: "button",
+        classes: "govuk-button--secondary govuk-!-margin-bottom-0",
+        attributes: { "data-start-checks-inline": true }
+      }) }}
+    </div>
+
+    <div data-checks-running hidden>
+      <p class="govuk-body-s govuk-!-margin-bottom-2" data-checks-countdown role="status">
+        Running checks — estimated time remaining: 8 seconds
+      </p>
+      <div class="app-progress__track">
+        <div class="app-progress__bar" data-checks-bar></div>
+      </div>
+    </div>
+
+    <div data-checks-complete hidden>
+      <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1" data-checks-headline></p>
+      <p class="govuk-body-s govuk-!-margin-bottom-2" data-checks-breakdown></p>
+      {{ govukButton({
+        text: "View issues",
+        href: "/consolidated/issues",
+        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+      }) }}
+    </div>
+
+  </div>
+{% endset %}
+{% set changesValue %}{% if document.changesRequested == 0 %}None{% else %}{{ document.changesRequested }} change{{ "s" if document.changesRequested != 1 }} requested{% endif %}{% endset %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    {{ govukBreadcrumbs({
+      classes: "govuk-!-margin-bottom-6",
+      items: [
+        { text: "Home", href: "/consolidated/hub" },
+        { text: document.name }
+      ]
+    }) }}
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ govukNotificationBanner({
+      type: "success",
+      text: saveNotificationText,
+      attributes: { hidden: true, tabindex: "-1", "data-save-notification-banner": true }
+    }) }}
+
+    {{ govukTag(statusTags[status]) }}
+
+    <span class="govuk-caption-m">Title</span>
+    <h1 class="govuk-heading-m">{{ document.name }}</h1>
+
+    {% if document.description %}
+      <p class="govuk-body">{{ document.description }}</p>
+    {% endif %}
+
+    {% set summaryRows = [
+      {
+        key: { text: "Version" },
+        value: { html: versionSelectCell }
+      },
+      {
+        key: { text: "Version notes" },
+        value: { html: versionNotesCell }
+      },
+      {
+        key: { text: "Last updated" },
+        value: { html: lastUpdatedCell }
+      },
+      {
+        key: { text: "Published" },
+        value: { html: publishedCell }
+      }
+    ] %}
+
+    {% if status != "Published" %}
+      {% set summaryRows = (summaryRows.push(
+        {
+          key: { text: "Publishing checks" },
+          value: { html: checksValue }
+        },
+        {
+          key: { text: "Changes requested" },
+          value: { text: changesValue }
+        }
+      ), summaryRows) %}
+    {% endif %}
+
+    {{ govukSummaryList({
+      classes: "govuk-!-margin-top-4",
+      rows: summaryRows
+    }) }}
+
+    {% if status == "Published" %}
+      {{ govukInsetText({
+        text: "Starting to edit this guidance will change its status from Published to Draft, and it will be added to the Editing tab on the guidance hub."
+      }) }}
+    {% endif %}
+
+    <div class="govuk-button-group app-document-overview-actions">
+
+      {% if status == "Published" %}
+
+        {{ govukButton({
+          text: "View",
+          href: "/consolidated/document/" + document.id + "/view"
+        }) }}
+
+        <form method="post" action="/consolidated/document/{{ document.id }}/start-editing">
+          {{ govukButton({
+            text: "Edit",
+            classes: "govuk-button--secondary"
+          }) }}
+        </form>
+
+      {% elif status == "Draft" %}
+
+        {{ govukButton({
+          text: "Continue editing",
+          href: "/consolidated/editor?id=" + document.id
+        }) }}
+        {{ govukButton({
+          text: "View",
+          href: "/consolidated/document/" + document.id + "/view",
+          classes: "govuk-button--secondary"
+        }) }}
+
+      {% else %}
+
+        {{ govukButton({
+          text: "View",
+          href: "/consolidated/document/" + document.id + "/view"
+        }) }}
+        {{ govukButton({
+          text: "Edit",
+          href: "/consolidated/editor?id=" + document.id,
+          classes: "govuk-button--secondary"
+        }) }}
+
+      {% endif %}
+
+    </div>
+
+    <p class="govuk-body">
+      <button type="button" class="govuk-link app-link-button"
+              data-save-to-search data-document-id="{{ document.id }}">
+        Save to search
+      </button>
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block pageScripts %}
+  <script type="application/json" data-version-data>{{ versionsJson | safe }}</script>
+  <script>
+    (function () {
+      var dataScript = document.querySelector('[data-version-data]')
+      var select = document.querySelector('[data-version-select]')
+      if (!dataScript || !select) return
+
+      var versions = JSON.parse(dataScript.textContent)
+      var fields = {
+        versionNotes: document.querySelector('[data-version-field="versionNotes"]'),
+        lastUpdated: document.querySelector('[data-version-field="lastUpdated"]'),
+        published: document.querySelector('[data-version-field="published"]')
+      }
+
+      select.addEventListener('change', function () {
+        var selected = versions[select.value]
+        if (!selected) return
+
+        if (fields.versionNotes) fields.versionNotes.textContent = selected.versionNotes
+        if (fields.lastUpdated) fields.lastUpdated.textContent = selected.lastUpdated
+        if (fields.published) fields.published.textContent = selected.published
+      })
+    })()
+  </script>
+  <script>
+    (function () {
+      var saveButton = document.querySelector('[data-save-to-search]')
+      var banner = document.querySelector('[data-save-notification-banner]')
+      if (!saveButton || !banner) return
+
+      saveButton.addEventListener('click', function () {
+        banner.hidden = false
+        banner.focus()
+
+        saveButton.textContent = 'Saved'
+        saveButton.disabled = true
+
+        var documentId = saveButton.getAttribute('data-document-id')
+        if (documentId && window.fetch) {
+          fetch('/consolidated/hub/save-to-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: documentId })
+          }).catch(function () {})
+        }
+      })
+    })()
+  </script>
+  <script>
+    (function () {
+      var checksCell = document.querySelector('[data-checks-cell]')
+      if (!checksCell) return
+
+      var idleState = checksCell.querySelector('[data-checks-idle]')
+      var runningState = checksCell.querySelector('[data-checks-running]')
+      var completeState = checksCell.querySelector('[data-checks-complete]')
+      var startButton = checksCell.querySelector('[data-start-checks-inline]')
+      var countdownText = checksCell.querySelector('[data-checks-countdown]')
+      var bar = checksCell.querySelector('[data-checks-bar]')
+      var headline = checksCell.querySelector('[data-checks-headline]')
+      var breakdown = checksCell.querySelector('[data-checks-breakdown]')
+
+      if (!startButton || !idleState || !runningState || !completeState) return
+
+      var DURATION_SECONDS = 8
+
+      function issueCount () {
+        var stored = Number(checksCell.dataset.issueCount)
+        if (!isNaN(stored) && stored >= 0) return stored
+        return Math.floor(Math.random() * 20) + 1
+      }
+
+      function splitBySeverity (total) {
+        if (total === 0) return { high: 0, medium: 0, low: 0 }
+
+        var high = Math.min(total, Math.round(total * (0.1 + Math.random() * 0.15)))
+        var medium = Math.min(total - high, Math.round(total * (0.3 + Math.random() * 0.2)))
+        var low = total - high - medium
+
+        return { high: high, medium: medium, low: low }
+      }
+
+      function setCountdown (secondsRemaining) {
+        countdownText.textContent = 'Running checks — estimated time remaining: ' + secondsRemaining + ' second' + (secondsRemaining !== 1 ? 's' : '')
+      }
+
+      startButton.addEventListener('click', function () {
+        idleState.hidden = true
+        completeState.hidden = true
+        runningState.hidden = false
+
+        var remaining = DURATION_SECONDS
+        setCountdown(remaining)
+
+        bar.style.transitionDuration = '0s'
+        bar.style.width = '0%'
+        window.setTimeout(function () {
+          bar.style.transitionDuration = DURATION_SECONDS + 's'
+          bar.style.width = '100%'
+        }, 0)
+
+        var tick = window.setInterval(function () {
+          remaining = Math.max(remaining - 1, 0)
+          setCountdown(remaining)
+        }, 1000)
+
+        window.setTimeout(function () {
+          window.clearInterval(tick)
+
+          var total = issueCount()
+          var severity = splitBySeverity(total)
+
+          headline.textContent = total === 0 ? 'No issues found' : total + ' issue' + (total !== 1 ? 's' : '') + ' found'
+          breakdown.textContent = severity.high + ' high priority, ' + severity.medium + ' medium priority, ' + severity.low + ' low priority'
+
+          runningState.hidden = true
+          completeState.hidden = false
+        }, DURATION_SECONDS * 1000)
+      })
+    })()
+  </script>
+{% endblock %}

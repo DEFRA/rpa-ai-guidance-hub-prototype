@@ -45,6 +45,10 @@ A page module's `page.njk` (extending `common/layouts/content.njk` or `hub.njk`)
 
 Session-backed data shared across pages or versions goes in `app/data/`, not inline in a route handler.
 
+If a page has a designer-intended URL slug for the real service, set it in that page's `*.notes.md` (see "Leaving notes on a page" below) rather than leaving it implicit in a commit message or ticket — that's what the `url` front matter field is for.
+
+Where a page's pattern or component isn't already settled by existing notes, research findings, or explicit user instruction, default to the GOV.UK Design System's guidance (the `gds-patterns`/`gds-components` skills) rather than improvising one — and record the choice in the page's notes if it's non-obvious.
+
 ## Leaving notes on a page
 
 A "Notes" panel (`app/views/partials/notes-panel.njk`), toggled by a tab docked to the right edge of the screen on every page across every version, is a designer/dev tool for tracking changes and commenting on decisions — not part of any journey being prototyped. It's inspired by "Alan" in `defra-design/fcp-farming-front-door`, but instead of hand-copying metadata into every template, a page's notes live in a `*.notes.md` file sitting next to its template (`app/lib/page-notes.js` resolves which one, reusing the `/vN/...` → `app/views/versions/vN/...` convention above):
@@ -53,6 +57,8 @@ A "Notes" panel (`app/views/partials/notes-panel.njk`), toggled by a tab docked 
 - A page module's `page.njk` pairs with `page.notes.md` in the same folder — see `app/views/v5/find-guidance/page.notes.md` for a worked example.
 
 Shape: an optional `---`-delimited front matter block with flat `status:`/`url:` fields, then a freeform markdown body — write it however reads best, e.g. a bold `**Author — date**` line per entry with `---` between them. The body is rendered with `marked` (see `app/lib/page-notes.js`), so headings, bullets, bold/italic and links all work. `url` is the designer-intended URL slug for the real service (e.g. `/find-guidance`) — this is _not_ the prototype's own `/v5/...` route, which is why it's a field to set rather than read from the request; leave it out for a page with no settled slug yet. There's no runtime store or way to add a note from the browser — write the file and commit it, same as any other prototype change. No file means the panel just shows an empty-state hint.
+
+Use this file, not just the commit message, to carry the reasoning behind a page's design: whenever a change to a page is more than mechanical (a layout or content decision, a call made in response to research or stakeholder feedback, a deliberate scope cut), add a dated `**Author — date**` entry explaining why, separated from the previous entry with `---`. This applies when adding a page too — a first entry noting what it's for and any open questions is more useful to the next person than an empty notes file. Commit messages describe the change; the notes file is where the justification for a page's current shape lives and accumulates, so read the existing entries before changing a page that already has them.
 
 ## Dev server
 
