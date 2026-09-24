@@ -48,16 +48,17 @@
   "Save to search" itself doesn't vary by state — it always renders, the
   same link, on its own line below whichever buttons that state has.
 
-  "View" (every state) and "Save to search" (every state) are new to this
-  page, reused verbatim from the find-guidance side's own document-
-  overview.html (app/views/versions/v6/document-overview.html): "View"
-  goes to /v6/find-guidance/document/<id>, the same read-only viewer every
-  other "Open"/"View" action in the app already uses (falls back to
-  generic placeholder content for an id with no real guidance-documents.js
-  match — see that route's own savedDocumentViewModel — so this is safe
-  even for a Published sample id that only exists in
-  MANAGE_GUIDANCE_PUBLISHED_SAMPLES, not guidance-documents.js). "Save to
-  search" is the exact same instant client-side "Saved" state + banner +
+  "Save to search" (every state) is new to this page, reused verbatim from
+  the find-guidance side's own document-overview.html (app/views/versions/
+  v6/document-overview.html). "View" (every state) originally went straight
+  to /v6/find-guidance/document/<id> (the read-only viewer every other
+  "Open"/"View" action in the app still uses) — a later pass put a choice
+  screen in front of it instead (/v6/guidance-document-choice/<id>,
+  app/views/v6/guidance-document-choice/), so a reviewer picks between the
+  standard guidance viewer and an experimental one being trialled rather
+  than always landing on the same one; see that page's own controller.js
+  for the two real destinations from there. "Save to search" is the exact
+  same instant client-side "Saved" state + banner +
   fire-and-forget POST to /v6/find-guidance/save-to-search pattern that
   page already uses too — copied rather than shared, matching how no
   script in this project is shared between pages that both happen to want
@@ -210,7 +211,7 @@
       <p class="govuk-body-s govuk-!-margin-bottom-2" data-checks-breakdown></p>
       {{ govukButton({
         text: "View issues",
-        href: "/v6/guidance-document/sfi-23",
+        href: "/v6/guidance-document/" + document.id,
         classes: "govuk-button--secondary govuk-!-margin-bottom-0"
       }) }}
     </div>
@@ -317,7 +318,7 @@
 
         {{ govukButton({
           text: "View",
-          href: "/v6/find-guidance/document/" + document.id
+          href: "/v6/guidance-document-choice/" + document.id
         }) }}
 
         <form method="post" action="/v6/manage-guidance/start-editing">
@@ -336,7 +337,7 @@
         }) }}
         {{ govukButton({
           text: "View",
-          href: "/v6/find-guidance/document/" + document.id,
+          href: "/v6/guidance-document-choice/" + document.id,
           classes: "govuk-button--secondary"
         }) }}
 
@@ -344,7 +345,7 @@
 
         {{ govukButton({
           text: "View",
-          href: "/v6/find-guidance/document/" + document.id
+          href: "/v6/guidance-document-choice/" + document.id
         }) }}
 
       {% endif %}

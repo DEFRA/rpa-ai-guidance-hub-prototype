@@ -1,20 +1,27 @@
 {#
   A single guidance document's overview, opened from the "Open" action on
-  app/views/v6/all-guidance-docs.html.
+  app/views/v6/all-guidance-docs.html, or from "View issues" on manage-
+  guidance/document-overview.html's own Publishing checks row (app/views/
+  v6/guidance-document/controller.js resolves :id to a real document
+  either way, so this page shows that document's own title/description —
+  see that controller's own comment for why "View issues" used to always
+  land on the same fixed sample regardless of which document's checks had
+  actually run, and no longer does).
 
-  Summary text, severity counts and the recommended changes below are fixed
-  placeholder content for now, not driven by real quality-check data — see
-  app/assets/javascripts/quality-checks.js for that when this is wired up.
+  Severity counts and the findings below (checks/checkSections,
+  controller.js, both from app/data/editor-experiment.js's
+  EDITOR_EXPERIMENT_CHECKS/EDITOR_EXPERIMENT_CHECK_SECTIONS) are still
+  fixed placeholder content for now, not driven by real quality-check
+  data — see app/assets/javascripts/quality-checks.js for that when this
+  is wired up. They are the exact same fixed findings editor-2-3-view.html's
+  own Checks panel shows, though, rather than a separate, independently-
+  written set the way they used to be — see that constant's own comment.
 
-  Each recommended change links to the change review screen
-  (app/views/change-review.html), which is itself a placeholder until the
-  change management / markdown editor is designed. The markdown editing tab
-  lives there now, not here — see change-review.html for that.
-
-  "Not fixed" and "Deferred" below are placeholder statuses standing in for
-  whatever a designer has already done with a finding — nothing here is
-  recorded yet, so every tab shows a fixed mix of both rather than reflecting
-  real state.
+  Each finding's own Issue link goes into the editor itself
+  (/v6/editor-2-3-view?checkId=<check.id>&id=<id>), landing on the Checks
+  tab with that one check highlighted, rather than the old change-review
+  screen (app/views/change-review.html) it used to open — see
+  controller.js's own comment on get() for that change.
 
   Breadcrumb starts from "Manage guidance" (/v6/all-guidance-docs) rather
   than "Guidance hub > All your guidance docs" — those two used to be
@@ -26,108 +33,52 @@
 #}
 {% extends "layouts/main.html" %}
 
-{% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/table/macro.njk" import govukTable %}
 {% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
 
-{% set pageName = "SFI 23 Guidance document" %}
+{% set pageName = documentTitle if documentTitle else "SFI 23 Guidance document" %}
 
-{% set reviewHref = "/v6/guidance-document/sfi-23/review" %}
+{#
+  checks/checkSections (EDITOR_EXPERIMENT_CHECKS/EDITOR_EXPERIMENT_CHECK_SECTIONS,
+  app/data/editor-experiment.js, via controller.js) replace what used to
+  be this page's own independently-hardcoded severities/statusTags — the
+  same fixed findings editor-2-3-view.html's own Checks panel shows,
+  grouped into the three tabs below by check.severity rather than each
+  tab keeping its own separately-written list. No more Status column
+  (Not fixed/Deferred): that was invented data with nothing behind it on
+  the editor side, so dropping it here rather than carrying a mismatch
+  forward. Each Issue now links into the editor itself
+  (/v6/editor-2-3-view?checkId=<check.id>, plus &id=<id> when this page
+  itself resolved to a real document) instead of the old markdown
+  change-review screen — see guidance-document/controller.js's own
+  comment on get() for why.
+#}
+{% set highChecks = [] %}
+{% set mediumChecks = [] %}
+{% set lowChecks = [] %}
+{% for check in checks %}
+  {% if check.severity == "High" %}{% set highChecks = (highChecks.push(check), highChecks) %}{% endif %}
+  {% if check.severity == "Medium" %}{% set mediumChecks = (mediumChecks.push(check), mediumChecks) %}{% endif %}
+  {% if check.severity == "Low" %}{% set lowChecks = (lowChecks.push(check), lowChecks) %}{% endif %}
+{% endfor %}
 
-{% set severities = {
-  high: {
-    name: "High",
-    count: 3,
-    badgeClasses: "app-tab-count-badge--red",
-    explainer: "Issues that must be fixed before this guidance can be published",
-    changes: [
-      {
-        description: "Step 3 does not start with an action verb — rewrite as an instruction",
-        location: "How to apply",
-        status: "Not fixed"
-      },
-      {
-        description: "Section \"Eligibility\" uses \"as appropriate\" with no measurable rule",
-        location: "Eligibility",
-        status: "Not fixed"
-      },
-      {
-        description: "Payment rates table is missing a row for upland options",
-        location: "Payment rates table",
-        status: "Deferred"
-      }
-    ]
-  },
-  medium: {
-    name: "Medium",
-    count: 5,
-    badgeClasses: "app-tab-count-badge--orange",
-    explainer: "Issues that should be reviewed and are recommended to fix",
-    changes: [
-      {
-        description: "Sentence in \"How to apply\" is 41 words — split it into two",
-        location: "How to apply",
-        status: "Not fixed"
-      },
-      {
-        description: "\"Relevant evidence\" is ambiguous — say what evidence is needed",
-        location: "How to apply",
-        status: "Deferred"
-      },
-      {
-        description: "Heading levels skip from H2 to H4 in \"Standards and requirements\"",
-        location: "Standards and requirements",
-        status: "Not fixed"
-      },
-      {
-        description: "\"In a timely manner\" has no measurable rule — give a timescale",
-        location: "Reviews",
-        status: "Deferred"
-      },
-      {
-        description: "Cross-reference to the Countryside Stewardship guidance is broken",
-        location: "Payments",
-        status: "Not fixed"
-      }
-    ]
-  },
-  low: {
-    name: "Low",
-    count: 2,
-    badgeClasses: "app-tab-count-badge--blue",
-    explainer: "Minor issues that are optional to address",
-    changes: [
-      {
-        description: "Inconsistent use of \"SFI\" vs \"the Sustainable Farming Incentive\"",
-        location: "Introduction",
-        status: "Deferred"
-      },
-      {
-        description: "Bulleted list in \"Actions available\" mixes sentence case and title case",
-        location: "Eligibility",
-        status: "Not fixed"
-      }
-    ]
-  }
+{% set severityMeta = {
+  "High": { badgeClasses: "app-tab-count-badge--red", explainer: "Issues that must be fixed before this guidance can be published" },
+  "Medium": { badgeClasses: "app-tab-count-badge--orange", explainer: "Issues that should be reviewed and are recommended to fix" },
+  "Low": { badgeClasses: "app-tab-count-badge--blue", explainer: "Minor issues that are optional to address" }
 } %}
 
-{% set statusTags = {
-  "Not fixed": { text: "Not fixed", classes: "govuk-tag--grey" },
-  "Deferred": { text: "Deferred", classes: "govuk-tag--blue" }
-} %}
-
-{% macro severityPanel(severity) %}
-  <h3 class="govuk-heading-m">{{ severity.name }}</h3>
-  <p class="govuk-body app-severity-explainer">{{ severity.explainer }}</p>
+{% macro severityPanel(name, severityChecks) %}
+  <h3 class="govuk-heading-m">{{ name }}</h3>
+  <p class="govuk-body app-severity-explainer">{{ severityMeta[name].explainer }}</p>
 
   {% set rows = [] %}
-  {% for change in severity.changes %}
-    {% set issueCell %}<a class="govuk-link" href="{{ reviewHref }}">{{ change.description }}</a>{% endset %}
-    {% set statusCell %}{{ govukTag(statusTags[change.status]) }}{% endset %}
+  {% for check in severityChecks %}
+    {% set issueHref = "/v6/editor-2-3-view?checkId=" + check.id + (("&id=" + id) if id else "") %}
+    {% set issueCell %}<a class="govuk-link" href="{{ issueHref }}">{{ check.text }}</a>{% endset %}
     {% set rows = (rows.push([
       { html: issueCell },
-      { text: change.location },
-      { html: statusCell }
+      { text: checkSections[check.section] }
     ]), rows) %}
   {% endfor %}
 
@@ -135,8 +86,7 @@
     classes: "app-severity-table",
     head: [
       { text: "Issue" },
-      { text: "Location" },
-      { text: "Status" }
+      { text: "Location" }
     ],
     rows: rows
   }) }}
@@ -159,33 +109,34 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <h1 class="govuk-heading-l">SFI 23 Guidance document</h1>
+    <h1 class="govuk-heading-l">{{ pageName }}</h1>
 
     <p class="govuk-body">
-      Guidance on the Sustainable Farming Incentive 2023 offer: who can apply,
+      {% if documentDescription %}{{ documentDescription }}{% else %}Guidance on the Sustainable Farming Incentive 2023 offer: who can apply,
       the actions available, standards and requirements, and how payment rates
-      are calculated.
+      are calculated.{% endif %}
     </p>
 
   </div>
 </div>
 
 {#
-  Full width rather than the two-thirds column above: the Issue/Location/
-  Status table has three columns of its own and was reading as squashed
-  inside the same narrow column as the summary text.
+  Full width rather than the two-thirds column above: the Issue/Location
+  table has two columns of its own and was reading as squashed inside the
+  same narrow column as the summary text.
 #}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
 
-    {% set highPanel %}{{ severityPanel(severities.high) }}{% endset %}
-    {% set mediumPanel %}{{ severityPanel(severities.medium) }}{% endset %}
-    {% set lowPanel %}{{ severityPanel(severities.low) }}{% endset %}
+    {% set highPanel %}{{ severityPanel("High", highChecks) }}{% endset %}
+    {% set mediumPanel %}{{ severityPanel("Medium", mediumChecks) }}{% endset %}
+    {% set lowPanel %}{{ severityPanel("Low", lowChecks) }}{% endset %}
 
     {#
       Tab labels carry a small count badge alongside the text — see
-      .app-tab-count-badge in _app-issues.scss, using the same colours as the
-      govukTag severity tags elsewhere on this page.
+      .app-tab-count-badge in _app-issues.scss, using the same colours as
+      editor-2-3-view.html's own severityTags govukTag map for these same
+      three severities.
 
       Built by hand rather than with govukTabs(params): that macro has no
       html option for a tab's own label (only its panel), and outputs
@@ -198,30 +149,44 @@
       the same approach change-review.html uses, for a different reason
       (indent() corrupting a <textarea> there instead).
     #}
-    {% set highLabel %}High <span class="app-tab-count-badge {{ severities.high.badgeClasses }}">{{ severities.high.count }}</span>{% endset %}
-    {% set mediumLabel %}Medium <span class="app-tab-count-badge {{ severities.medium.badgeClasses }}">{{ severities.medium.count }}</span>{% endset %}
-    {% set lowLabel %}Low <span class="app-tab-count-badge {{ severities.low.badgeClasses }}">{{ severities.low.count }}</span>{% endset %}
+    {% set highLabel %}High <span class="app-tab-count-badge {{ severityMeta.High.badgeClasses }}">{{ highChecks.length }}</span>{% endset %}
+    {% set mediumLabel %}Medium <span class="app-tab-count-badge {{ severityMeta.Medium.badgeClasses }}">{{ mediumChecks.length }}</span>{% endset %}
+    {% set lowLabel %}Low <span class="app-tab-count-badge {{ severityMeta.Low.badgeClasses }}">{{ lowChecks.length }}</span>{% endset %}
 
+    {#
+      activeSeverity (controller.js, from ?severity=) picks which tab
+      starts selected/visible — govuk-tabs' own tabs.mjs, once it runs,
+      would otherwise always reset to the first one (High) regardless of
+      these server-rendered classes: it only ever honours a real
+      window.location.hash on init, falling back to $tabs[0] when there
+      isn't one (see node_modules/govuk-frontend/dist/govuk/components/
+      tabs/tabs.mjs — this.getTab(location.hash) ?? this.$tabs[0]), so the
+      href that brought someone here also needs a matching #high/#medium/
+      #low of its own — see editor-2-3-view.html's own "Go to publishing
+      checks page" link — for JS to land on the same tab this server
+      render already shows, rather than a visible flash back to High once
+      it initialises.
+    #}
     <div class="govuk-tabs" data-module="govuk-tabs">
       <h2 class="govuk-tabs__title">Contents</h2>
       <ul class="govuk-tabs__list">
-        <li class="govuk-tabs__list-item govuk-tabs__list-item--selected">
+        <li class="govuk-tabs__list-item{% if activeSeverity == "High" %} govuk-tabs__list-item--selected{% endif %}">
           <a class="govuk-tabs__tab" href="#high">{{ highLabel | safe }}</a>
         </li>
-        <li class="govuk-tabs__list-item">
+        <li class="govuk-tabs__list-item{% if activeSeverity == "Medium" %} govuk-tabs__list-item--selected{% endif %}">
           <a class="govuk-tabs__tab" href="#medium">{{ mediumLabel | safe }}</a>
         </li>
-        <li class="govuk-tabs__list-item">
+        <li class="govuk-tabs__list-item{% if activeSeverity == "Low" %} govuk-tabs__list-item--selected{% endif %}">
           <a class="govuk-tabs__tab" href="#low">{{ lowLabel | safe }}</a>
         </li>
       </ul>
-      <div class="govuk-tabs__panel" id="high">
+      <div class="govuk-tabs__panel{% if activeSeverity != "High" %} govuk-tabs__panel--hidden{% endif %}" id="high">
         {{ highPanel | safe }}
       </div>
-      <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="medium">
+      <div class="govuk-tabs__panel{% if activeSeverity != "Medium" %} govuk-tabs__panel--hidden{% endif %}" id="medium">
         {{ mediumPanel | safe }}
       </div>
-      <div class="govuk-tabs__panel govuk-tabs__panel--hidden" id="low">
+      <div class="govuk-tabs__panel{% if activeSeverity != "Low" %} govuk-tabs__panel--hidden{% endif %}" id="low">
         {{ lowPanel | safe }}
       </div>
     </div>

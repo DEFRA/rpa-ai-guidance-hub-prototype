@@ -80,6 +80,21 @@ function getDocument(req, res) {
   res.render('versions/v6/saved-document-view', props)
 }
 
+// "Traditional viewer" option from guidance-document-choice.html's own
+// radios (app/views/v6/guidance-document-choice/) — the other of the two
+// viewer layouts a reviewer can pick there, alongside getDocument above.
+// Renders the same fixed placeholder content as the standalone
+// /v6/guidance-document-experiment/:id route (app/views/v6/guidance-
+// document-experiment/, versions/v6/guidance-document-experiment.html) —
+// :id is accepted here too, for the same URL shape as getDocument and so
+// the choice page can pass the guidance id through, but nothing in that
+// template reads it yet. Not tracked as "recently opened" — unlike
+// getDocument above, this layout has no real per-document content yet
+// for that list to meaningfully point back to.
+function getDocumentExperiment(req, res) {
+  res.render('versions/v6/guidance-document-experiment')
+}
+
 // No backHref — organic-search.html shows breadcrumbs instead of a Back
 // link now (see the template).
 function getOrganicSearch(req, res) {
@@ -135,6 +150,7 @@ module.exports = {
   getRemoveConfirm,
   postRemove,
   getDocument,
+  getDocumentExperiment,
   getOrganicSearch,
   postSaveToSearch,
   getAiSearch,

@@ -252,19 +252,50 @@
 {% endif %}
 
 <div class="govuk-grid-row">
-  <div class="govuk-grid-column-full">
+  {#
+    An empty one-quarter column, matching the sidebar's own width below —
+    kept so the three-quarters title column here still lines up with the
+    content column/search bar beneath it, now that the toggle button
+    itself has moved down into that sidebar's own row (see the row below)
+    to sit directly above it instead of a whole row away.
+  #}
+  <div class="govuk-grid-column-one-quarter"></div>
+  <div class="govuk-grid-column-three-quarters">
 
     <div class="govuk-!-margin-bottom-4">
       {{ govukTag(versionTags[version]) }}
     </div>
 
-    <h1 class="govuk-heading-xl">{{ documentName }}</h1>
+    {#
+      "Title" is a plain govuk-caption-m label above the heading — GDS'
+      own convention for pairing a small muted caption with the heading
+      scale directly below it, the same pattern used on document-
+      overview.html and editor-2-3-view.html. govuk-heading-m, not -xl
+      (this page's own original size): downsized so the title reads as
+      part of this page's own content, not a page-level display heading,
+      and to match those two pages' own established size for the same
+      "Title" + heading pairing.
+    #}
+    <span class="govuk-caption-m">Title</span>
+    <h1 class="govuk-heading-m">{{ documentName }}</h1>
+
+  </div>
+</div>
+
+<div class="govuk-grid-row">
+
+  <div class="govuk-grid-column-one-quarter">
 
     {#
-      Lives outside the column it controls, rather than inside it, so it is
-      still there to click "Show content" once that column is fully
-      collapsed — see the toggle script below, which hides
-      #document-content-panel outright rather than just its contents.
+      Moved here, directly above the panel it controls, to close the gap
+      that used to sit between it and the tabs when it lived a whole row
+      above (see that row's own comment) — still a sibling of
+      #document-content-panel, not nested inside it, so it is still there
+      to click "Show content" once that panel is fully collapsed (the
+      toggle script below hides #document-content-panel outright rather
+      than just its contents, and does so by id, not DOM position, so
+      moving the button here changes nothing about how that script finds
+      either element).
     #}
     <button
       type="button"
@@ -273,16 +304,32 @@
       aria-expanded="true"
       aria-controls="document-content-panel">Hide content</button>
 
-  </div>
-</div>
-
-<div class="govuk-grid-row">
-
-  <div class="govuk-grid-column-one-quarter" id="document-content-panel" data-content-panel>
+    <div id="document-content-panel" data-content-panel>
 
     <div class="app-document-content__scroll">
 
-      <h2 class="govuk-heading-m">Content</h2>
+      {#
+        Content/Case notes — same generic data-content-tab-button/
+        data-content-tab-panel switch (pageScripts, folded into the one
+        delegated click listener every other control on this page already
+        uses) and the same horizontal-underlined-tab visual language
+        editor-2-3-view.html's own Content/Comments/Checks tabs use
+        (.app-experiment-tab/-tabs, _app-editor-experiment.scss) — copied
+        under this page's own class names
+        (.app-document-content__tab/-tabs, _app-saved-document.scss)
+        rather than reused directly, matching how no visual pattern in
+        this project is shared across page families by importing the
+        other family's own classes, even when the styling ends up
+        identical. No "Content" <h2> any more — the tab's own label
+        already says that, so a heading directly above it would just
+        repeat it.
+      #}
+      <div class="app-document-content__tabs" role="tablist" aria-label="Sidebar">
+        <button type="button" class="app-document-content__tab app-document-content__tab--active" data-content-tab-button="content" id="content-tab-button-content" role="tab" aria-selected="true" aria-controls="content-tab-panel-content">Content</button>
+        <button type="button" class="app-document-content__tab" data-content-tab-button="case-notes" id="content-tab-button-case-notes" role="tab" aria-selected="false" aria-controls="content-tab-panel-case-notes">Case notes</button>
+      </div>
+
+      <div data-content-tab-panel="content" id="content-tab-panel-content" role="tabpanel" aria-labelledby="content-tab-button-content">
       <nav aria-label="Content">
         {% if customParts %}
           {#
@@ -360,7 +407,53 @@
           </ul>
         {% endif %}
       </nav>
+      </div>
+
+      {#
+        A reviewer's own case notes for this guidance — separate from the
+        fixed CASE_NOTE_BLOCK placeholder text rendered inline within a
+        step's own body further down (customParts/customSteps only),
+        which is identical wherever it appears and not something this tab
+        lists. Everything here is client-side only (added notes live in
+        the DOM, not session/a data file) — switching to the Content tab
+        and back leaves this panel exactly as it was, since the tab
+        switch above only ever toggles [hidden], it never re-renders this
+        panel; a full page reload does lose them, same as any other
+        unsaved-to-session state on this page (e.g. the editor drafts
+        editor-2-3-view.html itself only persists via session, not this
+        page). "Add case notes here" is .app-link-button
+        (_app-manage-guidance.scss) — the same "real button, styled as a
+        plain GDS text link" component "Save to search" already
+        established elsewhere in this app, reused here rather than
+        reinvented since the same need (a clickable action with no href
+        to navigate to) applies. Hidden once clicked rather than staying
+        alongside the now-open form — its one job (reveal the form) is
+        already done, and the form itself has no "cancel" to close it
+        again, so there is nothing left for a still-visible link to do.
+      #}
+      <div data-content-tab-panel="case-notes" id="content-tab-panel-case-notes" role="tabpanel" aria-labelledby="content-tab-button-case-notes" hidden>
+
+        <p class="govuk-body-s app-case-notes-panel__example-label">Example case note format:</p>
+        <p class="govuk-body-s app-case-notes-panel__example">
+          12 March 2026 — J Smith<br>
+          Checked eligibility against the current scheme rules. No issues found — case can proceed to sign-off.
+        </p>
+
+        <ul class="govuk-list app-case-notes-panel__list" data-case-notes-list hidden></ul>
+
+        <button type="button" class="govuk-link app-link-button" data-add-case-note>Add case notes here</button>
+
+        <div class="govuk-form-group app-case-notes-panel__form" data-case-notes-form hidden>
+          <label class="govuk-label govuk-visually-hidden" for="case-notes-input">Case note</label>
+          <textarea class="govuk-textarea app-case-notes-panel__input" id="case-notes-input" name="caseNotesInput" rows="4" data-case-notes-input></textarea>
+          <button type="button" class="govuk-button govuk-button--secondary govuk-!-margin-top-2 govuk-!-margin-bottom-0" data-case-notes-save>Save case note</button>
+        </div>
+
+      </div>
+
     </div>
+
+  </div>
 
   </div>
 
@@ -459,7 +552,7 @@
               </select>
             </div>
           </span>
-          <h2 class="govuk-heading-l">{{ currentStep.heading }}</h2>
+          <h2 class="govuk-heading-m">{{ currentStep.heading }}</h2>
           {% for entry in currentStep.body %}
             {% if entry == "CASE_NOTE_BLOCK" %}
               <div class="app-case-note">
@@ -506,7 +599,7 @@
               items: stepJumpItems
             }) }}
           </span>
-          <h2 class="govuk-heading-l">{{ currentStep.heading }}</h2>
+          <h2 class="govuk-heading-m">{{ currentStep.heading }}</h2>
           {% for entry in currentStep.body %}
             {% if entry == "CASE_NOTE_BLOCK" %}
               <div class="app-case-note">
@@ -554,7 +647,7 @@
                 items: stepJumpItems
               }) }}
             </span>
-            <h2 class="govuk-heading-l">{{ step.heading }}</h2>
+            <h2 class="govuk-heading-m">{{ step.heading }}</h2>
             {% for paragraph in step.content %}
               <p class="govuk-body">{{ paragraph }}</p>
             {% endfor %}
@@ -572,14 +665,13 @@
 </div>
 
 {#
-  Back/Next and Save progress live in a fixed bar at the bottom of the
-  viewport instead of inline after the step content — outside the grid row
-  above rather than nested inside the three-quarters column, since a fixed
-  element positions itself relative to the viewport regardless of where it
-  sits in the DOM; keeping it as a sibling here avoids implying it is still
-  part of that column. [data-document-text-column] gets matching
-  padding-bottom (see the stylesheet) so this bar never covers the last of
-  a step's own content or the inset text above.
+  Back/Next and Save progress sit in normal document flow after the step
+  content now, not a fixed bar pinned to the bottom of the viewport — see
+  _app-saved-document.scss's own history note on .app-document-footer-bar
+  for that change. Still a sibling of the grid row above rather than
+  nested inside the three-quarters column, purely because that was
+  already true and moving it into the column changes nothing now it's
+  static — a full-width bar in normal flow reads the same either way.
 #}
 <div class="app-document-footer-bar">
   <div class="govuk-width-container app-document-footer-bar__inner">
@@ -674,6 +766,69 @@
       // was actually clicked, the same way it would with individual
       // listeners, just registered once.
       document.addEventListener('click', function (event) {
+        // Content/Case notes — generic data-content-tab-button/
+        // data-content-tab-panel switch, folded into this one delegated
+        // listener like every other control on this page rather than its
+        // own separate addEventListener per button.
+        var contentTabButton = event.target.closest('[data-content-tab-button]')
+        if (contentTabButton) {
+          document.querySelectorAll('[data-content-tab-button]').forEach(function (button) {
+            var active = button === contentTabButton
+            button.classList.toggle('app-document-content__tab--active', active)
+            button.setAttribute('aria-selected', String(active))
+          })
+          document.querySelectorAll('[data-content-tab-panel]').forEach(function (panel) {
+            panel.hidden = panel.dataset.contentTabPanel !== contentTabButton.dataset.contentTabButton
+          })
+          return
+        }
+
+        // "Add case notes here" — reveals the note-entry form, then hides
+        // itself (see the template's own comment for why there is no
+        // separate "cancel" to bring it back).
+        var addCaseNote = event.target.closest('[data-add-case-note]')
+        if (addCaseNote) {
+          var caseNotesForm = document.querySelector('[data-case-notes-form]')
+          if (caseNotesForm) caseNotesForm.hidden = false
+          addCaseNote.hidden = true
+          var caseNotesInputToFocus = document.querySelector('[data-case-notes-input]')
+          if (caseNotesInputToFocus) caseNotesInputToFocus.focus()
+          return
+        }
+
+        // "Save case note" — appends the typed text to this panel's own
+        // list (author/timestamp matching the same "You"/"Just now"
+        // convention editor-2-3-view.html's own added comments use) and
+        // clears the box for the next one. An empty box saves nothing.
+        var caseNotesSave = event.target.closest('[data-case-notes-save]')
+        if (caseNotesSave) {
+          var caseNotesInput = document.querySelector('[data-case-notes-input]')
+          var caseNoteText = caseNotesInput ? caseNotesInput.value.trim() : ''
+
+          if (caseNoteText) {
+            var caseNotesList = document.querySelector('[data-case-notes-list]')
+            if (caseNotesList) {
+              var caseNoteItem = document.createElement('li')
+              caseNoteItem.className = 'app-case-notes-panel__note'
+
+              var caseNoteMeta = document.createElement('p')
+              caseNoteMeta.className = 'govuk-body-s app-case-notes-panel__note-meta'
+              caseNoteMeta.textContent = 'You — Just now'
+
+              var caseNoteBody = document.createElement('p')
+              caseNoteBody.className = 'govuk-body-s'
+              caseNoteBody.textContent = caseNoteText
+
+              caseNoteItem.appendChild(caseNoteMeta)
+              caseNoteItem.appendChild(caseNoteBody)
+              caseNotesList.appendChild(caseNoteItem)
+              caseNotesList.hidden = false
+            }
+            caseNotesInput.value = ''
+          }
+          return
+        }
+
         var contentToggle = event.target.closest('[data-content-toggle]')
         if (contentToggle) {
           var panel = document.getElementById(contentToggle.getAttribute('aria-controls'))
