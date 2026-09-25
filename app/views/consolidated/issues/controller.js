@@ -12,8 +12,6 @@
 // overridden below, to point at the consolidated editor/step-through
 // rather than that middleware's own retired-V2 defaults.
 
-const VERDICTS = ['fixed', 'wont_fix', 'false_positive']
-
 function withConsolidatedHrefs(res) {
   res.locals.editorHref = '/consolidated/editor'
   res.locals.stepThroughHref = '/consolidated/issues/findings'
@@ -26,82 +24,7 @@ function withConsolidatedHrefs(res) {
 
 function getIssues(req, res) {
   withConsolidatedHrefs(res)
-  res.render('consolidated/issues/issues.njk')
+  res.render('consolidated/issues/page.njk')
 }
 
-function findingOr404(req, res) {
-  const issue = res.locals.document.issues.find(
-    (candidate) => String(candidate.id) === req.params.id
-  )
-  if (!issue) res.status(404).render('consolidated/issues/finding-not-found.njk')
-  return issue
-}
-
-function getFinding(req, res) {
-  const issue = findingOr404(req, res)
-  if (!issue) return
-
-  const { issues } = res.locals.document
-  const position = issues.indexOf(issue)
-
-  res.render('consolidated/issues/finding.njk', {
-    finding: issue,
-    position: position + 1,
-    total: issues.length,
-    previousFinding: issues[position - 1],
-    nextFinding: issues[position + 1]
-  })
-}
-
-function postFinding(req, res) {
-  const issue = findingOr404(req, res)
-  if (!issue) return
-
-  if (VERDICTS.indexOf(req.body.verdict) === -1) {
-    return res.redirect(`/consolidated/issues/findings/${issue.id}`)
-  }
-
-  req.session.data.verdicts = req.session.data.verdicts || {}
-  req.session.data.verdicts[issue.id] = {
-    verdict: req.body.verdict,
-    comment: (req.body.comment || '').trim()
-  }
-
-  const next = res.locals.document.issues.find(
-    (candidate) => candidate.id !== issue.id && !candidate.verdict
-  )
-
-  res.redirect(
-    next
-      ? `/consolidated/issues/findings/${next.id}`
-      : '/consolidated/issues/review-complete'
-  )
-}
-
-// Start the sub-journey at the first finding with no verdict yet.
-function getFindingsStart(req, res) {
-  const next = res.locals.document.outstanding[0]
-  res.redirect(
-    next
-      ? `/consolidated/issues/findings/${next.id}`
-      : '/consolidated/issues/review-complete'
-  )
-}
-
-function getReviewComplete(req, res) {
-  res.render('consolidated/issues/review-complete.njk')
-}
-
-function getReviewReset(req, res) {
-  delete req.session.data.verdicts
-  res.redirect('/consolidated/issues')
-}
-
-module.exports = {
-  getIssues,
-  getFinding,
-  postFinding,
-  getFindingsStart,
-  getReviewComplete,
-  getReviewReset
-}
+module.exports = { getIssues }
