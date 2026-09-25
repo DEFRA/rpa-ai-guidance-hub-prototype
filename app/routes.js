@@ -1,35 +1,39 @@
 //
-// The loader: walks app/views for routes.js files and requires each one, so
-// adding a page module means adding a folder rather than editing this file.
-//
-// app/views/legacy/routes.js is required first, and explicitly, rather than
-// picked up by the walk below like everything else. It carries the site-wide
-// middleware (navigation, per-version header state, the journey/quality-check
-// locals every not-yet-migrated route still relies on) at its own top level,
-// so it has to run before any page module's routes are registered — the walk
-// below has no guaranteed order otherwise (see
-// references/page-module-architecture.md's "Load order" note).
+// The loader: walks app/views/consolidated for routes.js files and requires
+// each one, so adding a page module means adding a folder rather than editing
+// this file. Every other version (v1-v6, legacy) is frozen/archived and no
+// longer wired up here — see CLAUDE.md.
 //
 // For guidance on how to create routes see:
 // https://prototype-kit.service.gov.uk/docs/create-routes
 //
 
-const { readdirSync, statSync } = require('fs')
-const path = require('path')
+const { readdirSync, statSync } = require('node:fs')
+const path = require('node:path')
 const govukPrototypeKit = require('govuk-prototype-kit')
+const prototypes = require('./lib/prototypes')
 
-const pagesDir = path.join(__dirname, 'views')
-const legacyDir = path.join(pagesDir, 'legacy')
+const pagesDir = path.join(__dirname, 'views', 'consolidated')
 
-require(path.join(legacyDir, 'routes.js'))
+// The versions list — app/views/index.html, generated from
+// app/data/prototypes.js (via app/lib/prototypes.js's getVersions()). Not a
+// consolidated page itself (it lists every version, consolidated included),
+// so it is registered here rather than picked up by the walk below.
+govukPrototypeKit.requests
+  .setupRouter()
+  .get('/', (_req, res) => {
+    res.render('index', { versions: prototypes.getVersions() })
+  })
 
 function findRouteFiles(dir, found = []) {
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry)
-    if (full === legacyDir) continue
+
     if (statSync(full).isDirectory()) findRouteFiles(full, found)
-    else if (entry === 'routes.js') found.push(full)
+
+      else if (entry === 'routes.js') found.push(full)
   }
+
   return found
 }
 

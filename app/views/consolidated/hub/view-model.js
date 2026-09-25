@@ -3,7 +3,12 @@ const { buildManageGuidanceRows } = require('../../../data/manage-guidance')
 
 // The hub's four tabs' own ?tab= values — also what removeViewModel/
 // controller.js redirect back to after a remove.
-const VALID_TABS = ['recently-opened', 'saved-guidance', 'editing', 'awaiting-approval']
+const VALID_TABS = [
+  'recently-opened',
+  'saved-guidance',
+  'editing',
+  'awaiting-approval'
+]
 const DEFAULT_TAB = 'recently-opened'
 
 function fromSession(req) {

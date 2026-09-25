@@ -4,4 +4,3 @@ const controller = require('./controller')
 const router = govukPrototypeKit.requests.setupRouter('/consolidated/document')
 
 router.get('/:id', controller.get)
-router.post('/:id/start-editing', controller.postStartEditing)
