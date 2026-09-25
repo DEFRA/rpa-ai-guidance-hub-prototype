@@ -330,9 +330,12 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-full">
 
-    <div class="app-unified-guidance__search">
-      {{ searchGuidance | safe }}
-    </div>
+    {# ?headerSearch=on moves this into the green header (defra-header.njk). #}
+    {% if data.headerSearch != "on" %}
+      <div class="app-unified-guidance__search">
+        {{ searchGuidance | safe }}
+      </div>
+    {% endif %}
 
     {{ govukButton({ text: "Create or upload guidance", href: "/v6/create-guidance" }) }}
 
