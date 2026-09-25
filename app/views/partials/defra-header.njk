@@ -14,10 +14,19 @@
   description with no tabs list (that page's own left sidebar is its
   navigation); every other v6 page shows neither, using a govukBreadcrumbs
   component in its own content instead.
+
+  Header search (optional, off by default): visiting any page with
+  ?headerSearch=on (the kit stores query values in session data, so it
+  sticks until ?headerSearch=off) moves v6's search into the header,
+  following the GOV.UK homepage pattern — a search bar inside the green
+  home header on /v6/unified-guidance, and a search icon that opens a
+  search panel on every other signed-in v6 page. With it off, v6 renders
+  exactly as before.
 #}
+{% set showHeaderSearch = isV6 and not isV6SignIn and data.headerSearch == "on" %}
 <header class="defra-header" role="banner">
   <div class="govuk-width-container">
-    <div class="defra-header__inner">
+    <div class="defra-header__inner{% if showHeaderSearch and not isV6Home %} defra-header__inner--with-search{% endif %}">
       <div class="defra-header__brand-group">
         <img
           src="/public/images/defra-logo.svg"
@@ -46,9 +55,59 @@
       {% elif isV6 %}
         <a href="/v6/sign-in" class="defra-header__sign-in">Sign out</a>
       {% endif %}
+      {% if showHeaderSearch and not isV6Home %}
+        {#
+          A link to the search results page without JS; the script below
+          turns it into a button that opens the search panel instead.
+        #}
+        <a href="/v6/manage-guidance/search-guidance" class="defra-header__search-toggle" data-header-search-toggle aria-controls="defra-header-search" aria-expanded="false">
+          <span class="govuk-visually-hidden">Search guidance</span>
+          <svg class="defra-header__search-icon" xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" aria-hidden="true" focusable="false"><circle cx="12.0161" cy="11.0161" r="8.51613" stroke="currentColor" stroke-width="3" fill="none"></circle><line x1="17.8668" y1="17.3587" x2="26.4475" y2="25.9393" stroke="currentColor" stroke-width="3"></line></svg>
+          <svg class="defra-header__close-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2 2 18 18M18 2 2 18" stroke="currentColor" stroke-width="3" fill="none"></path></svg>
+        </a>
+      {% endif %}
     </div>
   </div>
 </header>
+{% if showHeaderSearch and not isV6Home %}
+  <div class="defra-header-search" id="defra-header-search" data-header-search-panel hidden>
+    <div class="govuk-width-container">
+      <form class="defra-header-search__form" method="get" action="/v6/manage-guidance/search-guidance" role="search">
+        <label class="govuk-label govuk-label--m" for="defra-header-search-input">Search guidance</label>
+        <div class="defra-search-bar">
+          <input class="govuk-input defra-search-bar__input" id="defra-header-search-input" name="q" type="search" autocomplete="off">
+          <button class="defra-search-bar__button" type="submit">
+            <span class="govuk-visually-hidden">Search</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" aria-hidden="true" focusable="false"><circle cx="12.0161" cy="11.0161" r="8.51613" stroke="currentColor" stroke-width="3" fill="none"></circle><line x1="17.8668" y1="17.3587" x2="26.4475" y2="25.9393" stroke="currentColor" stroke-width="3"></line></svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var toggle = document.querySelector('[data-header-search-toggle]')
+      var panel = document.querySelector('[data-header-search-panel]')
+      if (!toggle || !panel) return
+
+      toggle.setAttribute('role', 'button')
+      toggle.addEventListener('keydown', function (event) {
+        if (event.key === ' ') {
+          event.preventDefault()
+          toggle.click()
+        }
+      })
+      toggle.addEventListener('click', function (event) {
+        event.preventDefault()
+        var open = panel.hidden
+        panel.hidden = !open
+        toggle.setAttribute('aria-expanded', String(open))
+        toggle.classList.toggle('defra-header__search-toggle--open', open)
+        if (open) panel.querySelector('input').focus()
+      })
+    })()
+  </script>
+{% endif %}
 {% if isV6Home %}
   {#
     /v6/unified-guidance only (isV6Home set in app/views/legacy/routes.js) —
@@ -65,6 +124,19 @@
     <div class="govuk-width-container">
       <h1 class="defra-home-header__title">RPA Guidance hub</h1>
       <p class="defra-home-header__description">Find guidance to help you review and process claims, or manage guidance documents if you're responsible for keeping them up to date.</p>
+      {% if showHeaderSearch %}
+        {# Replaces the "Search guidance" block at the top of page.njk. #}
+        <form class="defra-home-header__search" method="get" action="/v6/manage-guidance/search-guidance" role="search">
+          <label class="defra-home-header__search-label" for="defra-home-header-search-input">Search guidance</label>
+          <div class="defra-search-bar">
+            <input class="govuk-input defra-search-bar__input" id="defra-home-header-search-input" name="q" type="search" autocomplete="off">
+            <button class="defra-search-bar__button defra-search-bar__button--on-green" type="submit">
+              <span class="govuk-visually-hidden">Search</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" aria-hidden="true" focusable="false"><circle cx="12.0161" cy="11.0161" r="8.51613" stroke="currentColor" stroke-width="3" fill="none"></circle><line x1="17.8668" y1="17.3587" x2="26.4475" y2="25.9393" stroke="currentColor" stroke-width="3"></line></svg>
+            </button>
+          </div>
+        </form>
+      {% endif %}
       {% if navigation and navigation.length %}
         <nav class="defra-home-header__tabs" aria-label="Service navigation">
           <ul class="defra-home-header__tabs-list">

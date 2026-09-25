@@ -1,0 +1,149 @@
+// Optional header search (?headerSearch=on) — see
+// app/views/partials/defra-header.njk. Modelled on the GOV.UK homepage search
+// and GOV.UK's header search toggle, recoloured for the Defra green header.
+
+$defra-search-button-tint: #cce7d6;
+
+// A white input with a square icon button, joined with no gap — shared by the
+// home header bar and the header search panel.
+.defra-search-bar {
+  display: flex;
+  max-width: 40em;
+}
+
+.defra-search-bar__input.govuk-input {
+  flex: 1 1 auto;
+  height: 50px;
+  margin: 0;
+  font-size: 19px;
+}
+
+.defra-search-bar__button {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: $govuk-white;
+  background-color: $defra-green;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $defra-green-hover;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+    box-shadow: inset 0 -4px 0 0 $govuk-black;
+  }
+}
+
+// On the green home header a green button would disappear, so it takes a
+// light green tint with a green icon, like GOV.UK's light blue on blue.
+.defra-search-bar__button--on-green {
+  color: $defra-green;
+  background-color: $defra-search-button-tint;
+
+  &:hover {
+    color: $defra-green-hover;
+    background-color: $govuk-white;
+  }
+}
+
+// In the green home header, on /v6/unified-guidance.
+.defra-home-header__search {
+  margin-top: 8px;
+
+  .govuk-input {
+    border-color: $govuk-white;
+  }
+
+  .govuk-input:focus {
+    border-color: $govuk-black;
+  }
+}
+
+.defra-home-header__search-label {
+  display: block;
+  margin-bottom: 8px;
+  color: $govuk-white;
+  font-family: $govuk-font-family;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+// Every other v6 page: a search icon after "Sign out" that opens a panel
+// below the header.
+.defra-header__inner--with-search {
+  grid-template-columns: auto 1fr auto auto;
+}
+
+.defra-header__search-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: -12px 0;
+  color: $defra-green;
+
+  &:hover {
+    color: $defra-green-hover;
+    background-color: $defra-light-green;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+    box-shadow: inset 0 -4px 0 0 $govuk-black;
+  }
+}
+
+.defra-header__close-icon,
+.defra-header__search-toggle--open .defra-header__search-icon {
+  display: none;
+}
+
+.defra-header__search-toggle--open {
+  color: $govuk-black;
+  background-color: $govuk-yellow;
+
+  &:hover {
+    color: $govuk-black;
+    background-color: $govuk-yellow;
+  }
+
+  .defra-header__close-icon {
+    display: block;
+  }
+}
+
+.defra-header-search {
+  padding: 30px 0;
+  border-top: 10px solid $defra-green;
+  border-bottom: 1px solid $govuk-border-colour;
+  background-color: govuk-colour("light-grey");
+
+  // Sits directly above the green brand border / service bar, which would
+  // otherwise double up with this panel's own top border.
+  &:not([hidden]) ~ .defra-header__brand-border {
+    display: none;
+  }
+}
+
+// Keeps the icon on the same row as "Sign out" rather than wrapping under the
+// logo, overriding _defra-header.scss's own two-column mobile grid.
+@media (max-width: 768px) {
+  .defra-header__inner--with-search {
+    grid-template-columns: auto 1fr auto auto;
+  }
+}
