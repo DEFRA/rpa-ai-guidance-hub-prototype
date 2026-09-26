@@ -1,0 +1,56 @@
+{#
+  A simplified stand-in for the retired /v6/manage-guidance/search-guidance
+  page — see controller.js's own comment for why this is a plain name
+  match rather than that page's full faceted filter UI (Category/State/
+  Scheme/Year): the consolidation plan's proposed journey doesn't include
+  search at all, so this exists only so the hub's search box has somewhere
+  real to go, not as a full port of that page.
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/table/macro.njk" import govukTable %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% set pageName = "Search guidance" %}
+
+{% set stateTags = {
+  "Draft": { text: "Draft", classes: "govuk-tag--grey" },
+  "Awaiting review": { text: "Awaiting review", classes: "govuk-tag--yellow" },
+  "Published": { text: "Published", classes: "govuk-tag--green" }
+} %}
+
+{% block columns %}
+
+  <h1 class="govuk-heading-l">Search guidance</h1>
+
+  {% if query %}
+    <p class="govuk-body">
+      {{ results.length }} result{{ "s" if results.length != 1 }} for "{{ query }}"
+    </p>
+  {% endif %}
+
+  {% if results.length %}
+    {% set rows = [] %}
+    {% for result in results %}
+      {% set titleCell %}<a class="govuk-link" href="/playground/document/{{ result.id }}">{{ result.title }}</a>{% endset %}
+      {% set stateCell %}{{ govukTag(stateTags[result.state]) }}{% endset %}
+      {% set rows = (rows.push([
+        { html: titleCell },
+        { text: result.version },
+        { html: stateCell }
+      ]), rows) %}
+    {% endfor %}
+
+    {{ govukTable({
+      head: [
+        { text: "Title", classes: "govuk-!-width-one-half" },
+        { text: "Version" },
+        { text: "Status" }
+      ],
+      rows: rows
+    }) }}
+  {% elif query %}
+    <p class="govuk-body">No guidance matched your search.</p>
+  {% endif %}
+
+{% endblock %}

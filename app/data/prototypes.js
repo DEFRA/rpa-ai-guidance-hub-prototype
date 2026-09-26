@@ -41,19 +41,26 @@ module.exports = {
       // Not another numbered version — a reset of the versioning strategy
       // itself. Pulls the one canonical page for each step of the journey
       // out of v1–v6 (rather than adding a v7 with its own parallel
-      // duplicates) into app/views/consolidated/, following a live crawl
+      // duplicates) into app/views/playground/, following a live crawl
       // and gap analysis rather than the original research brief's
-      // assumed journey. See app/views/consolidated/hub/page.notes.md for
-      // the full decision log.
-      id: 'consolidated',
-      name: 'Consolidated',
+      // assumed journey.
+      //
+      // This is the live, incrementally-evolving build — the one place
+      // ongoing/mob prototyping happens. When a state of it needs to be
+      // preserved for a research session, `npm run snapshot` freezes a copy
+      // into its own entry below (see CLAUDE.md and scripts/snapshot.js).
+      id: 'playground',
+      name: 'Playground',
       status: 'current',
       date: '24 September 2026',
-      entryHref: '/consolidated/',
+      entryHref: '/playground/',
       summary:
-        'One coherent journey built from the best page of each prior version, replacing v1–v6 as the live direction.',
+        'The live prototype, built from the best page of each prior version and evolved incrementally from here — frozen into a snapshot before each research session.',
       changes: [],
       journeys: []
     }
+
+    // Snapshots below this line are appended by scripts/snapshot.js — do not
+    // hand-edit. Run `npm run snapshot` to add one.
   ]
 }

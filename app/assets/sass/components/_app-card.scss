@@ -45,6 +45,11 @@
     right: 0;
     bottom: 0;
     left: 0;
+    // Without this, app-card__description's own `position: relative` (below)
+    // paints above this pseudo-element — both are z-index:auto positioned
+    // boxes, so the one later in the DOM wins — and a click on the
+    // description silently does nothing instead of following the card link.
+    z-index: 1;
   }
 
   // The card already shows focus, so the link does not need its own highlight.

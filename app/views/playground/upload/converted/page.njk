@@ -1,0 +1,67 @@
+{#
+  The success page after converting. Reached from the check page via the
+  POST-then-GET redirect in controller.js, so refreshing doesn't resubmit.
+
+  Consolidation fix (id-threading): "View the guidance" used to always
+  open the editor with no id at all, showing its fixed "SFI 23" sample
+  regardless of what was actually just converted — one of the three
+  id-threading bugs the plan's crawl found. There's no real
+  guidanceDocuments entry to pass an id for (this flow's details are
+  session-only — it does not create a real tracked Draft document, an
+  explicitly confirmed scope choice, not an oversight).
+
+  Revised fix: "View the guidance" now opens the document overview page
+  (playground/document/:id) rather than the editor directly, matching
+  every other "View"/document link in the playground build. That page
+  has no missing-id fallback (unlike the editor's own ?title= workaround,
+  still used elsewhere) — it 404-redirects to the hub instead — so
+  controller.js hardcodes guideId to one real, existing, genuinely
+  Published document (sfi-nutrient-management-actions, CONVERTED_GUIDE_ID
+  there — see that constant's own comment for why, not the more obviously
+  "on-theme" sfi-soil-health-actions) rather than inventing
+  draft-persistence for a genuinely new tracked entry. The panel above
+  still shows the guide name actually entered; the overview page it links
+  to shows that hardcoded document's own title/description instead — a
+  known mismatch accepted as part of this scope choice.
+
+  Consolidation decision: no "edit this guide" CTA is added here — the
+  plan's brief confirmed the confirmation page's only real links are "View
+  the guidance" and "Convert another document"; View already opens the
+  overview page (with Edit from there), so a separate Edit link would just
+  duplicate it.
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Guidance converted" %}
+
+{% block columns %}
+
+  {{ govukPanel({
+    titleText: "Guidance converted",
+    text: guideName
+  }) }}
+
+  <h2 class="govuk-heading-m">What happens next</h2>
+
+  <p class="govuk-body">
+    Your document is now markdown in the hub, saved as a draft. Only you can
+    see it until it is reviewed and published.
+  </p>
+
+  <p class="govuk-body">
+    Have a look at how it converted before you take it any further.
+  </p>
+
+  {{ govukButton({
+    text: "View the guidance",
+    href: "/playground/document/" + guideId
+  }) }}
+
+  <p class="govuk-body">
+    <a class="govuk-link" href="/playground/upload">Convert another document</a>
+  </p>
+
+{% endblock %}

@@ -3,9 +3,11 @@
   app/data/prototypes.js (via app/lib/prototypes.js's getVersions(), passed
   in as `versions` by the GET / handler in app/views/legacy/routes.js) — the
   same file that drives the step order within v2's designer journey, rather
-  than hand-written HTML (see git history). A version's tile only gets a
-  "(current)"/"(archived)" suffix for those two statuses — every other
-  status (e.g. "superseded") shows plain.
+  than hand-written HTML (see git history). Each version is a summary card;
+  only "current"/"archived" statuses get a status tag — every other status
+  (e.g. "superseded") shows no tag. getVersions() also builds each version's
+  `summaryRows` (see app/lib/prototypes.js) — the plain text/value detail
+  rows (purpose, author, when taken) shown below the status row.
 
   Version 1 is a frozen copy of every page reachable from the homepage, at
   app/views/versions/v1/ and the /v1/... routes in
@@ -28,27 +30,50 @@
   links send people first.
 #}
 {% extends "layouts/main.html" %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
 
 {% set pageName = "RPA Guidance Hub - Prototype versions" %}
 
 {% block content %}
 
 <div class="govuk-grid-row">
-  <div class="govuk-grid-column-two-thirds">
-
+  <div class="govuk-grid-column-full">
     <h1 class="govuk-heading-l">RPA Guidance Hub - Prototype versions</h1>
 
     {% for version in versions %}
-      <div class="app-version">
-        <h2 class="govuk-heading-m">
-          <a class="govuk-link" href="{{ version.entryHref }}">
-            {{ version.name }}{% if version.status === "current" %} (current){% elif version.status === "archived" %} (archived){% endif %}
-          </a>
-        </h2>
-        <p class="govuk-body">
-          {{ version.summary }}
-        </p>
-      </div>
+      {% set statusTag %}
+        {% if version.status === "current" %}
+          {{ govukTag({ text: "Current", classes: "govuk-tag--green" }) }}
+        {% elif version.status === "archived" %}
+          {{ govukTag({ text: "Archived", classes: "govuk-tag--grey" }) }}
+        {% endif %}
+      {% endset %}
+
+      {% set rows = [{ key: { text: "Status" }, value: { html: statusTag } }].concat(version.summaryRows) %}
+
+      {% if version.changes.length > 0 %}
+        {% set changesHtml %}
+          <ul class="govuk-list govuk-list--bullet">
+            {% for change in version.changes %}
+              <li>{{ change }}</li>
+            {% endfor %}
+          </ul>
+        {% endset %}
+        {% set rows = rows.concat([{ key: { text: "What changed" }, value: { html: changesHtml } }]) %}
+      {% endif %}
+
+      {{ govukSummaryList({
+        card: {
+          title: { text: version.name },
+          actions: {
+            items: [
+              { href: version.entryHref, text: "Open", visuallyHiddenText: version.name }
+            ]
+          }
+        },
+        rows: rows
+      }) }}
     {% endfor %}
 
   </div>
