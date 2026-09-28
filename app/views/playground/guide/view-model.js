@@ -1,6 +1,6 @@
 const { guidanceDocuments } = require('../../../data/guidance-documents')
-const { buildGuideContent } = require('../../../data/guide-content')
-const { getGuideMetadata } = require('../../../data/guide-metadata')
+const { buildGuideContent } = require('./guide-content')
+const { getGuideMetadata } = require('./guide-metadata')
 const { documentOverviewViewModel } = require('../document/view-model')
 const { getRole } = require('../../../data/context-pane')
 const { getBookmarks, BOOKMARK_TYPES } = require('../../../data/side-nav')
