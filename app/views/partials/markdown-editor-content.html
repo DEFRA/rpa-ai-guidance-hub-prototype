@@ -1,26 +1,18 @@
-{#
-  The simpler markdown editor: section links on the left, a formatting
-  toolbar and an editable textarea on the right.
-
-  Included on the "Edit as markdown" tab of change-review.html — the only
-  place that pairs the two side by side like this. Both halves are also
-  available separately, as partials/markdown-editor-nav.html and
-  partials/markdown-editor-editor.html, for guidance-document-edit.html,
-  which needs the Content list to sit outside its Edit/Preview tabs rather
-  than inside one alongside the textarea.
-#}
+{# The simpler markdown editor: section links on the left, a formatting toolbar
+and an editable textarea on the right. Included on the "Edit as markdown" tab of
+change-review.html — the only place that pairs the two side by side like this.
+Both halves are also available separately, as partials/markdown-editor-nav.html
+and partials/markdown-editor-editor.html, for guidance-document-edit.html, which
+needs the Content list to sit outside its Edit/Preview tabs rather than inside
+one alongside the textarea. #}
 
 <div class="govuk-grid-row">
-
   <div class="govuk-grid-column-one-quarter">
-
     <h2 class="govuk-heading-m">Content</h2>
     {% include "partials/markdown-editor-nav.html" %}
-
   </div>
 
   <div class="govuk-grid-column-three-quarters">
     {% include "partials/markdown-editor-editor.html" %}
   </div>
-
 </div>

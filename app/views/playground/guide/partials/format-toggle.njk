@@ -1,0 +1,19 @@
+{#
+  Stepper vs traditional, as an in-page control rather than the old
+  separate /document/:id/view choice screen. Prototype-only: it exists to
+  gather feedback on which format works better — in production a guide
+  would be set to one fixed format, and this control wouldn't exist.
+  Reads `format` and `formatHrefs`.
+#}
+<div class="app-guide-format-toggle" role="group" aria-label="Guide format">
+  <a
+    class="app-guide-format-toggle__option{{ ' app-guide-format-toggle__option--active' if format == 'traditional' }}"
+    href="{{ formatHrefs.traditional }}"
+    aria-current="{{ 'true' if format == 'traditional' else 'false' }}"
+  >Traditional</a>
+  <a
+    class="app-guide-format-toggle__option{{ ' app-guide-format-toggle__option--active' if format == 'stepper' }}"
+    href="{{ formatHrefs.stepper }}"
+    aria-current="{{ 'true' if format == 'stepper' else 'false' }}"
+  >Stepper</a>
+</div>

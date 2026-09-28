@@ -1,15 +1,35 @@
 // "Manage guidance" — the "Publishing checks" row on document-overview.html
 // (v5's own version and v6's state-based rewrite,
-// app/views/versions/v6/manage-guidance/document-overview.html, alike),
-// where "Checks not run" and the "Start Checks" button now sit inline
-// together, rather than that button being down with "Continue editing" at
-// the bottom of the page.
-
+// app/views/versions/v6/manage-guidance/document-overview.html, alike):
+// "Checks not run" and the "Start Checks" button stacked, button below
+// text, both left-aligned — this is the VALUE cell of the summary list's
+// own "Publishing checks" row, so it should start flush against the left
+// edge of that column like every other value cell on the page (a plain
+// govuk-body span, or a select). Column, not row: an earlier version had
+// the two sitting inline (row, wrapping onto its own line only if space
+// ran out) — this is a deliberate later change to always stack them,
+// regardless of how much width the column has.
+//
+// &[hidden] below is required, not defensive styling: [hidden] and this
+// class are both single-attribute/class selectors of equal specificity,
+// and an author stylesheet's display: flex here beats the browser's own
+// default [hidden] { display: none } rule at that tie (author styles
+// always win over the user-agent stylesheet, regardless of specificity)
+// — the same reason several rules in _app-editor-experiment.scss already
+// need this same override. Without it, document-overview.html's own
+// pageScripts setting idleState.hidden = true once "Start Checks" is
+// clicked was being silently overridden right back to visible, which is
+// what let the button (and "Checks not run") keep showing on top of the
+// running/complete states underneath it instead of actually disappearing.
 .app-manage-guidance-checks-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: govuk-spacing(3);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: govuk-spacing(2);
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 // "Save to search" on v6's document-overview.html (both the manage-

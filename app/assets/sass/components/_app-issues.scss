@@ -207,18 +207,18 @@
 }
 
 .app-tab-count-badge--red {
-  color: govuk-shade(govuk-colour("red"), 80%);
-  background-color: govuk-tint(govuk-colour("red"), 75%);
+  color: govuk-shade(govuk-colour('red'), 80%);
+  background-color: govuk-tint(govuk-colour('red'), 75%);
 }
 
 .app-tab-count-badge--orange {
-  color: govuk-shade(govuk-colour("orange"), 55%);
-  background-color: govuk-tint(govuk-colour("orange"), 70%);
+  color: govuk-shade(govuk-colour('orange'), 55%);
+  background-color: govuk-tint(govuk-colour('orange'), 70%);
 }
 
 .app-tab-count-badge--blue {
-  color: govuk-shade(govuk-colour("blue"), 60%);
-  background-color: govuk-tint(govuk-colour("blue"), 70%);
+  color: govuk-shade(govuk-colour('blue'), 60%);
+  background-color: govuk-tint(govuk-colour('blue'), 70%);
 }
 
 // -- Recommended changes, inside each severity tab ---------------------------

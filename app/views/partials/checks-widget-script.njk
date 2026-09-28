@@ -1,0 +1,77 @@
+{#
+  The checks-widget.njk script — kept separate so a page includes it once
+  inside {% block pageScripts %} rather than inline with the markup.
+#}
+<script>
+  (function () {
+    var checksCell = document.querySelector('[data-checks-cell]')
+    if (!checksCell) return
+
+    var idleState = checksCell.querySelector('[data-checks-idle]')
+    var runningState = checksCell.querySelector('[data-checks-running]')
+    var completeState = checksCell.querySelector('[data-checks-complete]')
+    var startButton = checksCell.querySelector('[data-start-checks-inline]')
+    var countdownText = checksCell.querySelector('[data-checks-countdown]')
+    var bar = checksCell.querySelector('[data-checks-bar]')
+    var headline = checksCell.querySelector('[data-checks-headline]')
+    var breakdown = checksCell.querySelector('[data-checks-breakdown]')
+
+    if (!startButton || !idleState || !runningState || !completeState) return
+
+    var DURATION_SECONDS = 8
+
+    function issueCount () {
+      var stored = Number(checksCell.dataset.issueCount)
+      if (!isNaN(stored) && stored >= 0) return stored
+      return Math.floor(Math.random() * 20) + 1
+    }
+
+    function splitBySeverity (total) {
+      if (total === 0) return { high: 0, medium: 0, low: 0 }
+
+      var high = Math.min(total, Math.round(total * (0.1 + Math.random() * 0.15)))
+      var medium = Math.min(total - high, Math.round(total * (0.3 + Math.random() * 0.2)))
+      var low = total - high - medium
+
+      return { high: high, medium: medium, low: low }
+    }
+
+    function setCountdown (secondsRemaining) {
+      countdownText.textContent = 'Running checks — estimated time remaining: ' + secondsRemaining + ' second' + (secondsRemaining !== 1 ? 's' : '')
+    }
+
+    startButton.addEventListener('click', function () {
+      idleState.hidden = true
+      completeState.hidden = true
+      runningState.hidden = false
+
+      var remaining = DURATION_SECONDS
+      setCountdown(remaining)
+
+      bar.style.transitionDuration = '0s'
+      bar.style.width = '0%'
+      window.setTimeout(function () {
+        bar.style.transitionDuration = DURATION_SECONDS + 's'
+        bar.style.width = '100%'
+      }, 0)
+
+      var tick = window.setInterval(function () {
+        remaining = Math.max(remaining - 1, 0)
+        setCountdown(remaining)
+      }, 1000)
+
+      window.setTimeout(function () {
+        window.clearInterval(tick)
+
+        var total = issueCount()
+        var severity = splitBySeverity(total)
+
+        headline.textContent = total === 0 ? 'No issues found' : total + ' issue' + (total !== 1 ? 's' : '') + ' found'
+        breakdown.textContent = severity.high + ' high priority, ' + severity.medium + ' medium priority, ' + severity.low + ' low priority'
+
+        runningState.hidden = true
+        completeState.hidden = false
+      }, DURATION_SECONDS * 1000)
+    })
+  })()
+</script>

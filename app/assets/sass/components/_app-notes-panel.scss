@@ -17,9 +17,9 @@
   background: $defra-green;
   border: 0;
   border-radius: 8px 0 0 8px;
-  @include govuk-font(19, $weight: "bold");
+  @include govuk-font(19, $weight: 'bold');
   letter-spacing: 0.5px;
-  color: govuk-colour("white");
+  color: govuk-colour('white');
   cursor: pointer;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
   transition:
@@ -54,7 +54,7 @@
   width: 320px;
   max-width: 90vw;
   overflow-y: auto;
-  background: govuk-colour("white");
+  background: govuk-colour('white');
   border-left: 1px solid $govuk-border-colour;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
   transition: right 0.2s ease-in-out;
@@ -73,7 +73,7 @@
 }
 
 .app-notes-panel__title {
-  @include govuk-font(19, $weight: "bold");
+  @include govuk-font(19, $weight: 'bold');
   margin: 0;
 }
 
@@ -118,7 +118,7 @@
   h1,
   h2,
   h3 {
-    @include govuk-font(19, $weight: "bold");
+    @include govuk-font(19, $weight: 'bold');
     margin: govuk-spacing(4) 0 govuk-spacing(2);
   }
 

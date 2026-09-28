@@ -66,9 +66,9 @@ function getRecentlyOpened(req) {
   return req.session.data.recentlyOpened
 }
 
-function getSavedGuidance(req) {
-  if (!req.session.data.savedGuidance) {
-    req.session.data.savedGuidance = [
+function getPinnedGuidance(req) {
+  if (!req.session.data.pinnedGuidance) {
+    req.session.data.pinnedGuidance = [
       {
         id: 'countryside-stewardship-capital-grants',
         lastModified: '20 July 2025'
@@ -80,7 +80,7 @@ function getSavedGuidance(req) {
       { id: 'sfi-soil-health-actions', lastModified: '3 May 2025' }
     ]
   }
-  return req.session.data.savedGuidance
+  return req.session.data.pinnedGuidance
 }
 
 // A tab param, as already carried by find-guidance.html's own Remove links
@@ -89,7 +89,9 @@ function getSavedGuidance(req) {
 // to know which list to take an id out of.
 function getListForTab(req, tabParam) {
   if (tabParam === 'recently-opened') return getRecentlyOpened(req)
-  if (tabParam === 'saved-guidance') return getSavedGuidance(req)
+  if (tabParam === 'pinned-guidance' || tabParam === 'saved-guidance') {
+    return getPinnedGuidance(req)
+  }
   return null
 }
 
@@ -106,21 +108,25 @@ function formatToday() {
 
 // Adds id to the front of list with today's date — or, if it is already
 // there, removes the old entry first, so it moves to the front with an
-// updated date rather than appearing twice.
-function touchEntry(list, id) {
+// updated date rather than appearing twice. version, when given, records
+// which version was current at the moment of opening — see
+// app/data/context-pane.js's own buildRecentlyOpenedRows, the only reader
+// of this field, which compares it against the document's current version
+// to flag "Updated since you opened it" in the context pane.
+function touchEntry(list, id, version) {
   const existingIndex = list.findIndex((entry) => entry.id === id)
   if (existingIndex !== -1) list.splice(existingIndex, 1)
-  list.unshift({ id, lastModified: formatToday() })
+  list.unshift({ id, lastModified: formatToday(), version })
 }
 
-function addRecentlyOpened(req, id) {
+function addRecentlyOpened(req, id, version) {
   const list = getRecentlyOpened(req)
-  touchEntry(list, id)
+  touchEntry(list, id, version)
   if (list.length > RECENTLY_OPENED_LIMIT) list.length = RECENTLY_OPENED_LIMIT
 }
 
-function addSavedGuidance(req, id) {
-  touchEntry(getSavedGuidance(req), id)
+function addPinnedGuidance(req, id) {
+  touchEntry(getPinnedGuidance(req), id)
 }
 
 // Builds find-guidance.html's table rows from a session list (id +
@@ -147,10 +153,16 @@ function buildFindGuidanceRows(list) {
 module.exports = {
   REMOVE_CONFIRM_TABS,
   getRecentlyOpened,
-  getSavedGuidance,
+  getPinnedGuidance,
+  // getSavedGuidance/addSavedGuidance: pre-rename names, kept as aliases so
+  // frozen snapshots taken before getPinnedGuidance/addPinnedGuidance (see
+  // "Add context pane") keep working — a frozen snapshot's page.njk/
+  // controller.js/view-model.js can never be edited to use the new names.
+  getSavedGuidance: getPinnedGuidance,
   getListForTab,
   formatToday,
   addRecentlyOpened,
-  addSavedGuidance,
+  addPinnedGuidance,
+  addSavedGuidance: addPinnedGuidance,
   buildFindGuidanceRows
 }

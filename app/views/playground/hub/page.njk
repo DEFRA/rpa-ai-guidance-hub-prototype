@@ -1,0 +1,339 @@
+{#
+  The playground hub — the de-versioned home page (the plan's own
+  disposition for /v6/unified-guidance: "keep as-is, becomes / (home)";
+  here that's /playground/hub, since the site's actual "/" still serves
+  the frozen versions index — see the playground build's own decisions
+  log for why). The hero is carried over unchanged from /v6/unified-guidance.
+
+  Navigation (see page.notes.md): the side navigation (layouts/main.html,
+  partials/side-nav.njk) replaced the context pane. Its lists are filters of
+  this one all-guidance list — ?list= and ?case= (view-model.js), mirrored
+  by the quick-filter row above Filters. Pinned guides carry a star, can be
+  pinned from each row, and sit first whenever nothing narrows the list.
+
+  Layout: the green hero now sits at the top of the main column, beside the
+  nav, rather than full-bleed across the page (_app-side-nav.scss rounds
+  it), so the nav starts under the Defra header on every page.
+
+  Filters (.app-filter, _app-filter.scss) are a horizontal row inside
+  the main column, above the results list — a hand-ported
+  adaptation of the MoJ Design System's Filter component (header /
+  selected-filters-with-removable-tags / options), not the installed
+  package, laid out horizontally since MoJ's own docs only cover a
+  vertical filter pane. Every field in .app-filter__options is always
+  visible, in-flow, with no collapse/disclosure/overlay behaviour — GDS
+  doesn't sanction modal-style dropdown panels, so this deliberately
+  isn't the popover-per-facet treatment an earlier pass of this page
+  tried. There's no govuk-grid-row split any more: with the sidebar
+  column gone, both the filter row and the results list are plain
+  full-width siblings in the main column. See
+  page.notes.md for the full reasoning, including why Category/Scheme/
+  Year moved off plain <select> (each progressively enhanced with
+  accessible-autocomplete, since the real service expects many options
+  per facet) while State (a fixed, three-value enum) stays checkboxes
+  and Sort-by stays a plain select.
+
+  Filtering/sorting/search is a real GET round-trip (view-model.js reads
+  category/scheme/year/state/sort/q straight off req.query and filters
+  buildManageGuidanceSearchResults() server-side), not client-side JS —
+  the retired hub/search/page.njk this was ported from filtered entirely
+  client-side against an embedded resultsJson, which meant none of it
+  worked with JavaScript off; see page.notes.md for why that changed.
+  #hub-filters is one real <form> covering Category/Scheme/Year/State (a
+  hidden q field mirrors the current search so applying a filter doesn't
+  drop it); Sort by sits outside that form in the results header but
+  submits with it via its own form="hub-filters" attribute. Selected
+  filters render as plain <a> tags (remove one filter = follow a link with
+  that param dropped, per selectedFilters/buildHref in view-model.js), and
+  Clear filters is a plain link to the bare page — no JS needed for any of
+  that. pageScripts below is now pure progressive enhancement only:
+  accessible-autocomplete on Category/Scheme/Year, and an optional
+  auto-submit-on-change for Sort by.
+#}
+{% extends "common/layouts/base.njk" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "partials/side-nav-icon.njk" import sideNavIcon %}
+
+{% set pageName = "RPA Guidance hub" %}
+
+{% set versionTags = {
+  "Version 1": { text: "Version 1", classes: "govuk-tag--green" },
+  "Version 2": { text: "Version 2", classes: "govuk-tag--purple" }
+} %}
+
+{% set stateTags = {
+  "Draft": { text: "Draft", classes: "govuk-tag--grey" },
+  "Awaiting review": { text: "Awaiting review", classes: "govuk-tag--yellow" },
+  "Published": { text: "Published", classes: "govuk-tag--turquoise" }
+} %}
+
+
+{% block content %}
+
+  <div class="defra-home-header">
+    <div class="govuk-width-container govuk-!-margin-bottom-6">
+      <h1 class="defra-home-header__title">RPA Guidance hub</h1>
+      <p class="defra-home-header__description">Find guidance to help you review and process claims, or manage guidance documents if you're responsible for keeping them up to date.</p>
+    </div>
+
+    <div class="govuk-width-container">
+      <form class="defra-home-header__search" method="get" action="/playground/hub" role="search">
+        <label class="defra-home-header__search-label" for="defra-home-header-search-input">Search hub</label>
+        <div class="defra-search-bar">
+          <input class="govuk-input defra-search-bar__input" id="defra-home-header-search-input" name="q" type="search" autocomplete="off" value="{{ initialSearchQuery }}">
+          <button class="defra-search-bar__button defra-search-bar__button--on-green" type="submit">
+            <span class="govuk-visually-hidden">Search</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" aria-hidden="true" focusable="false"><circle cx="12.0161" cy="11.0161" r="8.51613" stroke="currentColor" stroke-width="3" fill="none"></circle><line x1="17.8668" y1="17.3587" x2="26.4475" y2="25.9393" stroke="currentColor" stroke-width="3"></line></svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<div class="app-quick-filters">
+  <h2 class="app-quick-filters__label" id="quick-filters-heading">Quick filters</h2>
+  <ul class="app-quick-filters__list" aria-labelledby="quick-filters-heading">
+    {% for filter in quickFilters %}
+      <li>
+        <a class="app-quick-filters__chip{% if filter.selected %} app-quick-filters__chip--selected{% endif %}" href="{{ filter.href }}"{% if filter.selected %} aria-current="true"{% endif %}>
+          {% if filter.selected %}<span class="app-quick-filters__tick" aria-hidden="true">&#10003;</span>{% endif %}
+          {{ sideNavIcon(filter.icon) }}
+          <span>{{ filter.text }}</span>
+          <span class="app-quick-filters__count">{{ filter.count }}<span class="govuk-visually-hidden"> guides</span></span>
+          {% if filter.selected %}<span class="govuk-visually-hidden"> (selected, select to remove this filter)</span>{% endif %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+  <div class="app-filter" data-module="app-filter">
+
+    <div class="app-filter__header">
+      <h2 class="govuk-heading-m app-filter__title">Filters</h2>
+      <a class="app-filter__clear" href="{{ clearFiltersHref }}">Clear filters</a>
+    </div>
+
+    {% if selectedFilters.length %}
+      <div class="app-filter__selected">
+        <h3 class="govuk-visually-hidden">Selected filters</h3>
+        <ul class="app-filter__tags">
+          {% for filter in selectedFilters %}
+            <li>
+              <a class="app-filter__tag" href="{{ filter.href }}">
+                <span class="govuk-visually-hidden">Remove filter</span>
+                {{ filter.label }}
+                <span class="app-filter__tag-remove" aria-hidden="true">&times;</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {#
+      A single real <form> — a genuine GET round-trip, no client-side
+      filtering — carries Category/Scheme/Year/State together so a no-JS
+      visit still filters correctly. Sort by (below, in the results header,
+      outside this form's own markup) submits with it too via its
+      form="hub-filters" attribute, so changing sort doesn't need a form of
+      its own. A hidden q field mirrors the current search text so applying
+      a filter doesn't drop whatever's already been searched for.
+    #}
+    <form id="hub-filters" method="get" action="/playground/hub">
+      <input type="hidden" name="q" value="{{ initialSearchQuery }}">
+      {% if selectedList %}<input type="hidden" name="list" value="{{ selectedList }}">{% endif %}
+      {% if selectedBookmark %}<input type="hidden" name="{{ selectedBookmark.param }}" value="{{ selectedBookmark.ref }}">{% endif %}
+
+      <div class="app-filter__options">
+
+        <div class="app-filter__field">
+          {{ govukSelect({
+            id: "category",
+            name: "category",
+            label: { text: "Category" },
+            items: [
+              { value: "all", text: "All categories", selected: selectedCategory == "all" },
+              { value: "sfi", text: "Sustainable Farming Incentive", selected: selectedCategory == "sfi" },
+              { value: "countryside-stewardship", text: "Countryside Stewardship", selected: selectedCategory == "countryside-stewardship" },
+              { value: "cross-compliance", text: "Cross Compliance", selected: selectedCategory == "cross-compliance" }
+            ]
+          }) }}
+        </div>
+
+        <div class="app-filter__field">
+          {{ govukSelect({
+            id: "scheme",
+            name: "scheme",
+            label: { text: "Scheme" },
+            items: [
+              { value: "all", text: "All schemes", selected: selectedScheme == "all" },
+              { value: "countryside-stewardship", text: "Countryside Stewardship", selected: selectedScheme == "countryside-stewardship" },
+              { value: "sustainable-farming-incentive", text: "Sustainable Farming Incentive", selected: selectedScheme == "sustainable-farming-incentive" }
+            ]
+          }) }}
+        </div>
+
+        <div class="app-filter__field">
+          {{ govukSelect({
+            id: "year",
+            name: "year",
+            label: { text: "Year" },
+            items: [
+              { value: "all", text: "All years", selected: selectedYear == "all" },
+              { value: "2026", text: "2026", selected: selectedYear == "2026" },
+              { value: "2025", text: "2025", selected: selectedYear == "2025" },
+              { value: "2024", text: "2024", selected: selectedYear == "2024" },
+              { value: "2023", text: "2023", selected: selectedYear == "2023" },
+              { value: "2022", text: "2022", selected: selectedYear == "2022" },
+              { value: "2021", text: "2021", selected: selectedYear == "2021" },
+              { value: "2020", text: "2020", selected: selectedYear == "2020" },
+              { value: "2019", text: "2019", selected: selectedYear == "2019" }
+            ]
+          }) }}
+        </div>
+
+        <div class="app-filter__field">
+          {{ govukCheckboxes({
+            idPrefix: "state",
+            name: "state",
+            classes: "govuk-checkboxes--small",
+            fieldset: {
+              legend: { text: "State" }
+            },
+            items: [
+              { value: "draft", text: "Draft", checked: stateChecked.draft },
+              { value: "awaiting-review", text: "Awaiting review", checked: stateChecked["awaiting-review"] },
+              { value: "published", text: "Published", checked: stateChecked.published }
+            ]
+          }) }}
+        </div>
+
+        <div class="app-filter__actions">
+          {{ govukButton({
+            text: "Apply filters",
+            classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+          }) }}
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+  <div class="app-search-results__header">
+    <h2 class="govuk-heading-m app-search-results__count">{{ results.length }} guide{{ "s" if results.length != 1 }}</h2>
+
+    <div class="app-search-results__sort">
+      <label class="govuk-label app-search-results__sort-label" for="sort">Sort by</label>
+      {{ govukSelect({
+        id: "sort",
+        name: "sort",
+        classes: "app-search-results__sort-select",
+        formGroup: { classes: "govuk-!-margin-bottom-0" },
+        attributes: { form: "hub-filters", "data-sort-select": true },
+        items: [
+          { value: "most-relevant", text: "Most relevant", selected: selectedSort == "most-relevant" },
+          { value: "updated-newest", text: "Updated (newest)", selected: selectedSort == "updated-newest" },
+          { value: "updated-oldest", text: "Updated (oldest)", selected: selectedSort == "updated-oldest" }
+        ]
+      }) }}
+    </div>
+  </div>
+
+  {% if results.length == 0 %}
+    <p class="govuk-body">No guides match your search or filters. Try removing some filters or using different search terms.</p>
+  {% else %}
+    <ul class="app-search-results">
+      {% for result in results %}
+        <li class="app-search-results__item{% if result.pinned %} app-search-results__item--pinned{% endif %}" id="result-{{ result.id }}">
+
+          <div class="app-search-results__top">
+            <div class="govuk-!-margin-bottom-2">
+              {{ govukTag(versionTags[result.version]) }}
+              {{ govukTag(stateTags[result.state]) }}
+              {% if result.pinned %}<strong class="govuk-tag govuk-tag--grey app-search-results__pinned-tag">Pinned</strong>{% endif %}
+            </div>
+            <form class="app-pin-toggle" method="post" action="{{ pinToggleHref }}">
+              <input type="hidden" name="documentId" value="{{ result.id }}">
+              <input type="hidden" name="returnTo" value="{{ currentHref }}">
+              <input type="hidden" name="anchor" value="pin-{{ result.id }}">
+              <button type="submit" class="app-pin-toggle__button" id="pin-{{ result.id }}" aria-pressed="{{ 'true' if result.pinned else 'false' }}" data-pin-toggle>
+                {{ sideNavIcon("star-filled" if result.pinned else "star") }}
+                <span class="govuk-visually-hidden">Pin {{ result.title }}</span>
+              </button>
+            </form>
+          </div>
+
+          <h3 class="govuk-heading-s app-search-results__name">
+            <a class="govuk-link" href="{{ result.overviewHref }}?from=search&q={{ initialSearchQuery | urlencode }}">{{ result.title }}</a>
+          </h3>
+
+          <p class="govuk-body app-search-results__description">{{ result.description }}</p>
+
+          <p class="govuk-body-s app-search-results__dates">Last updated: {{ result.lastUpdated }} &middot; Published: {{ result.published }}</p>
+
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+{% endblock %}
+
+{% block pageScripts %}
+  {# accessible-autocomplete is loaded by layouts/main.html on side-nav pages. #}
+  <script>
+    (function () {
+      // Filtering itself is a real GET round-trip now (view-model.js), not
+      // client-side JS, so it works with JavaScript off. Everything left
+      // here is pure progressive enhancement on top of controls that
+      // already work without it.
+
+      // Category, Scheme and Year all expect many options in the real
+      // service, so each is progressively enhanced with
+      // accessible-autocomplete rather than left as a plain <select> — the
+      // select stays the source of truth and is what actually submits
+      // (enhanceSelectElement syncs its .value on confirm). cssNamespace
+      // renames the vendor's own "autocomplete" BEM block to
+      // "app-autocomplete" so it can be hand-styled in _app-filter.scss
+      // rather than importing the vendor CSS unmodified. State stays plain
+      // checkboxes — a fixed three-value enum, not a long list — and there
+      // is deliberately no per-facet dropdown/disclosure wrapper around any
+      // of this: GDS doesn't sanction modal-style popover panels, so every
+      // field here is always visible and in-flow.
+      ;['category', 'scheme', 'year'].forEach(function (id) {
+        var select = document.getElementById(id)
+        if (select && window.accessibleAutocomplete) {
+          accessibleAutocomplete.enhanceSelectElement({
+            selectElement: select,
+            cssNamespace: 'app-autocomplete',
+            defaultValue: select.value === 'all' ? '' : undefined
+          })
+        }
+      })
+
+      // Sort by already submits with the rest of #hub-filters (via its own
+      // form="hub-filters" attribute — see page.njk) once Apply filters is
+      // pressed; auto-submitting on change as well just saves that extra
+      // click, entirely optional since the fallback (change it, then press
+      // Apply) already works with JS off.
+      // After pinning/unpinning, pin-toggle redirects back to #pin-<id> —
+      // the star button itself, so a keyboard user keeps their place.
+      if (window.location.hash.indexOf('#pin-') === 0) {
+        var star = document.getElementById(window.location.hash.slice(1))
+        if (star) star.focus()
+      }
+
+      var sortSelect = document.querySelector('[data-sort-select]')
+      if (sortSelect) {
+        sortSelect.addEventListener('change', function () {
+          sortSelect.form.submit()
+        })
+      }
+    })()
+  </script>
+{% endblock %}

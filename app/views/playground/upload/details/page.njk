@@ -1,0 +1,89 @@
+{#
+  The guide's details, step 1 of 2 — v6's own port of v4's
+  upload-metadata.html: the facts read from the document plus the
+  scheme(s) it relates to. Title is editable and required; at least one
+  scheme answer (a named scheme, or "Not scheme-specific") is required.
+  Scheme is checkboxes, not radios — guidance can relate to more than one
+  — with "Not scheme-specific" as an exclusive option (JS handles the
+  exclusivity client-side; the server rejects the combination if JS is
+  unavailable, same as v4 — see controller.js's postMetadata). Version and
+  last modified are read from the document and cannot be changed, so
+  they're shown as a summary list rather than form fields. Values live in
+  the session (controller.js), so returning via a Change link from the
+  check page shows what was already entered.
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "The guide's details" %}
+{% if errorList and errorList.length %}{% set pageName = "Error: " + pageName %}{% endif %}
+
+{% block columns %}
+
+  {% if errorList and errorList.length %}
+    {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+  {% endif %}
+
+  <h1 class="govuk-heading-l">The guide's details</h1>
+
+  <p class="govuk-body">
+    We have read the title, version and date from the document. Check the
+    title and choose the schemes this guidance relates to.
+  </p>
+
+  <form method="post" action="/playground/upload/details" novalidate>
+
+    {# Set when this step was opened via a Change link from the check page —
+       carried through so Continue returns there instead of the next step. #}
+    {% if from %}<input type="hidden" name="from" value="{{ from }}">{% endif %}
+
+    {{ govukInput({
+      id: "guide-title",
+      name: "guideTitle",
+      value: details.name,
+      label: { text: "Guidance title", classes: "govuk-label--s" },
+      hint: { text: "If the guidance relates to a scheme, include the scheme name in the title." },
+      errorMessage: errors.guideTitle
+    }) }}
+
+    {{ govukSummaryList({
+      rows: [
+        { key: { text: "Version number" }, value: { text: details.version } },
+        { key: { text: "Last modified date" }, value: { text: details.lastModified } }
+      ]
+    }) }}
+
+    {{ govukCheckboxes({
+      idPrefix: "scheme",
+      name: "scheme",
+      values: details.scheme,
+      fieldset: {
+        legend: { text: "Which schemes does this guidance relate to?", classes: "govuk-fieldset__legend--s" }
+      },
+      hint: { text: "Select every scheme this guidance relates to." },
+      errorMessage: errors.scheme,
+      items: [
+        { value: "sfi", text: "Sustainable Farming Incentive (SFI)" },
+        { value: "countryside-stewardship", text: "Countryside Stewardship (CS)" },
+        { value: "cross-compliance", text: "Cross Compliance" },
+        { value: "basic-payment-scheme", text: "Basic Payment Scheme (BPS)" },
+        { divider: "or" },
+        {
+          value: "none",
+          text: "Not scheme-specific",
+          hint: { text: "Only select this if the guidance genuinely applies across schemes, rather than to one or more schemes in particular" },
+          behaviour: "exclusive"
+        }
+      ]
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+
+  </form>
+
+{% endblock %}

@@ -1,0 +1,42 @@
+{#
+  The "Start Checks" simulate-then-reveal widget for a Draft/Awaiting
+  approval guide: idle -> running (fake countdown) -> complete (a random
+  pass/fail breakdown linking to the canonical Issues page). Reads
+  `publishingChecks` and `issuesHref`. Shared by document/page.njk and the
+  guide page's editor controls (playground/guide/**) — extracted here so
+  both render and behave identically rather than keeping two copies.
+#}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+<div data-checks-cell data-issue-count="{{ publishingChecks }}">
+
+  <div class="app-manage-guidance-checks-row" data-checks-idle>
+    <span>Checks not run</span>
+    {{ govukButton({
+      text: "Start Checks",
+      type: "button",
+      classes: "govuk-button--secondary govuk-!-margin-bottom-0",
+      attributes: { "data-start-checks-inline": true }
+    }) }}
+  </div>
+
+  <div data-checks-running hidden>
+    <p class="govuk-body-s govuk-!-margin-bottom-2" data-checks-countdown role="status">
+      Running checks — estimated time remaining: 8 seconds
+    </p>
+    <div class="app-progress__track">
+      <div class="app-progress__bar" data-checks-bar></div>
+    </div>
+  </div>
+
+  <div data-checks-complete hidden>
+    <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1" data-checks-headline></p>
+    <p class="govuk-body-s govuk-!-margin-bottom-2" data-checks-breakdown></p>
+    {{ govukButton({
+      text: "View issues",
+      href: issuesHref,
+      classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+    }) }}
+  </div>
+
+</div>

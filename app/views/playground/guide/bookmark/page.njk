@@ -1,0 +1,83 @@
+{#
+  Bookmarking a guide to a case, pulled out of the guide's own right-hand
+  panel into its own question page (see page.notes.md for why) — the
+  radios/conditional-reveal pattern from gds-components, not the old
+  radios-then-separate-input shape. Two named inputs (caseRef/sbiRef), not
+  one shared field, because a conditional reveal only hides the other
+  input with CSS — it still submits (see view-model.js).
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set pageName = "Bookmark this guide to a case" %}
+{% if errorList and errorList.length %}{% set pageName = "Error: " + pageName %}{% endif %}
+
+{% block columns %}
+
+  {% if errorList and errorList.length %}
+    {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+  {% endif %}
+
+  {% set caseHtml %}
+    {{ govukInput({
+      id: "bookmark-ref-case",
+      name: "caseRef",
+      value: caseRef,
+      classes: "govuk-!-width-one-third",
+      spellcheck: false,
+      autocomplete: "off",
+      label: { text: "Case ID" },
+      hint: { text: types[0].hint },
+      errorMessage: errors.caseRef
+    }) }}
+  {% endset %}
+
+  {% set sbiHtml %}
+    {{ govukInput({
+      id: "bookmark-ref-sbi",
+      name: "sbiRef",
+      value: sbiRef,
+      classes: "govuk-!-width-one-third",
+      spellcheck: false,
+      autocomplete: "off",
+      label: { text: "SBI application number" },
+      hint: { text: types[1].hint },
+      errorMessage: errors.sbiRef
+    }) }}
+  {% endset %}
+
+  <form method="post" action="/playground/guide/{{ id }}/bookmark" novalidate>
+
+    {{ govukRadios({
+      idPrefix: "bookmark-type",
+      name: "type",
+      value: type,
+      fieldset: {
+        legend: {
+          text: "Bookmark this guide to a case",
+          isPageHeading: true,
+          classes: "govuk-fieldset__legend--l"
+        }
+      },
+      hint: {
+        text: documentName + " will show in that case's guide list on the side navigation."
+      },
+      errorMessage: errors.type,
+      items: [
+        { value: "case", text: types[0].label, conditional: { html: caseHtml } },
+        { value: "sbi", text: types[1].label, conditional: { html: sbiHtml } }
+      ]
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Bookmark guide" }) }}
+      <a class="govuk-link" href="/playground/guide/{{ id }}">Cancel</a>
+    </div>
+
+  </form>
+
+{% endblock %}

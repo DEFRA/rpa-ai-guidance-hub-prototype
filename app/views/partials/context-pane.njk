@@ -1,0 +1,216 @@
+{#
+  The persistent context pane — see app/data/context-pane.js for how
+  `contextPane` (the one variable this partial reads) is built. Included
+  inside a page's own .app-context-pane-row (_app-context-pane.scss), a
+  flex row rather than a govuk-grid-row, leftmost on every page that has
+  one, on pages set to app-full-width (_app-full-width.scss) — not owned
+  by a layout, so each page decides for itself whether it gets one, same
+  as any other page-specific content.
+
+  The calling page only includes this partial when contextPane.collapsed
+  is false — when it's true, the page renders
+  partials/context-pane-trigger.njk instead, so this file never has to
+  render its own collapsed state. That split (a page's own {% if %},
+  rather than this partial hiding itself with CSS) is what makes the
+  .app-context-pane-row__main flex item reclaim the pane's width for
+  free: an element that was never rendered takes no space, no JavaScript
+  required — see _app-context-pane.scss's own top comment.
+
+  "Hide" (below) is a real <form method="post"> to context-pane-toggle,
+  not a JS-driven show/hide — the whole point, per user feedback, being
+  that this has to work with JavaScript off: the server already knows
+  which way to render (contextPane.collapsed, session-backed) before the
+  page loads, rather than rendering one state and asking a script to flip
+  it. See context-pane-toggle/routes.js.
+
+  Sections render as a real govukAccordion, not a flat always-open list —
+  per user feedback, on a page with several of them (a document in view,
+  its relationships, and each of the reader's own lists — Recently opened,
+  Saved guidance, Editing, Awaiting approval, Needs your attention, each
+  its own item rather than grouped into one shared panel) showing all of
+  them at once crowded out whichever one actually mattered for that page.
+  Exactly one starts expanded (contextPane's own sections already carry
+  `expanded`, decided in app/data/context-pane.js — the pane itself has no
+  opinion on which). rememberExpanded: false — the accordion's own default
+  session-storage memory is keyed only by this id, shared across every
+  page that includes this partial, so remembering would leak one page's
+  open section onto an unrelated one; which section opens is page context,
+  not something worth a viewer having to re-collapse. Without JavaScript,
+  the accordion component's own no-JS handling shows every section,
+  stacked, rather than none of them.
+
+  An <aside> landmark wrapping the accordion, not a fixed drawer (unlike
+  the Notes panel, partials/notes-panel.njk, which is a dev tool, not part
+  of any journey): this is real content, so it needs to be reachable by
+  landmark navigation and to print/reflow with the page.
+#}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+{% from "govuk/components/accordion/macro.njk" import govukAccordion %}
+
+{% if contextPane and not contextPane.collapsed %}
+  <aside class="app-context-pane" aria-labelledby="context-pane-heading">
+
+    <div class="app-context-pane__header">
+      <h2 class="govuk-heading-s app-context-pane__title" id="context-pane-heading">Context</h2>
+      <form method="post" action="{{ contextPane.toggleHref }}">
+        <input type="hidden" name="collapsed" value="true">
+        <input type="hidden" name="returnTo" value="{{ contextPane.returnHref }}">
+        <button type="submit" class="app-context-pane__toggle">Hide</button>
+      </form>
+    </div>
+
+    <div class="app-context-pane__body">
+
+      {% if contextPane.searchContext %}
+        <div class="app-context-pane__search-context">
+          <h3 class="govuk-heading-s">Search</h3>
+          <p class="govuk-body-s">
+            Result {{ contextPane.searchContext.position }} of {{ contextPane.searchContext.total }}
+            for &lsquo;{{ contextPane.searchContext.query }}&rsquo;
+          </p>
+          <p class="govuk-body-s">
+            {% if contextPane.searchContext.prevHref %}<a class="govuk-link" href="{{ contextPane.searchContext.prevHref }}">Previous result</a>{% endif %}
+            {% if contextPane.searchContext.prevHref and contextPane.searchContext.nextHref %} &middot; {% endif %}
+            {% if contextPane.searchContext.nextHref %}<a class="govuk-link" href="{{ contextPane.searchContext.nextHref }}">Next result</a>{% endif %}
+          </p>
+          <p class="govuk-body-s"><a class="govuk-link" href="{{ contextPane.searchContext.backHref }}">Back to results</a></p>
+        </div>
+      {% endif %}
+
+      {% set accordionItems = [] %}
+
+      {% for section in contextPane.sections %}
+
+        {% if section.id == "contents" %}
+          {% set panelHtml %}
+            <ul class="govuk-list app-context-pane__list">
+              {% for item in section.items %}
+                <li><a class="govuk-link" href="{{ item.href }}">{{ item.text }}</a></li>
+              {% endfor %}
+            </ul>
+          {% endset %}
+
+        {% elif section.id == "this-document" %}
+          {% set panelHtml %}
+            {% if section.warning %}
+              {{ govukWarningText({ text: section.warning.text, iconFallbackText: "Warning" }) }}
+              <p class="govuk-body-s">{{ section.warning.notes }}</p>
+            {% endif %}
+            <dl class="app-context-pane__facts">
+              {% for fact in section.facts %}
+                <div class="app-context-pane__fact">
+                  <dt class="govuk-body-s app-context-pane__fact-label">{{ fact.label }}</dt>
+                  <dd class="govuk-body-s app-context-pane__fact-value">{{ fact.value }}</dd>
+                </div>
+              {% endfor %}
+            </dl>
+          {% endset %}
+
+        {% elif section.id == "relationships" %}
+          {% set panelHtml %}
+            {% if section.related.length %}
+              <h4 class="govuk-heading-s govuk-!-margin-bottom-1">Related guidance</h4>
+              <ul class="govuk-list app-context-pane__list">
+                {% for item in section.related %}
+                  <li><a class="govuk-link" href="{{ item.href }}">{{ item.title }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            {% if section.referencedIn.length %}
+              <h4 class="govuk-heading-s govuk-!-margin-bottom-1 govuk-!-margin-top-4">Referenced in this guidance</h4>
+              <ul class="govuk-list app-context-pane__list">
+                {% for item in section.referencedIn %}
+                  <li>{% if item.href %}<a class="govuk-link" href="{{ item.href }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            {% if section.linkedFrom.length %}
+              <h4 class="govuk-heading-s govuk-!-margin-bottom-1 govuk-!-margin-top-4">Linked from</h4>
+              <ul class="govuk-list app-context-pane__list">
+                {% for item in section.linkedFrom %}
+                  <li><a class="govuk-link" href="{{ item.href }}">{{ item.title }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          {% endset %}
+
+        {% else %}
+          {#
+            One of the reader's own lists — Recently opened, Saved
+            guidance, Editing, Awaiting approval, Needs your attention —
+            each its own accordion item (app/data/context-pane.js'
+            buildYourListsSections), not grouped under one shared panel,
+            so opening one doesn't mean seeing (or hiding) them all.
+          #}
+          {% set panelHtml %}
+            <ul class="govuk-list app-context-pane__list">
+              {% for item in section.items %}
+                <li class="app-context-pane__list-item">
+                  <a class="govuk-link" href="{{ item.href }}">{{ item.title }}</a>
+                  {% if item.updated %}<strong class="govuk-tag govuk-tag--blue govuk-!-margin-left-1">Updated</strong>{% endif %}
+                  {% if item.meta %}<span class="govuk-body-s app-context-pane__meta">{{ item.meta }}</span>{% endif %}
+                  {% if item.removeHref %}
+                    <a class="govuk-link govuk-body-s" href="{{ item.removeHref }}">Remove<span class="govuk-visually-hidden"> {{ item.title }}</span></a>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+            {% if section.total > section.items.length %}
+              <p class="govuk-body-s"><a class="govuk-link" href="/playground/hub">View all ({{ section.total }})</a></p>
+            {% endif %}
+          {% endset %}
+        {% endif %}
+
+        {#
+          List sections carry a `total` (even a plain-number 0 is
+          "defined"); Contents/This document/Related guidance don't, so
+          this only ever appends a count to a list's own heading.
+        #}
+        {% set accordionHeading = section.heading %}
+        {% if section.total is defined %}
+          {% set accordionHeading = section.heading + " (" + section.total + ")" %}
+        {% endif %}
+
+        {% set accordionItems = (accordionItems.push({
+          heading: { text: accordionHeading },
+          content: { html: panelHtml },
+          expanded: section.expanded
+        }), accordionItems) %}
+
+      {% endfor %}
+
+      {{ govukAccordion({
+        id: "context-pane-accordion",
+        headingLevel: 3,
+        rememberExpanded: false,
+        classes: "app-context-pane__accordion",
+        items: accordionItems
+      }) }}
+
+      {% if contextPane.recentSearches.length %}
+        <div class="app-context-pane__recent-searches">
+          <h3 class="govuk-heading-s">Recent searches</h3>
+          <ul class="govuk-list app-context-pane__list">
+            {% for query in contextPane.recentSearches %}
+              <li><a class="govuk-link" href="/playground/hub?q={{ query | urlencode }}">{{ query }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <p class="govuk-body-s app-context-pane__role">
+        Viewing as {{ contextPane.role }}.
+      </p>
+      <form method="post" action="{{ contextPane.switchRoleHref }}">
+        <input type="hidden" name="returnTo" value="{{ contextPane.returnHref }}">
+        <input type="hidden" name="role" value="{{ "viewer" if contextPane.role == "designer" else "designer" }}">
+        <button type="submit" class="govuk-link app-link-button govuk-body-s">
+          Switch to {{ "viewer" if contextPane.role == "designer" else "designer" }}
+        </button>
+      </form>
+
+    </div>
+  </aside>
+{% endif %}

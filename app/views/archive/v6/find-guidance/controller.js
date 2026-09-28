@@ -1,0 +1,160 @@
+const { guidanceDocuments } = require('../../../data/guidance-documents')
+const guidanceLists = require('../../../data/guidance-lists')
+const viewModel = require('./view-model')
+
+// Retired as its own page — /v6/unified-guidance (app/views/v6/unified-guidance/)
+// replaces this and /v6/all-guidance-docs with one screen, four sidebar
+// tabs instead of two peer pages. Kept as a redirect, not removed, so
+// existing bookmarks/links elsewhere in the app still land somewhere real.
+function get(req, res) {
+  res.redirect('/v6/unified-guidance')
+}
+
+function getNew(req, res) {
+  res.locals.backHref = '/v6/find-guidance'
+  res.render('versions/v6/find-guidance-new')
+}
+
+function postNew(req, res) {
+  res.redirect(
+    req.body.searchMethod === 'ai'
+      ? '/v6/find-guidance/ai-search'
+      : '/v6/find-guidance/organic-search'
+  )
+}
+
+// Confirms removing a row from either tab on find-guidance.html — reached
+// from that page's own "Remove" links, which carry ?id= and ?tab=
+// (recently-opened or saved-guidance). "Yes, remove" itself is a real
+// POST — see postRemove below — id/tab are carried into it as hidden form
+// fields rather than read back off this GET's own query string a second
+// time.
+function getRemoveConfirm(req, res) {
+  res.locals.backHref = '/v6/find-guidance'
+  res.render(
+    'versions/v6/delete-search-confirm',
+    viewModel.removeConfirmViewModel(req)
+  )
+}
+
+// A real POST — this actually takes the entry out of
+// req.session.data.recentlyOpened or .savedGuidance, so it stays gone on
+// the next visit rather than only looking removed until the session's
+// underlying array is read again. Redirects straight to the matching tab
+// on /v6/unified-guidance — req.body.tab (recently-opened/saved-guidance)
+// is already exactly that page's own ?tab= vocabulary, so no separate
+// anchor-name lookup is needed the way REMOVE_CONFIRM_TABS.anchor used to
+// provide (that mapping only ever existed for saved-guidance's own
+// govukTabs id, "favourited-guidance", never renamed to match its label —
+// a quirk this page's own tab names don't carry forward). Falls back to
+// the default tab if id/tab don't resolve to a real list.
+function postRemove(req, res) {
+  const list = guidanceLists.getListForTab(req, req.body.tab)
+
+  if (list && req.body.id) {
+    const index = list.findIndex((entry) => entry.id === req.body.id)
+    if (index !== -1) list.splice(index, 1)
+  }
+
+  res.redirect(
+    '/v6/unified-guidance?tab=' + (list ? req.body.tab : 'recently-opened')
+  )
+}
+
+// Tracks this as a "recently opened" document — but only on the actual
+// entry into it (the "Open" button on document-overview.html links here
+// with no ?step=), not on every subsequent Back/Next/sidebar/dropdown/
+// search navigation between its own steps, which all stay on this same
+// route with a ?step= of their own.
+function getDocument(req, res) {
+  const guidanceDocument = guidanceDocuments.find(
+    (candidate) => candidate.id === req.params.id
+  )
+
+  if (guidanceDocument && !req.query.step) {
+    guidanceLists.addRecentlyOpened(req, guidanceDocument.id)
+  }
+
+  const { backHref, props } = viewModel.savedDocumentViewModel(req)
+  res.locals.backHref = backHref
+  res.render('versions/v6/saved-document-view', props)
+}
+
+// "Traditional viewer" option from guidance-document-choice.html's own
+// radios (app/views/v6/guidance-document-choice/) — the other of the two
+// viewer layouts a reviewer can pick there, alongside getDocument above.
+// Renders the same fixed placeholder content as the standalone
+// /v6/guidance-document-experiment/:id route (app/views/v6/guidance-
+// document-experiment/, versions/v6/guidance-document-experiment.html) —
+// :id is accepted here too, for the same URL shape as getDocument and so
+// the choice page can pass the guidance id through, but nothing in that
+// template reads it yet. Not tracked as "recently opened" — unlike
+// getDocument above, this layout has no real per-document content yet
+// for that list to meaningfully point back to.
+function getDocumentExperiment(req, res) {
+  res.render('versions/v6/guidance-document-experiment')
+}
+
+// No backHref — organic-search.html shows breadcrumbs instead of a Back
+// link now (see the template).
+function getOrganicSearch(req, res) {
+  res.render(
+    'versions/v6/organic-search',
+    viewModel.organicSearchViewModel(req)
+  )
+}
+
+// Server-side counterpart to document-overview.html's "Save to search"
+// button. Responds with no body either way — the client-side fetch call
+// doesn't do anything with the response.
+function postSaveToSearch(req, res) {
+  if (req.body && req.body.id) {
+    guidanceLists.addSavedGuidance(req, req.body.id)
+  }
+  res.status(204).end()
+}
+
+// Search by explaining the problem, rather than by document.
+function getAiSearch(req, res) {
+  res.locals.backHref = '/v6/find-guidance/new'
+  res.render('versions/v6/ai-search')
+}
+
+// The wait between submitting a query and seeing results. Nothing here is a
+// real search yet, so this only remembers the query text for
+// ai-search-results.html's heading. Redirects to the GET route rather than
+// rendering directly, so refreshing the loading page does not resubmit it.
+function postAiSearchLoading(req, res) {
+  req.session.data.aiSearchQuery = (req.body.query || '').trim()
+  res.redirect('/v6/find-guidance/ai-search-loading')
+}
+
+function getAiSearchLoading(req, res) {
+  res.render('versions/v6/ai-search-loading')
+}
+
+// Reached two ways: fresh from the form on ai-search.html (no :id), or
+// resumed from a row in the "Guided searches" tab on find-guidance.html
+// (:id identifies which fixed example search this is).
+function getAiSearchResults(req, res) {
+  res.render(
+    'versions/v6/ai-search-results',
+    viewModel.aiSearchResultsViewModel(req)
+  )
+}
+
+module.exports = {
+  get,
+  getNew,
+  postNew,
+  getRemoveConfirm,
+  postRemove,
+  getDocument,
+  getDocumentExperiment,
+  getOrganicSearch,
+  postSaveToSearch,
+  getAiSearch,
+  getAiSearchLoading,
+  postAiSearchLoading,
+  getAiSearchResults
+}

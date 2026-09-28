@@ -289,11 +289,76 @@ function buildAddedCommentAnchors(req) {
     }))
 }
 
+// The Checks tab's fixed sample findings — previously hardcoded
+// independently in editor-2-3-view.html's own template ({% set checks =
+// [...] %}) and, differently, in guidance-document.html's own severities
+// structure, so the two pages' "Checks"/"Publishing checks" content never
+// actually matched. Single-sourced here instead, so both pages render
+// this exact same list — each check carries a stable id so a link from
+// one page to the other (guidance-document.html's own "Issue" links,
+// ?checkId= on /v6/editor-2-3-view) can point at one specific check.
+//
+// section matches one of EDITOR_EXPERIMENT_CHECK_SECTIONS' own ids below
+// — the same fixed sample content editor-2-3-view.html falls back to
+// whenever ?id= is missing or matches no guidance-documents.js entry (see
+// that template's own `sections` default). Checks are not themselves
+// per-document — there is no real per-document quality-check dataset yet
+// (see guidance-document.html's own comment) — so they always refer to
+// that one fixed sample's section names regardless of which real
+// document, if any, either page is currently showing.
+const EDITOR_EXPERIMENT_CHECKS = [
+  {
+    id: 'check-1',
+    text: 'Payment rate figure is outdated',
+    severity: 'High',
+    section: 'section-3'
+  },
+  {
+    id: 'check-2',
+    text: 'Missing alt text on supporting image',
+    severity: 'Medium',
+    section: 'section-5'
+  },
+  {
+    id: 'check-3',
+    text: 'Heading level skips from H2 to H4',
+    severity: 'Low',
+    section: 'section-4'
+  },
+  {
+    id: 'check-4',
+    text: 'Broken internal link to related guidance',
+    severity: 'Medium',
+    section: 'section-6'
+  },
+  {
+    id: 'check-5',
+    text: 'Sentence exceeds recommended reading age',
+    severity: 'Low',
+    section: 'section-2'
+  }
+]
+
+// Display names for EDITOR_EXPERIMENT_CHECKS' own section ids — the exact
+// same fixed sample section names editor-2-3-view.html's own `sections`
+// default already uses, kept in sync by hand since that default is
+// markup, not something this module can read back.
+const EDITOR_EXPERIMENT_CHECK_SECTIONS = {
+  'section-1': 'Overview',
+  'section-2': 'Eligibility criteria',
+  'section-3': 'Payment rates',
+  'section-4': 'Application process',
+  'section-5': 'Supporting evidence',
+  'section-6': 'Review dates'
+}
+
 module.exports = {
   buildEditorSections,
   getEditorExperimentReplies,
   getEditorExperimentDeletedCommentIds,
   getEditorExperimentAddedComments,
   buildEditorExperimentComments,
-  buildAddedCommentAnchors
+  buildAddedCommentAnchors,
+  EDITOR_EXPERIMENT_CHECKS,
+  EDITOR_EXPERIMENT_CHECK_SECTIONS
 }

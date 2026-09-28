@@ -1,0 +1,27 @@
+{#
+  A full-height drag handle along the pane's right-hand border — see
+  _app-context-pane.scss and context-pane-resize.js. A JS enhancement,
+  [hidden] until that script actually attaches itself, over the native
+  CSS resize handle already on .app-context-pane-row__pane (the no-JS
+  fallback — a corner grip rather than a full border, but genuinely
+  draggable with no script at all).
+
+  Included by each pane page as a sibling of context-pane.njk, inside the
+  same .app-context-pane-row__pane — not part of that partial itself,
+  since it has to be a direct child of the element it resizes (that's
+  what its own absolute positioning is relative to), and not every
+  inclusion of context-pane.njk sits inside that wrapper (the stepper
+  viewer keeps its own pane column on the standard grid instead, where
+  dragging to a fixed pixel width would just overlap its grid siblings —
+  see its own page.notes.md — so it doesn't include this partial either).
+
+  role="separator"/aria-orientation/aria-valuenow give this the standard
+  resizable-pane semantics; context-pane-resize.js keeps the value in
+  sync and adds Left/Right arrow key support, since the native handle
+  this backs up has no keyboard equivalent at all.
+#}
+{% if contextPane and not contextPane.collapsed %}
+  <div class="app-context-pane-resize-handle" data-context-pane-resize-handle
+       role="separator" aria-orientation="vertical" aria-label="Resize context pane"
+       tabindex="0" hidden></div>
+{% endif %}

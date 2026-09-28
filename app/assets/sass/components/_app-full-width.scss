@@ -1,0 +1,23 @@
+// Full-width variant for pages carrying a persistent context pane
+// (app/views/partials/context-pane.njk) — a three-quarter/one-half/
+// one-quarter (or similar) grid gets cramped inside the standard 960px
+// govuk-width-container, so those pages set
+// {% set bodyClasses = "app-full-width" %} to widen it — the same
+// mechanism layouts/v3.html/_app-v3.scss already uses for v3, just as a
+// class any page can opt into rather than a whole separate layout.
+
+.app-full-width .govuk-width-container {
+  max-width: none;
+  margin-right: govuk-spacing(4);
+  margin-left: govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    margin-right: govuk-spacing(6);
+    margin-left: govuk-spacing(6);
+  }
+
+  @include govuk-media-query($from: desktop) {
+    margin-right: govuk-spacing(8);
+    margin-left: govuk-spacing(8);
+  }
+}

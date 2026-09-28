@@ -247,7 +247,9 @@
     outline: 3px solid transparent;
     color: $govuk-black;
     background-color: $govuk-focus-colour;
-    box-shadow: 0 -2px $govuk-focus-colour, 0 4px $govuk-black;
+    box-shadow:
+      0 -2px $govuk-focus-colour,
+      0 4px $govuk-black;
     text-decoration: none;
   }
 }
@@ -293,7 +295,9 @@
   &:focus {
     color: $govuk-black;
     background-color: $govuk-focus-colour;
-    box-shadow: 0 -2px $govuk-focus-colour, 0 4px $govuk-black;
+    box-shadow:
+      0 -2px $govuk-focus-colour,
+      0 4px $govuk-black;
     outline: 3px solid transparent;
   }
 }
@@ -528,7 +532,7 @@
   @include govuk-font($size: 14);
   display: block;
   margin-bottom: govuk-spacing(1);
-  color: govuk-colour("dark-grey");
+  color: govuk-colour('dark-grey');
 
   strong {
     color: $govuk-black;
@@ -551,13 +555,22 @@
   margin-top: 5px;
   border-radius: 50%;
 
-  &--critical { background-color: #d4351c; }
-  &--high { background-color: #f47738; }
-  &--medium { background-color: $govuk-yellow; }
-  &--low { background-color: #1d70b8; }
-  &--info { background-color: $govuk-mid-grey; }
+  &--critical {
+    background-color: #d4351c;
+  }
+  &--high {
+    background-color: #f47738;
+  }
+  &--medium {
+    background-color: $govuk-yellow;
+  }
+  &--low {
+    background-color: #1d70b8;
+  }
+  &--info {
+    background-color: $govuk-mid-grey;
+  }
 }
-
 
 // The brief highlight over the passage a finding's anchor lands on — an
 // absolutely positioned overlay (see the flash() note in application.js:
@@ -628,7 +641,7 @@
 .app-guide-view__search-status {
   margin-top: govuk-spacing(1);
   margin-bottom: 0;
-  color: govuk-colour("dark-grey");
+  color: govuk-colour('dark-grey');
 }
 
 // The Show/Hide contents control, aligned with the search box above it.

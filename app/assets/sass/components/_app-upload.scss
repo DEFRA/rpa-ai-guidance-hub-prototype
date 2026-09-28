@@ -1,0 +1,19 @@
+// The upload page's form panel — same grey treatment as .app-filter on the
+// hub, rounded to match the hub's hero.
+.app-upload {
+  margin-bottom: govuk-spacing(6);
+  padding: govuk-spacing(4);
+  border-radius: 8px;
+  background-color: $govuk-light-grey;
+}
+
+// The enhanced drop zone is transparent by default, so it would disappear
+// into the grey panel.
+.app-upload .govuk-drop-zone {
+  background-color: $govuk-white;
+}
+
+.app-upload-tips {
+  padding-top: govuk-spacing(2);
+  border-top: 4px solid $defra-green;
+}

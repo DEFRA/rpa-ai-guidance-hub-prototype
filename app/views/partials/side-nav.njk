@@ -1,0 +1,164 @@
+{#
+  The side navigation, expanded — see app/data/side-nav.js for how
+  `sideNav` is built, and layouts/main.html for the shell it sits in. The
+  collapsed icon rail is a separate partial (side-nav-rail.njk), chosen
+  server-side, so the two never both render.
+
+  Every toggle and "…" menu here is a native <details> disclosure rather
+  than an ARIA menu: they work without JavaScript and read as plain
+  expand/collapse buttons. side-nav.js only adds Esc/outside-click closing.
+  Collapse/expand submits the shell's #side-nav-toggle-form.
+#}
+{% from "partials/side-nav-icon.njk" import sideNavIcon %}
+
+{% macro navLink(item) %}
+  <a class="app-side-nav__link{% if item.current %} app-side-nav__link--current{% endif %}" href="{{ item.href }}"{% if item.current %} aria-current="page"{% endif %}>
+    {{ sideNavIcon(item.icon) }}
+    <span class="app-side-nav__text">{{ item.text }}</span>
+    {% if item.badge is defined %}
+      <span class="app-side-nav__badge">{{ item.badge }}<span class="govuk-visually-hidden"> guides</span></span>
+    {% endif %}
+  </a>
+{% endmacro %}
+
+<nav class="app-side-nav" aria-label="Guidance hub">
+
+  <div class="app-side-nav__header">
+    <div class="app-side-nav__identity">
+      <p class="app-side-nav__service">Guidance hub</p>
+      <details class="app-side-nav__switcher" data-side-nav-disclosure>
+        <summary class="app-side-nav__switcher-summary">
+          <span class="govuk-visually-hidden">Signed in as </span>{{ sideNav.roleLabel }}
+          {{ sideNavIcon("chevron-down", "app-side-nav__chevron") }}
+        </summary>
+        <div class="app-side-nav__popover">
+          <form method="post" action="{{ sideNav.switchRoleHref }}">
+            <input type="hidden" name="returnTo" value="{{ sideNav.returnTo }}">
+            <input type="hidden" name="role" value="{{ sideNav.otherRole }}">
+            <button type="submit" class="app-side-nav__menu-item">Switch to {{ sideNav.otherRole }}</button>
+          </form>
+        </div>
+      </details>
+    </div>
+    <button type="submit" form="side-nav-toggle-form" class="app-side-nav__icon-button app-side-nav__collapse" data-side-nav-collapse>
+      {{ sideNavIcon("collapse") }}
+      <span class="govuk-visually-hidden">Collapse navigation</span>
+    </button>
+  </div>
+
+  <form class="app-side-nav__search" method="get" action="{{ sideNav.searchAction }}" role="search">
+    <label class="govuk-visually-hidden" for="side-nav-search">Search hub</label>
+    {{ sideNavIcon("search", "app-side-nav__search-icon") }}
+    <input class="app-side-nav__search-input" id="side-nav-search" name="q" type="search" autocomplete="off" placeholder="Search hub" value="{{ sideNav.searchQuery }}" data-side-nav-search>
+    <kbd class="app-side-nav__kbd" data-side-nav-kbd hidden></kbd>
+    <button type="submit" class="govuk-visually-hidden-focusable app-side-nav__search-submit">Search</button>
+  </form>
+
+  <ul class="app-side-nav__list">
+    {% for item in sideNav.coreItems %}
+      <li>{{ navLink(item) }}</li>
+    {% endfor %}
+  </ul>
+
+  {% if sideNav.designerItems.length %}
+    <h2 class="app-side-nav__label" id="side-nav-designing">Designing</h2>
+    <ul class="app-side-nav__list" aria-labelledby="side-nav-designing">
+      {% for item in sideNav.designerItems %}
+        <li>{{ navLink(item) }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <details class="app-side-nav__section" id="side-nav-pinned" open>
+    <summary class="app-side-nav__section-summary">
+      <span class="app-side-nav__label">Pinned guidance</span>
+      <span class="app-side-nav__section-count">{{ sideNav.pinned.length }}<span class="govuk-visually-hidden"> pinned</span></span>
+      {{ sideNavIcon("chevron-down", "app-side-nav__chevron") }}
+    </summary>
+    {% if sideNav.pinned.length %}
+      <ul class="app-side-nav__list">
+        {% for pin in sideNav.pinned %}
+          <li class="app-side-nav__row">
+            <a class="app-side-nav__link{% if pin.current %} app-side-nav__link--current{% endif %}" href="{{ pin.href }}"{% if pin.current %} aria-current="page"{% endif %}>
+              {{ sideNavIcon("star-filled", "app-side-nav__star") }}
+              <span class="app-side-nav__text">{{ pin.title }}</span>
+            </a>
+            <details class="app-side-nav__more" data-side-nav-disclosure>
+              <summary class="app-side-nav__icon-button app-side-nav__more-button">
+                {{ sideNavIcon("more") }}
+                <span class="govuk-visually-hidden">More actions for {{ pin.title }}</span>
+              </summary>
+              <div class="app-side-nav__popover">
+                <a class="app-side-nav__menu-item" href="{{ pin.href }}">Open</a>
+                <form method="post" action="{{ sideNav.pinToggleHref }}">
+                  <input type="hidden" name="documentId" value="{{ pin.id }}">
+                  <input type="hidden" name="returnTo" value="{{ sideNav.returnTo }}">
+                  <button type="submit" class="app-side-nav__menu-item">Unpin<span class="govuk-visually-hidden"> {{ pin.title }}</span></button>
+                </form>
+              </div>
+            </details>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="app-side-nav__empty">Select the star next to a guide to pin it here.</p>
+    {% endif %}
+  </details>
+
+  <details class="app-side-nav__section" id="side-nav-cases" open>
+    <summary class="app-side-nav__section-summary">
+      <span class="app-side-nav__label">Case bookmarks</span>
+      <span class="app-side-nav__section-count">{{ sideNav.cases.length }}<span class="govuk-visually-hidden"> cases</span></span>
+      {{ sideNavIcon("chevron-down", "app-side-nav__chevron") }}
+    </summary>
+    {% if sideNav.cases.length %}
+      <ul class="app-side-nav__list">
+        {% for case in sideNav.cases %}
+          <li>
+            <div class="app-side-nav__row">
+              <a class="app-side-nav__link{% if case.current %} app-side-nav__link--current{% endif %}" href="{{ case.href }}"{% if case.current %} aria-current="page"{% endif %}>
+                {{ sideNavIcon(case.icon) }}
+                <span class="app-side-nav__text">
+                  <span class="app-side-nav__ref-type">{{ case.typeLabel }}</span>
+                  <span class="govuk-visually-hidden">: </span>{{ case.ref }}
+                </span>
+                <span class="app-side-nav__meta">{{ case.guides.length }} guide{{ "s" if case.guides.length != 1 }}</span>
+              </a>
+              <details class="app-side-nav__more" data-side-nav-disclosure>
+                <summary class="app-side-nav__icon-button app-side-nav__more-button">
+                  {{ sideNavIcon("more") }}
+                  <span class="govuk-visually-hidden">More actions for {{ case.typeFullLabel }} {{ case.ref }}</span>
+                </summary>
+                <div class="app-side-nav__popover">
+                  <a class="app-side-nav__menu-item" href="{{ case.href }}">Show guides on the hub</a>
+                  <form method="post" action="{{ sideNav.removeBookmarkHref }}">
+                    <input type="hidden" name="type" value="{{ case.type }}">
+                    <input type="hidden" name="ref" value="{{ case.ref }}">
+                    <input type="hidden" name="returnTo" value="{{ sideNav.returnTo }}">
+                    <button type="submit" class="app-side-nav__menu-item">Remove bookmark<span class="govuk-visually-hidden"> {{ case.typeFullLabel }} {{ case.ref }}</span></button>
+                  </form>
+                </div>
+              </details>
+            </div>
+            {% if case.guides.length %}
+              <ul class="app-side-nav__sublist" aria-label="Guides bookmarked for {{ case.typeFullLabel }} {{ case.ref }}">
+                {% for guide in case.guides %}
+                  <li><a class="app-side-nav__sublink" href="{{ guide.href }}">{{ guide.title }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="app-side-nav__empty">Bookmark a guide to a case ID or SBI application number from the guide's own page.</p>
+    {% endif %}
+  </details>
+
+  <ul class="app-side-nav__list app-side-nav__footer">
+    {% for item in sideNav.footerItems %}
+      <li>{{ navLink(item) }}</li>
+    {% endfor %}
+  </ul>
+
+</nav>
