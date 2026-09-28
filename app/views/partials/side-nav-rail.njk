@@ -1,0 +1,59 @@
+{#
+  The side navigation collapsed to an icon rail — rendered instead of
+  side-nav.njk when sideNav.collapsed (app/data/side-nav.js).
+
+  Each item's name is real text (.app-side-nav__rail-label): visually
+  hidden in the rail, shown when the mobile drawer opens. The tooltip is a
+  separate aria-hidden copy shown on hover and keyboard focus, dismissible
+  with Esc (side-nav.js), so it meets WCAG 1.4.13 without doubling up what
+  a screen reader announces. Search, Pinned and Case bookmarks expand the
+  nav and land on that part of it (the returnTo fragment).
+#}
+{% from "partials/side-nav-icon.njk" import sideNavIcon %}
+
+{% macro railItem(text, icon, href, current, badge) %}
+  <a class="app-side-nav__rail-item{% if current %} app-side-nav__rail-item--current{% endif %}" href="{{ href }}"{% if current %} aria-current="page"{% endif %} data-side-nav-tooltip>
+    {{ sideNavIcon(icon) }}
+    <span class="app-side-nav__rail-label">{{ text }}{% if badge is defined %} ({{ badge }}<span class="govuk-visually-hidden"> guides</span>){% endif %}</span>
+    {% if badge is defined %}<span class="app-side-nav__rail-dot" aria-hidden="true">{{ badge }}</span>{% endif %}
+    <span class="app-side-nav__tooltip" aria-hidden="true">{{ text }}</span>
+  </a>
+{% endmacro %}
+
+{# railForm: the auto-collapsed rail (layouts/main.html) expands via its own form. #}
+{% set expandForm = railForm or "side-nav-toggle-form" %}
+
+{% macro railExpand(text, icon, fragment, form) %}
+  <button type="submit" form="{{ form }}" class="app-side-nav__rail-item"{% if fragment %} name="returnTo" value="{{ sideNav.returnTo.split('#')[0] }}#{{ fragment }}"{% endif %} data-side-nav-tooltip>
+    {{ sideNavIcon(icon) }}
+    <span class="app-side-nav__rail-label">{{ text }}</span>
+    <span class="app-side-nav__tooltip" aria-hidden="true">{{ text }}</span>
+  </button>
+{% endmacro %}
+
+<nav class="app-side-nav app-side-nav--rail" aria-label="Guidance hub">
+  <ul class="app-side-nav__rail-list">
+    <li>{{ railExpand("Expand navigation", "expand", null, expandForm) }}</li>
+    <li>{{ railExpand("Search guidance", "search", "side-nav-search", expandForm) }}</li>
+  </ul>
+
+  <ul class="app-side-nav__rail-list">
+    {% for item in sideNav.coreItems %}
+      <li>{{ railItem(item.text, item.icon, item.href, item.current) }}</li>
+    {% endfor %}
+    {% for item in sideNav.designerItems %}
+      <li>{{ railItem(item.text, item.icon, item.href, item.current, item.badge) }}</li>
+    {% endfor %}
+  </ul>
+
+  <ul class="app-side-nav__rail-list">
+    <li>{{ railExpand("Pinned guidance", "star", "side-nav-pinned", expandForm) }}</li>
+    <li>{{ railExpand("Case bookmarks", "hash", "side-nav-cases", expandForm) }}</li>
+  </ul>
+
+  <ul class="app-side-nav__rail-list app-side-nav__rail-footer">
+    {% for item in sideNav.footerItems %}
+      <li>{{ railItem(item.text, item.icon, item.href, false) }}</li>
+    {% endfor %}
+  </ul>
+</nav>

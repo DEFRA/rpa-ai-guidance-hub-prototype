@@ -1,0 +1,336 @@
+// The merged guide page (app/views/playground/guide/**) — the hub -> guide
+// consolidation's visual redesign of the reading experience, plus its
+// right-hand panel, styled after the persistent side navigation
+// (_app-side-nav.scss, imported before this file so its tokens/mixins are
+// available here): light grey background, a bordered column, collapsible
+// to a slim icon rail rather than hidden outright. The panel is rendered
+// as a column of .app-shell itself (layouts/main.html's shellAside block),
+// a mirror image of .app-shell__nav — not nested inside the reading
+// column's own flex row, so these rules mostly just copy .app-shell__nav's
+// own (position, height, sticky) rather than reinventing them.
+
+// 320px default matches PANEL_WIDTH.default (guide/view-model.js); the
+// min/max match PANEL_WIDTH.min/max there too — keep both pairs in sync.
+$app-guide-panel-min-width: 280px;
+$app-guide-panel-max-width: 480px;
+
+.app-guide-panel {
+  position: sticky;
+  top: 0;
+  // flex-basis auto, not a fixed basis, so a resized `width` (dragging the
+  // handle, or the native resize grip below) actually takes effect — same
+  // fix .app-shell__nav needed. --app-guide-panel-width is the width saved
+  // for this session (page.njk's own panelWidth) — a var, not a plain
+  // inline `width`, so the narrow-screen override below (a plain
+  // stylesheet rule) can still win over it rather than being beaten by
+  // inline-style specificity.
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: var(--app-guide-panel-width, 320px);
+  min-width: $app-guide-panel-min-width;
+  max-width: $app-guide-panel-max-width;
+  height: calc(100vh - var(--app-side-nav-top, 0px));
+  overflow-y: auto;
+  border-left: 1px solid $app-side-nav-divider;
+  background-color: $govuk-light-grey;
+}
+
+// No-JS fallback for resizing: the browser's own corner grip (overflow is
+// already auto). side-nav.js adds the full-height handle most people use.
+@include govuk-media-query($from: desktop) {
+  .app-guide-panel:not(.app-guide-panel--collapsed) {
+    resize: horizontal;
+  }
+}
+
+.app-guide-panel--collapsed {
+  width: $app-side-nav-rail-width;
+  min-width: 0;
+  max-width: none;
+  overflow: visible;
+}
+
+.app-guide-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 0 govuk-spacing(4);
+  border-bottom: 1px solid $app-side-nav-divider;
+}
+
+.app-guide-panel__body {
+  padding: govuk-spacing(4);
+}
+
+// Stacks below the reading column on narrow screens — the same breakpoint
+// .app-shell itself stacks the nav at.
+@include govuk-media-query($until: desktop) {
+  .app-guide-panel,
+  .app-guide-panel--collapsed {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid $app-side-nav-divider;
+  }
+}
+
+// The stepper/traditional format toggle — an in-page control rather than
+// the old separate /document/:id/view choice screen. Prototype-only: in
+// production a guide would be set to one fixed format, and this control
+// wouldn't exist.
+.app-guide-format-toggle {
+  display: inline-flex;
+  margin-bottom: govuk-spacing(4);
+  border: 2px solid $govuk-black;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.app-guide-format-toggle__option {
+  padding: govuk-spacing(1) govuk-spacing(3);
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  font-weight: 700;
+
+  &:link,
+  &:visited {
+    color: $govuk-black;
+    text-decoration: none;
+  }
+
+  &:not(:last-child) {
+    border-right: 2px solid $govuk-black;
+  }
+}
+
+.app-guide-format-toggle__option--active {
+  background-color: $defra-green;
+
+  &:link,
+  &:visited {
+    color: $govuk-white;
+  }
+}
+
+// Title/byline.
+.app-guide-title {
+  margin: 0 0 govuk-spacing(2);
+  font-family: $govuk-font-family;
+  font-weight: 700;
+  font-size: 32px;
+
+  @include govuk-media-query($from: tablet) {
+    font-size: 40px;
+  }
+}
+
+.app-guide-byline {
+  margin: 0 0 govuk-spacing(2);
+  font-size: 16px;
+  color: $govuk-secondary-text-colour;
+}
+
+.app-guide-byline__updated {
+  margin-left: govuk-spacing(2);
+}
+
+// Reading measure and hierarchy — capped width, generous line-height and
+// vertical rhythm, a Word-style heading scale (.app-guide-heading-1/-2)
+// with a rule only where a section itself ends (.app-guide-divider) so a
+// long guide still reads as distinct sections rather than one flat
+// scroll.
+.app-guide-body-text {
+  max-width: 42em;
+  font-size: 19px;
+  line-height: 1.5;
+  margin-bottom: govuk-spacing(4);
+}
+
+.app-guide-section {
+  max-width: 42em;
+}
+
+.app-guide-section__eyebrow {
+  margin: govuk-spacing(6) 0 govuk-spacing(1);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $defra-green-hover;
+}
+
+// The "Heading 1"/"Heading 2" pair a traditional-format part renders as
+// (reading-content.njk's renderPart level) — a section's first part is
+// heading-1, every other part in that section is heading-2, told apart by
+// size/tag alone, the same way Word tells its own heading styles apart.
+.app-guide-heading-1 {
+  max-width: 42em;
+  margin: govuk-spacing(6) 0 govuk-spacing(2);
+  font-family: $govuk-font-family;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.app-guide-heading-2 {
+  max-width: 42em;
+  margin: govuk-spacing(4) 0 govuk-spacing(2);
+  font-family: $govuk-font-family;
+  font-weight: 700;
+  font-size: 19px;
+}
+
+.app-guide-part-heading__eyebrow {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $govuk-secondary-text-colour;
+}
+
+// Marks only a section (heading-1) ending — never between one part and
+// the next within the same section, which read as nested under it by
+// heading size alone rather than a rule.
+.app-guide-divider {
+  max-width: 42em;
+  margin: govuk-spacing(6) 0;
+  border: 0;
+  border-top: 1px solid $govuk-mid-grey;
+}
+
+.app-guide-progress {
+  max-width: 42em;
+  margin-bottom: govuk-spacing(4);
+}
+
+// Contents lists — traditional's in-page anchor list and stepper's jump
+// list (current section/part marked, not colour alone).
+.app-guide-contents {
+  max-width: 42em;
+  padding: govuk-spacing(3) govuk-spacing(4);
+  margin-bottom: govuk-spacing(6);
+  background-color: $govuk-light-grey;
+}
+
+.app-guide-contents__list {
+  // Parts sit one level under their section (`govuk-list` itself resets
+  // list padding to 0, so an unmarked, indented sub-list needs its own).
+  margin-bottom: 0;
+  padding-left: govuk-spacing(4);
+}
+
+.app-guide-contents__section {
+  margin: govuk-spacing(2) 0 govuk-spacing(1);
+  font-weight: 700;
+}
+
+.app-guide-contents__section--current .app-guide-contents__section-link {
+  color: $govuk-black;
+  text-decoration: none;
+}
+
+.app-guide-contents__link--current {
+  font-weight: 700;
+  color: $govuk-black;
+}
+
+// The CASE_NOTE_BLOCK template placeholder.
+.app-guide-callout {
+  max-width: 42em;
+  padding: govuk-spacing(3) govuk-spacing(4);
+  margin-bottom: govuk-spacing(4);
+  border-left: 5px solid $govuk-yellow;
+  background-color: $govuk-light-grey;
+}
+
+.app-guide-callout__label {
+  margin: 0 0 govuk-spacing(2);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.app-guide-callout__highlight {
+  color: govuk-colour('red');
+  font-weight: 700;
+}
+
+// A branching decision point (reading-content.njk's renderPart, entry.type
+// == "branch") — blue rather than the callout's yellow, so a "read this
+// and decide" moment doesn't look like the same thing as a template to
+// fill in.
+.app-guide-branch {
+  max-width: 42em;
+  padding: govuk-spacing(3) govuk-spacing(4);
+  margin-bottom: govuk-spacing(4);
+  border-left: 5px solid govuk-colour('blue');
+  background-color: $govuk-light-grey;
+}
+
+.app-guide-branch__question {
+  margin: 0 0 govuk-spacing(2);
+  font-weight: 700;
+}
+
+.app-guide-branch__options {
+  margin: 0;
+}
+
+.app-guide-branch__option {
+  margin-bottom: govuk-spacing(1);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// The panel's own metadata list.
+.app-guide-metadata-list {
+  margin: 0 0 govuk-spacing(4);
+}
+
+.app-guide-metadata-list__row {
+  padding: govuk-spacing(2) 0;
+  border-bottom: 1px solid $govuk-mid-grey;
+
+  dt {
+    font-size: 14px;
+    font-weight: 700;
+    color: $govuk-secondary-text-colour;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+// The panel's "Case bookmarks" section (partials/case-bookmarks.njk) — the
+// one task in the panel, so it sits first, styled like the side nav's own
+// list rows rather than the old boxed bookmark form.
+.app-guide-panel__section {
+  margin-bottom: govuk-spacing(4);
+  padding-bottom: govuk-spacing(4);
+  border-bottom: 1px solid $app-side-nav-divider;
+}
+
+.app-guide-panel__bookmarks-list {
+  margin: govuk-spacing(2) 0 govuk-spacing(3);
+}
+
+.app-guide-panel__bookmarks-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+  padding: govuk-spacing(1) 0;
+}
+
+.app-guide-panel__bookmarks-link {
+  display: block;
+}

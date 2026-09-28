@@ -294,8 +294,8 @@
 // Move up/down buttons now every item is its own bordered card, so this
 // replaces it rather than trying to preserve it pixel-for-pixel.
 .app-experiment-nav__item--active {
-  border-color: govuk-colour("blue");
-  background-color: govuk-tint(govuk-colour("blue"), 90%);
+  border-color: govuk-colour('blue');
+  background-color: govuk-tint(govuk-colour('blue'), 90%);
 
   .app-experiment-nav__link {
     font-weight: 700;
@@ -452,7 +452,7 @@
   cursor: ns-resize;
 
   &::before {
-    content: "";
+    content: '';
     display: block;
     width: 10px;
     height: 2px;
@@ -669,10 +669,10 @@
   // Both a toggled-on state (Bold, Align-left, ...) and an open dropdown
   // share the same "active" look, same as Tiptap's own toolbar doesn't
   // visually distinguish the two either.
-  &[aria-pressed="true"],
-  &[aria-expanded="true"] {
-    background-color: govuk-tint(govuk-colour("blue"), 85%);
-    color: govuk-colour("blue");
+  &[aria-pressed='true'],
+  &[aria-expanded='true'] {
+    background-color: govuk-tint(govuk-colour('blue'), 85%);
+    color: govuk-colour('blue');
   }
 
   // Kept as the standard GOV.UK yellow outline rather than switching to
@@ -968,7 +968,7 @@
   // it simply sits at the natural end of the (short) content, faint
   // enough by design not to read as a stray mark either way.
   &::after {
-    content: "";
+    content: '';
     display: block;
     position: sticky;
     bottom: 0;
@@ -976,7 +976,11 @@
     right: 0;
     height: 32px;
     margin-top: -32px;
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), $govuk-white);
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0),
+      $govuk-white
+    );
     pointer-events: none;
   }
 }
@@ -1049,7 +1053,7 @@
   flex: 1 1 auto;
 }
 
-[data-tab-panel="checks"] {
+[data-tab-panel='checks'] {
   padding: govuk-spacing(4);
 }
 
@@ -1063,7 +1067,7 @@
 // overridden right back to visible, which is what made clicking "Checks"
 // update the tab's own active state but never actually hide the
 // Comments panel underneath it.
-[data-tab-panel="comments"] {
+[data-tab-panel='comments'] {
   display: flex;
   flex-direction: column;
 
@@ -1149,8 +1153,8 @@
 }
 
 .app-experiment-tab--active {
-  border-bottom-color: govuk-colour("blue");
-  color: govuk-colour("blue");
+  border-bottom-color: govuk-colour('blue');
+  color: govuk-colour('blue');
   font-weight: 700;
 }
 
@@ -1644,7 +1648,7 @@
 // is: display: flex here and the browser's own default [hidden] {
 // display: none } are equal-specificity single-selector rules, and author
 // styles always win that tie regardless of origin.
-[data-tab-panel="content"] {
+[data-tab-panel='content'] {
   display: flex;
   flex-direction: column;
   padding: govuk-spacing(4);
@@ -1739,12 +1743,16 @@
 // specifically so editor-experiment.html's own "Add new content" form
 // (.app-experiment-add-content-form, reused unscoped by both pages)
 // keeps its original side-by-side input+button layout, untouched.
-.app-editor-2-3-view .app-experiment-add-content-form .app-experiment-add-comment {
+.app-editor-2-3-view
+  .app-experiment-add-content-form
+  .app-experiment-add-comment {
   flex-direction: column;
   align-items: stretch;
 }
 
-.app-editor-2-3-view .app-experiment-add-content-form .app-experiment-add-comment__input {
+.app-editor-2-3-view
+  .app-experiment-add-content-form
+  .app-experiment-add-comment__input {
   flex: 0 0 auto;
 }
 

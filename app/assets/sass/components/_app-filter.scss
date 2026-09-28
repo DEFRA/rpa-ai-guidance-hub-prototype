@@ -1,0 +1,202 @@
+// The hub's horizontal filter row — a hand-ported adaptation of the MoJ
+// Design System's Filter component (moj-filter: header / selected filters /
+// options), not the installed package, since MoJ's own docs only cover a
+// vertical filter-pane layout and its styling needed to match this
+// codebase's own look. See hub/page.notes.md for the full reasoning.
+
+.app-filter {
+  margin-bottom: govuk-spacing(6);
+  padding: govuk-spacing(4);
+  background-color: $govuk-light-grey;
+}
+
+.app-filter__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(3);
+
+  h2 {
+    margin-bottom: 0;
+  }
+}
+
+// A real link to /playground/hub with no query string — see buildHref() in
+// view-model.js — not a JS-driven reset, same reasoning as .app-filter__tag
+// below. Same treatment as .app-toggle in _app-v3.scss, applied fresh here
+// rather than shared, since that file belongs to the frozen v3 version.
+.app-filter__clear {
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  font-size: 0.9375rem;
+  text-decoration: underline;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-focus-colour;
+    box-shadow:
+      0 -2px $govuk-focus-colour,
+      0 4px $govuk-black;
+    text-decoration: none;
+  }
+}
+
+.app-filter__selected {
+  padding-bottom: govuk-spacing(3);
+  margin-bottom: govuk-spacing(3);
+  border-bottom: 1px solid $govuk-mid-grey;
+}
+
+.app-filter__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// A real <a href> (view-model.js's buildHref()), not a JS-driven removal —
+// each tag just links back to /playground/hub with that one filter's value
+// dropped from the querystring, so it works with JavaScript off.
+.app-filter__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: govuk-spacing(1);
+  padding: govuk-spacing(1) govuk-spacing(2);
+  border: 1px solid $govuk-black;
+  border-radius: 0;
+  background-color: $govuk-white;
+  color: $govuk-black;
+  font-family: $govuk-font-family;
+  font-size: 0.875rem;
+  text-decoration: none;
+
+  &:hover {
+    background-color: $govuk-black;
+    color: $govuk-white;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    background-color: $govuk-focus-colour;
+    color: $govuk-black;
+    box-shadow:
+      0 -2px $govuk-focus-colour,
+      0 4px $govuk-black;
+  }
+}
+
+.app-filter__tag-remove {
+  font-weight: 700;
+}
+
+.app-filter__options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: govuk-spacing(3);
+}
+
+// Each facet sits directly in the options row, always visible — no
+// collapse/disclosure/overlay wrapper. GDS doesn't sanction modal-style
+// dropdown panels, so this is deliberately not the earlier popover-per-
+// facet treatment (see page.njk's top comment).
+.app-filter__field {
+  flex: 0 1 220px;
+
+  .govuk-form-group,
+  .govuk-checkboxes {
+    margin-bottom: 0;
+  }
+}
+
+.app-filter__actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+// -- accessible-autocomplete (Category, Scheme, Year) ------------------------
+//
+// Progressively enhances each of those three <select>s (enhanceSelectElement,
+// called from page.njk's pageScripts) — all three expect many options in the
+// real service. cssNamespace: 'app-autocomplete' renames the vendor's own
+// "autocomplete" BEM block to this — hand-written to match this repo's
+// govuk-input look rather than importing the vendor CSS unmodified, per the
+// brief that MoJ/vendor patterns need tweaking to this codebase's own design
+// language.
+.app-autocomplete__wrapper {
+  position: relative;
+}
+
+.app-autocomplete__input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: govuk-spacing(1);
+  border: 2px solid $govuk-black;
+  color: $govuk-text-colour;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  appearance: none;
+}
+
+.app-autocomplete__input--focused {
+  outline: 3px solid $govuk-focus-colour;
+  outline-offset: 0;
+  box-shadow: inset 0 0 0 2px;
+}
+
+.app-autocomplete__hint {
+  position: absolute;
+  color: $govuk-secondary-text-colour;
+  pointer-events: none;
+}
+
+.app-autocomplete__menu {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 2px solid $govuk-black;
+  border-top: 0;
+  background-color: $govuk-white;
+  max-height: 340px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app-autocomplete__menu--hidden {
+  display: none;
+}
+
+.app-autocomplete__menu--overlay {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.app-autocomplete__option {
+  display: block;
+  padding: govuk-spacing(1);
+  border-bottom: 1px solid $govuk-mid-grey;
+  font-family: $govuk-font-family;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:last-of-type {
+    border-bottom: 0;
+  }
+}
+
+.app-autocomplete__option--focused,
+.app-autocomplete__option:hover {
+  background-color: $govuk-focus-colour;
+  color: $govuk-black;
+}

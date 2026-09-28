@@ -71,8 +71,8 @@
 }
 
 .app-document-content__tab--active {
-  border-bottom-color: govuk-colour("blue");
-  color: govuk-colour("blue");
+  border-bottom-color: govuk-colour('blue');
+  color: govuk-colour('blue');
   font-weight: 700;
 }
 
@@ -163,7 +163,8 @@
   transition: transform 150ms ease;
 }
 
-.app-document-content__section-toggle[aria-expanded="true"] .app-document-content__chevron {
+.app-document-content__section-toggle[aria-expanded='true']
+  .app-document-content__chevron {
   transform: rotate(45deg);
 }
 

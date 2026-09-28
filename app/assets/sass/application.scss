@@ -14,36 +14,51 @@ body {
 
 // Defra branding for internal, non-GOV.UK services
 // https://digital.defra.gov.uk/design/branding
-@import "components/defra-header";
-@import "components/defra-home-header";
-@import "components/defra-service-navigation";
-@import "components/defra-footer";
+@import 'components/defra-header';
+@import 'components/defra-home-header';
+@import 'components/defra-header-search';
+@import 'components/defra-service-navigation';
+@import 'components/defra-footer';
 
 // Prototype index
-@import "components/app-journey";
+@import 'components/app-journey';
 
 // Service pages
-@import "components/app-hero";
-@import "components/app-card";
-@import "components/app-editor";
-@import "components/app-issues";
-@import "components/app-progress";
-@import "components/app-review";
-@import "components/app-markdown-editor";
-@import "components/app-guidance-edit";
-@import "components/app-ai-search";
-@import "components/app-saved-document";
-@import "components/app-organic-search";
-@import "components/app-find-guidance";
-@import "components/app-editor-experiment";
-@import "components/app-manage-guidance";
-@import "components/app-unified-guidance";
+@import 'components/app-hero';
+@import 'components/app-card';
+@import 'components/app-editor';
+@import 'components/app-issues';
+@import 'components/app-progress';
+@import 'components/app-review';
+@import 'components/app-markdown-editor';
+@import 'components/app-guidance-edit';
+@import 'components/app-ai-search';
+@import 'components/app-saved-document';
+@import 'components/app-organic-search';
+@import 'components/app-filter';
+@import 'components/app-upload';
+@import 'components/app-find-guidance';
+@import 'components/app-editor-experiment';
+@import 'components/app-manage-guidance';
+@import 'components/app-unified-guidance';
+
+// The persistent context pane (hub, document, viewer, editor) and the
+// full-width variant its pages opt into
+@import 'components/app-context-pane';
+@import 'components/app-full-width';
+
+// The persistent side navigation that replaces the context pane in playground
+@import 'components/app-side-nav';
+
+// The guide page's own right-hand panel, styled after the side nav above —
+// imported after it so it can reuse the same tokens/mixins.
+@import 'components/app-guide';
 
 // Version 3 — full-width layout, collapsible filters, recent work cards
-@import "components/app-v3";
+@import 'components/app-v3';
 
 // Notes — the designer/dev annotation panel, shown on every version
-@import "components/app-notes-panel";
+@import 'components/app-notes-panel';
 
 // The last components still shipping GOV.UK green (#00703c), re-pointed at
 // Defra green so every green on the service matches — buttons are already

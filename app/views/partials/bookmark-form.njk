@@ -1,0 +1,71 @@
+{#
+  "Bookmark to a case" on a guide's own page — reads `bookmarkForm` (app/data/
+  side-nav.js buildBookmarkForm). Always visible rather than inside a
+  details or the side nav: it's a form, not help text, and a disclosure is
+  easy to miss and awkward for some voice-control users. Small inline radios
+  per the Design System's allowance for dense caseworking screens. On an
+  error the page renders partials/bookmark-error-summary.njk at the top.
+#}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% if bookmarkForm %}
+  <section class="app-bookmark-form" id="bookmark-to-case" aria-labelledby="bookmark-to-case-heading">
+    <h2 class="govuk-heading-s govuk-!-margin-bottom-2" id="bookmark-to-case-heading">Bookmark to a case</h2>
+
+    {% if bookmarkForm.existing.length %}
+      <ul class="govuk-list app-bookmark-form__existing">
+        {% for bookmark in bookmarkForm.existing %}
+          <li>
+            <a class="govuk-link" href="{{ bookmark.href }}">{{ bookmark.typeLabel }} {{ bookmark.ref }}</a>
+            <form class="app-bookmark-form__remove" method="post" action="{{ bookmarkForm.removeHref }}">
+              <input type="hidden" name="type" value="{{ bookmark.type }}">
+              <input type="hidden" name="ref" value="{{ bookmark.ref }}">
+              <input type="hidden" name="documentId" value="{{ bookmarkForm.documentId }}">
+              <input type="hidden" name="returnTo" value="{{ bookmarkForm.returnTo }}#bookmark-to-case">
+              <button type="submit" class="govuk-link app-link-button govuk-body-s">Remove<span class="govuk-visually-hidden"> this guide from {{ bookmark.typeLabel }} {{ bookmark.ref }}</span></button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% set error = bookmarkForm.error %}
+    <form method="post" action="{{ bookmarkForm.addHref }}" novalidate>
+      <input type="hidden" name="documentId" value="{{ bookmarkForm.documentId }}">
+      <input type="hidden" name="returnTo" value="{{ bookmarkForm.returnTo }}">
+
+      {{ govukRadios({
+        idPrefix: "bookmark-type",
+        name: "type",
+        classes: "govuk-radios--inline govuk-radios--small",
+        fieldset: {
+          legend: { text: "Bookmark by", classes: "govuk-fieldset__legend--s" }
+        },
+        errorMessage: { text: error.text } if error and error.field == "type" else false,
+        items: bookmarkForm.types
+      }) }}
+
+      <div class="app-bookmark-form__row">
+        {{ govukInput({
+          id: "bookmark-ref",
+          name: "ref",
+          label: { text: "Case ID or SBI application number" },
+          hint: { text: "For example, CASE-10482 or 123456789" },
+          classes: "govuk-input--width-20",
+          spellcheck: false,
+          autocomplete: "off",
+          value: bookmarkForm.ref,
+          errorMessage: { text: error.text } if error and error.field == "ref" else false,
+          formGroup: { classes: "govuk-!-margin-bottom-0" }
+        }) }}
+
+        {{ govukButton({
+          text: "Bookmark guide",
+          classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+        }) }}
+      </div>
+    </form>
+  </section>
+{% endif %}

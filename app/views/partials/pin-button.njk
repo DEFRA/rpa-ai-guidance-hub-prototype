@@ -1,0 +1,17 @@
+{#
+  "Pin guide" / "Unpin guide" on a document page — reads `pin`
+  ({ pinned, href, returnTo }) and `pinDocumentId`. The visible label
+  changes with the state, so no aria-pressed is needed. Pinned guides show
+  in the side nav's Pinned section and first in the unfiltered hub list.
+#}
+{% from "partials/side-nav-icon.njk" import sideNavIcon %}
+{% if pin %}
+  <form class="app-pin-form" method="post" action="{{ pin.href }}">
+    <input type="hidden" name="documentId" value="{{ pinDocumentId }}">
+    <input type="hidden" name="returnTo" value="{{ pin.returnTo }}">
+    <button type="submit" class="govuk-button govuk-button--secondary app-pin-button govuk-!-margin-bottom-4" data-module="govuk-button">
+      {{ sideNavIcon("star-filled" if pin.pinned else "star") }}
+      {{ "Unpin guide" if pin.pinned else "Pin guide" }}
+    </button>
+  </form>
+{% endif %}

@@ -1,0 +1,41 @@
+{#
+  The wait between choosing a file and the hub having it — v6's own port
+  of v4's upload-processing.html, using the exact same shared
+  [data-module="app-progress"] widget (app/assets/javascripts/
+  application.js) unmodified: a fixed 3-stage timer that always ends by
+  navigating to data-next, and a plain link as the no-JS fallback.
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% set pageName = "Checking your file" %}
+
+{% block columns %}
+
+  <h1 class="govuk-heading-l">Checking your file</h1>
+
+  <p class="govuk-body">
+    We scan every file for viruses before it goes into the hub. This
+    usually takes a few seconds.
+  </p>
+
+  <div
+    class="app-progress"
+    data-module="app-progress"
+    data-next="/playground/upload/details">
+
+    <p class="app-progress__status" data-progress-status role="status">
+      Uploading your file
+    </p>
+
+    <div class="app-progress__track">
+      <div class="app-progress__bar" data-progress-bar></div>
+    </div>
+
+  </div>
+
+  <p class="govuk-body">
+    Do not close this page. If nothing happens,
+    <a class="govuk-link" href="/playground/upload/details">continue to the guide's details</a>.
+  </p>
+
+{% endblock %}

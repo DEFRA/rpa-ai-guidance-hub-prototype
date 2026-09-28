@@ -1,25 +1,14 @@
-{#
-  The outcome when the virus scan rejects the file.
-
-  CDP Uploader can reject an upload outright (DEFRA/cdp-uploader, "rejected file
-  (virus) callback"), so this will happen. It is not the designer's fault and
-  the page should not read as though it is — a shared network drive of old Word
-  documents will trip a scanner sooner or later.
-
-  The file never reached the hub, which is worth saying plainly: the designer's
-  next question is whether anything was stored.
-#}
-{% extends "layouts/main.html" %}
-
-{% from "govuk/components/button/macro.njk" import govukButton %}
-
-{% set pageName = "File not uploaded" %}
-
-{% block content %}
+{# The outcome when the virus scan rejects the file. CDP Uploader can reject an
+upload outright (DEFRA/cdp-uploader, "rejected file (virus) callback"), so this
+will happen. It is not the designer's fault and the page should not read as
+though it is — a shared network drive of old Word documents will trip a scanner
+sooner or later. The file never reached the hub, which is worth saying plainly:
+the designer's next question is whether anything was stored. #} {% extends
+"layouts/main.html" %} {% from "govuk/components/button/macro.njk" import
+govukButton %} {% set pageName = "File not uploaded" %} {% block content %}
 
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-
     <h1 class="govuk-heading-l">You cannot upload this file</h1>
 
     <p class="govuk-body">
@@ -43,15 +32,14 @@
       </li>
     </ol>
 
-    {{ govukButton({
-      text: "Upload a different file",
-      href: "/v1/designer/migrate/single/upload"
-    }) }}
+    {{ govukButton({ text: "Upload a different file", href:
+    "/v1/designer/migrate/single/upload" }) }}
 
     <p class="govuk-body">
-      <a class="govuk-link" href="/v1/designer/documents">Return to your documents</a>
+      <a class="govuk-link" href="/v1/designer/documents"
+        >Return to your documents</a
+      >
     </p>
-
   </div>
 </div>
 

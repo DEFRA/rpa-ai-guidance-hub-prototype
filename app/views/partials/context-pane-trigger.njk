@@ -1,0 +1,16 @@
+{#
+  The context pane's own "reopen" control — see partials/context-pane.njk
+  and context-pane-toggle/routes.js. A real <form method="post">, not a
+  JS-driven show/hide, so it works with JavaScript off. Included by every
+  page that has a pane, as a sibling of the pane's own column, only when
+  contextPane.collapsed is true (the page's own {% if %}, alongside the
+  {% else %} that includes context-pane.njk instead) — the two partials
+  are mutually exclusive, never both rendered.
+#}
+{% if contextPane and contextPane.collapsed %}
+  <form method="post" action="{{ contextPane.toggleHref }}" class="app-context-pane-trigger-form">
+    <input type="hidden" name="collapsed" value="false">
+    <input type="hidden" name="returnTo" value="{{ contextPane.returnHref }}">
+    <button type="submit" class="app-context-pane-trigger">Show context</button>
+  </form>
+{% endif %}

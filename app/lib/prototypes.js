@@ -71,6 +71,31 @@ function groupByPersona(journeys) {
   return groups
 }
 
+// The index page's summary card for a version shows a handful of plain
+// text/value rows (see app/views/index.html) — everything except the status
+// tag itself, which needs the govukTag macro and so is built in the template
+// instead. A snapshot has `purpose`/`author` (see scripts/snapshot.js);
+// playground has neither, and falls back to its own `summary` prose.
+function buildSummaryRows(version) {
+  const rows = []
+
+  if (version.purpose) {
+    rows.push({ key: { text: 'Purpose' }, value: { text: version.purpose } })
+  } else if (version.summary) {
+    rows.push({ key: { text: 'Summary' }, value: { text: version.summary } })
+  }
+
+  if (version.author) {
+    rows.push({ key: { text: 'By' }, value: { text: version.author } })
+  }
+
+  if (version.status !== 'current' && version.date) {
+    rows.push({ key: { text: 'Taken' }, value: { text: version.date } })
+  }
+
+  return rows
+}
+
 // All versions, with build state resolved.
 function getVersions() {
   return versions.map((version) => {
@@ -84,7 +109,8 @@ function getVersions() {
       personas: groupByPersona(journeys),
       journeyCount: journeys.length,
       stepCount: journeys.reduce((total, j) => total + j.stepCount, 0),
-      builtCount: journeys.reduce((total, j) => total + j.builtCount, 0)
+      builtCount: journeys.reduce((total, j) => total + j.builtCount, 0),
+      summaryRows: buildSummaryRows(version)
     }
   })
 }

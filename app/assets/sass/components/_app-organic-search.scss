@@ -42,7 +42,7 @@
 
 // The open group reads as bold black text rather than a link, so it stands
 // out from the three (still blue, still link-styled) collapsed ones.
-.app-filter-group__toggle[aria-expanded="true"] {
+.app-filter-group__toggle[aria-expanded='true'] {
   color: $govuk-text-colour;
   font-weight: 700;
 
@@ -67,7 +67,7 @@
   transition: transform 150ms ease;
 }
 
-.app-filter-group__toggle[aria-expanded="true"] .app-filter-group__chevron {
+.app-filter-group__toggle[aria-expanded='true'] .app-filter-group__chevron {
   transform: rotate(-135deg);
 }
 

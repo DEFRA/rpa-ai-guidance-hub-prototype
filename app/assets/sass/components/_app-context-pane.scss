@@ -1,0 +1,264 @@
+// The persistent context pane — see app/views/partials/context-pane.njk
+// and app/data/context-pane.js.
+//
+// The row it sits in is a flex row (.app-context-pane-row), not the
+// standard GOV.UK grid (.govuk-grid-row/govuk-grid-column-*) — the same
+// departure _app-v3.scss's own .app-v3-search/.app-guide-view__layout
+// already make, for the same reason: the grid's columns are fixed
+// fractions of the row, so hiding one leaves a blank gap rather than
+// giving its width back. A flex row does that for free — the pane is a
+// fixed-width flex item (.app-context-pane-row__pane) and the main
+// content is flex: 1 1 auto (.app-context-pane-row__main), so once
+// contextPane.collapsed means the page simply doesn't render
+// .app-context-pane-row__pane at all (a real server-rendered choice, not
+// a script hiding it after the fact — see context-pane.njk's own top
+// comment, this has to work with JavaScript off), the main content
+// reclaims that width for free, no JS involved. The stepper viewer, which
+// already had its own two-column reading/contents split before this,
+// keeps that on the standard grid instead, choosing its own column
+// widths server-side the same way — see its own page.notes.md.
+
+.app-context-pane-row {
+  @include govuk-media-query($from: desktop) {
+    display: flex;
+    align-items: flex-start;
+    gap: govuk-spacing(6);
+  }
+}
+
+.app-context-pane-row__pane {
+  position: relative;
+  margin-bottom: govuk-spacing(6);
+
+  @include govuk-media-query($from: desktop) {
+    // flex-basis: auto (not a length) is what matters here — flex-basis
+    // takes priority over `width` in a flex item's sizing, so
+    // `flex: 0 0 300px` (flex-basis: 300px) would make both the native
+    // resize handle below AND context-pane-resize.js's own drag handle
+    // silently no-op: they both work by changing `width`, and a fixed
+    // flex-basis overrides that regardless. `flex: 0 0 auto` + a plain
+    // `width` lets the flex-basis resolve from that width instead, so
+    // changing it (by dragging either handle) actually takes effect.
+    flex: 0 0 auto;
+    width: 300px;
+    min-width: 220px;
+    max-width: 480px;
+    margin-bottom: 0;
+
+    // The native browser resize handle (bottom-right corner) — kept as
+    // the no-JS fallback for context-pane-resize.js's own full-height
+    // border handle below, which most readers will actually use. overflow:
+    // auto is what CSS requires before a browser will offer either resize
+    // affordance at all; it also means a pane taller than the viewport
+    // scrolls in place rather than lengthening the whole page, which reads
+    // better for a persistent side panel. Only the width resizes
+    // (resize: horizontal), not the height.
+    //
+    // Known gap: the resized width isn't remembered (a reload goes back
+    // to 300px) — persisting it would need a session round trip on every
+    // drag (or a debounced one), which seemed like overreach for a resize
+    // handle already a step beyond what most GOV.UK services offer.
+    resize: horizontal;
+    overflow: auto;
+  }
+}
+
+// A full-height drag handle along the pane's right-hand border
+// (partials/context-pane-resize-handle.njk, context-pane-resize.js) — a
+// JS enhancement over the native corner resize above, since a fixed
+// corner grip is awkward to find and drag on a panel that can run the
+// full height of the page. [hidden] until the script confirms it can
+// actually drive it, so a no-JS visit never shows a handle that does
+// nothing (the native corner grip above still works either way).
+.app-context-pane-resize-handle {
+  @include govuk-media-query($from: desktop) {
+    position: absolute;
+    top: 0;
+    right: 0px;
+    bottom: 0;
+    width: 8px;
+    margin: 0;
+    padding: 0;
+    border-right: 1px solid #b1b4b6;
+    cursor: col-resize;
+    touch-action: none;
+
+    &:hover,
+    &:focus {
+      background: $govuk-focus-colour;
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+}
+
+.app-context-pane-row__main {
+  min-width: 0;
+
+  @include govuk-media-query($from: desktop) {
+    flex: 1 1 auto;
+  }
+}
+
+.app-context-pane {
+  border-left: 1px solid $govuk-border-colour;
+  padding-left: govuk-spacing(4);
+  padding-right: govuk-spacing(4);
+
+  @include govuk-media-query($until: desktop) {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
+.app-context-pane__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+  margin-bottom: govuk-spacing(3);
+}
+
+.app-context-pane__title {
+  margin-bottom: 0;
+}
+
+// Styled like a link, not a button — a persistent view toggle, the same
+// reasoning app-toggle (_app-v3.scss) already gives for its own Hide/Show
+// filters control, just not shared across files to keep this component
+// independent of that one.
+.app-context-pane__toggle {
+  display: inline-block;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: $govuk-link-colour;
+  font-size: 0.9375rem;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-focus-colour;
+    box-shadow:
+      0 -2px $govuk-focus-colour,
+      0 4px $govuk-black;
+    text-decoration: none;
+  }
+}
+
+// The "Show context" reopener (partials/context-pane-trigger.njk) — a
+// real form, rendered by the page only when contextPane.collapsed is
+// true, in place of .app-context-pane-row__pane, never alongside it. A
+// small outlined tab, not a full button — a secondary, easy-to-ignore
+// control most of the time, the same reasoning the Notes panel's own tab
+// (.app-notes-trigger, _app-notes-panel.scss) gives for its own toggle,
+// just quieter: that one is a persistent dev tool docked to the edge of
+// every page; this is closer to "undo hiding something you just hid".
+.app-context-pane-trigger {
+  margin-bottom: 0;
+  padding: govuk-spacing(1) govuk-spacing(3);
+  border: 1px solid $govuk-border-colour;
+  background: govuk-colour('light-grey');
+  color: $govuk-link-colour;
+  font-family: $govuk-font-family;
+  @include govuk-font($size: 16);
+  cursor: pointer;
+
+  &:hover {
+    background: $govuk-mid-grey;
+  }
+
+  &:focus {
+    outline: 3px solid transparent;
+    color: $govuk-black;
+    background-color: $govuk-focus-colour;
+    box-shadow:
+      0 -2px $govuk-focus-colour,
+      0 4px $govuk-black;
+  }
+}
+
+.app-context-pane-trigger-form {
+  margin-bottom: govuk-spacing(4);
+
+  @include govuk-media-query($from: desktop) {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+    margin-right: govuk-spacing(3);
+    align-self: flex-start;
+  }
+}
+
+.app-context-pane__accordion {
+  .govuk-accordion__section-header {
+    padding-top: govuk-spacing(2);
+    padding-bottom: govuk-spacing(2);
+  }
+
+  .govuk-accordion__section-content {
+    padding: 0 0 govuk-spacing(3);
+  }
+}
+
+.app-context-pane__facts {
+  margin: 0;
+}
+
+.app-context-pane__fact {
+  display: flex;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+  padding: govuk-spacing(1) 0;
+  border-bottom: 1px dotted $govuk-border-colour;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.app-context-pane__fact-label {
+  color: govuk-colour('dark-grey');
+}
+
+.app-context-pane__fact-value {
+  margin: 0;
+  text-align: right;
+}
+
+// Non-collapsible, above/below the accordion — transient (a search
+// position) or persistent (recent searches) content, not one more section
+// to hide, so these two stay outside govukAccordion's own items.
+.app-context-pane__search-context,
+.app-context-pane__recent-searches {
+  margin-bottom: govuk-spacing(5);
+  padding-bottom: govuk-spacing(5);
+  border-bottom: 1px solid $govuk-border-colour;
+}
+
+.app-context-pane__list {
+  margin-bottom: govuk-spacing(2);
+}
+
+.app-context-pane__list-item {
+  padding-bottom: govuk-spacing(2);
+}
+
+.app-context-pane__meta {
+  display: block;
+  color: govuk-colour('dark-grey');
+}
+
+.app-context-pane__role {
+  margin-bottom: govuk-spacing(1);
+  color: govuk-colour('dark-grey');
+}

@@ -1,6 +1,7 @@
 .idea
 .vscode
-.claude
+.claude/*
+!.claude/settings.json
 .git
 .DS_Store
 node_modules
@@ -13,6 +14,9 @@ npm-debug.log
 .env
 migrate.log
 usage-data-config.json
+
+# Playwright MCP snapshots/console logs
+.playwright-mcp/
 
 # Real guidance .docx source files (app/lib/guidance-loader.js) — never
 # committed: these are real government guidance content, not fixture/

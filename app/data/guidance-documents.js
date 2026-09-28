@@ -968,11 +968,31 @@ const hardcodedGuidanceDocuments = [
             body: [
               "To create a 'New Case', you must first navigate to the customer's Organisation account screen. You can access this from the dashboard by searching for the business using their SBI number — enter an SBI or Organisation name in the search box and press Enter.",
               "You can view open cases from the 'Recent Cases' section within the Organisation account. As the sub grid only shows cases from the last year, to view a list of all cases click the three dots, then click 'See associated records'.",
-              'Is there a resolved case present relating to the query?',
-              [
-                "If 'Yes', continue to the Child Cases part of this guidance.",
-                "If 'No', continue to create a new case."
-              ],
+              // A structured branch (see reading-content.njk's renderPart
+              // and guide/view-model.js's resolveBranchOptions) rather than
+              // plain "If 'Yes'/'No'" prose — the "Yes" answer is a real
+              // skip ahead to a later part (Child Cases), not just the
+              // next part in the guide, so it needs a working link, not
+              // text. "No" has no part of its own to jump to: the guide
+              // already continues into new-case creation immediately
+              // below, so it stays plain text.
+              {
+                type: 'branch',
+                question:
+                  'Is there a resolved case present relating to the query?',
+                options: [
+                  {
+                    text: 'Yes',
+                    description:
+                      'skip to the Child Cases part of this guidance',
+                    target: 'Child Cases'
+                  },
+                  {
+                    text: 'No',
+                    description: 'continue reading below to create a new case'
+                  }
+                ]
+              },
               "From the ribbon at the top of the page click '+New Case'. Complete all mandatory fields marked with a red asterisk that have not been auto populated, including 'CASE MAPPING' > 'Scheme' (select CS), then the 'Subject' field once it appears.",
               "Under 'CASE DETAILS', enter the Case Title in the format [SBI][Title][Relevant Scheme Year][Agreement reference/Claim ID], for example: 12345678 ED1 Evidence Required 2024 2000000. Also complete 'Case Origin' and 'Case Description'.",
               "Under 'ORGANISATION DETAILS', 'Organisation' should auto populate. Under 'CONTACT DETAILS', enter the contact's name — the rest of the contact information (Email, Mobile Phone, etc.) will auto populate.",

@@ -1,0 +1,1119 @@
+// The side navigation shell (layouts/main.html) and the nav itself
+// (partials/side-nav.njk, side-nav-rail.njk). Workspace-tool structure,
+// Defra palette: a light grey panel, current item on light green with a
+// Defra green bar and bold text (never colour alone), yellow focus as
+// everywhere else. Text on the grey panel uses $defra-green-hover, not
+// $defra-green, which only reaches ~4.3:1 on #f3f2f1.
+
+$app-side-nav-width: 280px;
+// Match NAV_WIDTH in app/data/side-nav.js.
+$app-side-nav-min-width: 220px;
+$app-side-nav-max-width: 440px;
+$app-side-nav-rail-width: 64px;
+// Below this (and above the drawer breakpoint) the nav auto-collapses to the
+// rail, until it's been collapsed or expanded by hand.
+$app-side-nav-auto-collapse: 1200px;
+$app-side-nav-hover: #e3e2e0;
+$app-side-nav-divider: $govuk-mid-grey;
+$app-side-nav-muted: #505a5f;
+
+@mixin app-side-nav-focus {
+  outline: 3px solid transparent;
+  background-color: $govuk-yellow;
+  box-shadow: inset 0 0 0 3px $govuk-black;
+  color: $govuk-black;
+  text-decoration: none;
+}
+
+// Full width for everything on a nav page — header, footer and main column —
+// so the Defra logo lines up with the nav rather than a centred 960px column.
+.app-has-side-nav .govuk-width-container {
+  max-width: none;
+  margin-right: govuk-spacing(4);
+  margin-left: govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    margin-right: govuk-spacing(6);
+    margin-left: govuk-spacing(6);
+  }
+}
+
+.app-shell {
+  display: flex;
+  align-items: flex-start;
+  border-top: 1px solid $app-side-nav-divider;
+}
+
+.app-shell__nav {
+  position: sticky;
+  top: 0;
+  // flex-basis auto, not a fixed basis, so a changed `width` (dragging the
+  // handle, or the native resize grip below) actually takes effect — the
+  // same fix the context pane needed. --app-side-nav-width is the width
+  // saved for this session (layouts/main.html).
+  flex: 0 0 auto;
+  // border-box so the measured width (border included) is the width saved,
+  // with no 1px creep on each save.
+  box-sizing: border-box;
+  width: var(--app-side-nav-width, $app-side-nav-width);
+  min-width: $app-side-nav-min-width;
+  max-width: $app-side-nav-max-width;
+  // --app-side-nav-top is set by side-nav.js to however much of the Defra
+  // header is still on screen, so the nav (and its sticky footer) fits the
+  // visible viewport.
+  height: calc(100vh - var(--app-side-nav-top, 0px));
+  overflow-y: auto;
+  // Keeps a focused item scrolled clear of the sticky footer (WCAG 2.4.11).
+  scroll-padding-bottom: 120px;
+  border-right: 1px solid $app-side-nav-divider;
+  background-color: $govuk-light-grey;
+}
+
+// No-JS fallback for resizing: the browser's own corner grip (overflow is
+// already auto). side-nav.js adds the full-height handle most people use.
+@include govuk-media-query($from: desktop) {
+  .app-shell:not(.app-shell--collapsed) .app-shell__nav {
+    resize: horizontal;
+  }
+}
+
+// Full-height drag handle, overlapping the edge it resizes so it takes no
+// layout space. Sticky and sized like the nav. Shared by the nav's own
+// handle (margin-left, its right edge) and the guide panel's
+// (--aside, margin-right, its left edge — app/views/playground/guide/
+// page.njk).
+.app-shell__resize {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  flex: 0 0 8px;
+  width: 8px;
+  height: calc(100vh - var(--app-side-nav-top, 0px));
+  margin-left: -8px;
+  cursor: col-resize;
+  touch-action: none;
+
+  &:hover,
+  &.app-shell__resize--dragging {
+    background-color: $govuk-yellow;
+  }
+
+  // Yellow alone is too close to the grey panel for a focus indicator
+  // (WCAG 1.4.11), so focus adds a black inset outline.
+  &:focus {
+    outline: none;
+    background-color: $govuk-yellow;
+    box-shadow: inset 0 0 0 2px $govuk-black;
+  }
+}
+
+.app-shell__resize--aside {
+  margin-left: 0;
+  margin-right: -8px;
+}
+
+.app-shell--resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.app-shell--collapsed .app-shell__nav {
+  min-width: 0;
+  max-width: none;
+  width: $app-side-nav-rail-width;
+  // Rail tooltips sit outside the rail's own width.
+  overflow: visible;
+}
+
+// The auto-collapsed rail and its toolbar expand button, shown only on
+// mid-width windows (see "Mid-width windows" below). Sized like the
+// collapsed nav.
+.app-shell__toolbar-toggle.app-shell__toolbar-toggle--mid {
+  display: none;
+}
+
+.app-shell__rail {
+  display: none;
+  position: sticky;
+  top: 0;
+  flex: 0 0 auto;
+  width: $app-side-nav-rail-width;
+  height: calc(100vh - var(--app-side-nav-top, 0px));
+  border-right: 1px solid $app-side-nav-divider;
+  background-color: $govuk-light-grey;
+}
+
+.app-shell__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-shell__toolbar {
+  display: flex;
+  align-items: center;
+  gap: govuk-spacing(3);
+  min-height: 56px;
+  padding: 0 govuk-spacing(4);
+  border-bottom: 1px solid $app-side-nav-divider;
+
+  @include govuk-media-query($from: tablet) {
+    padding: 0 govuk-spacing(5);
+  }
+}
+
+.app-shell__toolbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: $govuk-black;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $govuk-light-grey;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+.app-shell__toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: $app-side-nav-divider;
+}
+
+.app-shell__toolbar-title {
+  @include govuk-font($size: 16);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// The editor's 100vw breakout (_app-editor-experiment.scss) assumes it is
+// centred in the viewport; beside the nav the column is already full width.
+.app-has-side-nav .app-experiment-page {
+  left: auto;
+  width: auto;
+  margin-left: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+// The hub's green hero, now inside the main column: a rounded panel rather
+// than full-bleed, sitting beside the nav.
+.app-has-side-nav .defra-home-header {
+  margin-bottom: govuk-spacing(6);
+  border-radius: 8px;
+}
+
+// ---------------------------------------------------------------------------
+// The nav
+// ---------------------------------------------------------------------------
+
+.app-side-nav {
+  @include govuk-font($size: 16);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: govuk-spacing(3) govuk-spacing(2) govuk-spacing(3);
+  color: $govuk-black;
+
+  summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.app-side-nav__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+  padding: govuk-spacing(1) govuk-spacing(1) govuk-spacing(3) govuk-spacing(2);
+}
+
+.app-side-nav__identity {
+  min-width: 0;
+}
+
+.app-side-nav__service {
+  @include govuk-font($size: 19, $weight: bold);
+  margin: 0;
+}
+
+.app-side-nav__switcher {
+  position: relative;
+}
+
+.app-side-nav__switcher-summary {
+  display: inline-block;
+  min-height: 24px;
+  margin-left: -4px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: $app-side-nav-muted;
+  font-size: 14px;
+
+  &:hover {
+    color: $govuk-black;
+    text-decoration: underline;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+.app-side-nav-icon {
+  flex: none;
+}
+
+.app-side-nav__chevron {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  transition: transform 0.15s ease;
+}
+
+details:not([open]) > summary .app-side-nav__chevron {
+  transform: rotate(-90deg);
+}
+
+// Popovers for the role switcher and "…" menus — plain <details> contents,
+// floated over the nav.
+.app-side-nav__popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 200px;
+  padding: govuk-spacing(1);
+  border: 1px solid $app-side-nav-divider;
+  border-radius: 6px;
+  background-color: $govuk-white;
+  box-shadow: 0 4px 12px rgba($govuk-black, 0.15);
+}
+
+.app-side-nav__menu-item {
+  @include govuk-font($size: 16);
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: govuk-spacing(2) govuk-spacing(3);
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: $govuk-black;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:link,
+  &:visited {
+    color: $govuk-black;
+  }
+
+  &:hover {
+    background-color: $govuk-light-grey;
+    text-decoration: underline;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+.app-side-nav__icon-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: $app-side-nav-muted;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $app-side-nav-hover;
+    color: $govuk-black;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+// Search
+
+.app-side-nav__search {
+  position: relative;
+  margin: 0 0 govuk-spacing(3);
+}
+
+.app-side-nav__search-icon {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: $app-side-nav-muted;
+  pointer-events: none;
+}
+
+.app-side-nav__search-input {
+  @include govuk-font($size: 16);
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 govuk-spacing(3) 0 36px;
+  border: 1px solid $app-side-nav-muted;
+  border-radius: 6px;
+  background-color: $govuk-white;
+  color: $govuk-black;
+
+  &::placeholder {
+    color: $app-side-nav-muted;
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: 3px solid $govuk-yellow;
+    outline-offset: 0;
+    box-shadow: inset 0 0 0 2px $govuk-black;
+  }
+
+  &:has(~ .app-side-nav__kbd:not([hidden])) {
+    padding-right: 64px;
+  }
+}
+
+.app-side-nav__kbd {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  padding: 1px 6px;
+  border: 1px solid $app-side-nav-divider;
+  border-radius: 4px;
+  background-color: $govuk-light-grey;
+  color: $app-side-nav-muted;
+  font-family: $govuk-font-family;
+  font-size: 13px;
+  line-height: 18px;
+  pointer-events: none;
+}
+
+.app-side-nav__search-submit:focus {
+  @include app-side-nav-focus;
+  position: absolute !important;
+  top: 4px;
+  right: 4px;
+  padding: 4px 8px;
+}
+
+// Lists and links
+
+.app-side-nav__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-side-nav__link {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 6px 10px 6px 12px;
+  border-radius: 6px;
+  color: $govuk-black;
+  line-height: 1.25;
+  text-decoration: none;
+
+  &:link,
+  &:visited {
+    color: $govuk-black;
+  }
+
+  .app-side-nav-icon {
+    color: $app-side-nav-muted;
+  }
+
+  &:hover {
+    background-color: $app-side-nav-hover;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+
+    .app-side-nav-icon {
+      color: $govuk-black;
+    }
+  }
+}
+
+.app-side-nav__link--current {
+  background-color: $defra-light-green;
+  font-weight: 700;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 0;
+    width: 4px;
+    border-radius: 2px;
+    background-color: $defra-green;
+  }
+
+  .app-side-nav-icon {
+    color: $defra-green-hover;
+  }
+
+  &:hover {
+    background-color: $defra-light-green;
+    text-decoration: underline;
+  }
+}
+
+.app-side-nav__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-side-nav__link .app-side-nav__star {
+  color: $defra-green-hover;
+}
+
+.app-side-nav__badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  box-sizing: border-box;
+  padding: 0 7px;
+  border: 1px solid $app-side-nav-muted;
+  border-radius: 11px;
+  background-color: $govuk-white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.app-side-nav__meta {
+  flex: none;
+  color: $app-side-nav-muted;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.app-side-nav__label {
+  margin: govuk-spacing(4) govuk-spacing(3) govuk-spacing(1);
+  color: $app-side-nav-muted;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+// Collapsible sections (Pinned guidance, Case bookmarks)
+
+.app-side-nav__section {
+  margin-top: govuk-spacing(3);
+  padding-top: govuk-spacing(1);
+  border-top: 1px solid $app-side-nav-divider;
+}
+
+.app-side-nav__section-summary {
+  display: flex;
+  align-items: center;
+  gap: govuk-spacing(2);
+  min-height: 40px;
+  padding: 0 govuk-spacing(2) 0 govuk-spacing(3);
+  border-radius: 6px;
+
+  .app-side-nav__label {
+    margin: 0;
+  }
+
+  .app-side-nav__chevron {
+    margin-left: auto;
+    color: $app-side-nav-muted;
+  }
+
+  &:hover {
+    background-color: $app-side-nav-hover;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+
+    .app-side-nav__label,
+    .app-side-nav__section-count,
+    .app-side-nav__chevron {
+      color: $govuk-black;
+    }
+  }
+}
+
+.app-side-nav__section-count {
+  color: $app-side-nav-muted;
+  font-size: 14px;
+}
+
+.app-side-nav__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.app-side-nav__more {
+  position: relative;
+  flex: none;
+  margin-top: 2px;
+
+  .app-side-nav__popover {
+    right: 0;
+    left: auto;
+  }
+}
+
+.app-side-nav__more[open] > .app-side-nav__more-button {
+  background-color: $app-side-nav-hover;
+  color: $govuk-black;
+}
+
+.app-side-nav__sublist {
+  margin: 0 0 govuk-spacing(1) 21px;
+  padding: 0 0 0 govuk-spacing(2);
+  border-left: 1px solid $app-side-nav-divider;
+  list-style: none;
+}
+
+.app-side-nav__sublink {
+  display: block;
+  padding: 6px govuk-spacing(2);
+  border-radius: 4px;
+  color: $govuk-black;
+  font-size: 14px;
+  line-height: 1.3;
+  text-decoration: none;
+
+  &:link,
+  &:visited {
+    color: $govuk-black;
+  }
+
+  &:hover {
+    background-color: $app-side-nav-hover;
+    text-decoration: underline;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+.app-side-nav__empty {
+  margin: 0;
+  padding: govuk-spacing(1) govuk-spacing(3) govuk-spacing(2);
+  color: $app-side-nav-muted;
+  font-size: 14px;
+}
+
+// Case ID vs SBI application number, shown as text so the two kinds of
+// bookmark aren't told apart by icon alone.
+.app-side-nav__ref-type {
+  display: block;
+  color: $app-side-nav-muted;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+// Help/Settings stay pinned to the bottom of the nav while the rest scrolls
+// beneath them. The negative margin cancels the nav's own bottom padding so
+// the footer sits flush with its edge.
+.app-side-nav__footer {
+  position: sticky;
+  z-index: 5;
+  bottom: 0;
+  margin: auto 0 (- govuk-spacing(3));
+  padding: govuk-spacing(2) 0 govuk-spacing(3);
+  border-top: 1px solid $app-side-nav-divider;
+  background-color: $govuk-light-grey;
+}
+
+// ---------------------------------------------------------------------------
+// Collapsed icon rail
+// ---------------------------------------------------------------------------
+
+.app-side-nav--rail {
+  align-items: center;
+  padding: govuk-spacing(2) 0;
+}
+
+.app-side-nav__rail-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: govuk-spacing(2) 0;
+  list-style: none;
+
+  & + & {
+    border-top: 1px solid $app-side-nav-divider;
+  }
+}
+
+.app-side-nav__rail-footer {
+  position: sticky;
+  z-index: 5;
+  bottom: 0;
+  margin-top: auto;
+  background-color: $govuk-light-grey;
+}
+
+.app-side-nav__rail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: $app-side-nav-muted;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:link,
+  &:visited {
+    color: $app-side-nav-muted;
+  }
+
+  &:hover {
+    background-color: $app-side-nav-hover;
+    color: $govuk-black;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+.app-side-nav__rail-item--current {
+  background-color: $defra-light-green;
+  box-shadow: inset 4px 0 0 $defra-green;
+
+  &:link,
+  &:visited {
+    color: $defra-green-hover;
+  }
+}
+
+.app-side-nav__rail-dot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  padding: 0 4px;
+  border: 1px solid $app-side-nav-muted;
+  border-radius: 9px;
+  background-color: $govuk-white;
+  color: $govuk-black;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+// The label is the item's real accessible name — hidden in the desktop
+// rail, shown when the rail opens as the mobile drawer.
+@include govuk-media-query($from: desktop) {
+  .app-side-nav__rail-label {
+    @include govuk-visually-hidden;
+  }
+}
+
+// Tooltip: hover and keyboard focus, stays while hovered (the transparent
+// left border bridges the gap), Esc dismisses (side-nav.js adds
+// --tooltip-dismissed until the pointer/focus leaves).
+.app-side-nav__tooltip {
+  position: absolute;
+  z-index: 30;
+  top: 50%;
+  left: 100%;
+  display: none;
+  padding: 6px 10px;
+  border-left: 10px solid transparent;
+  border-radius: 4px;
+  background-clip: padding-box;
+  background-color: $govuk-black;
+  color: $govuk-white;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.3;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+@include govuk-media-query($from: desktop) {
+  .app-side-nav__rail-item:hover .app-side-nav__tooltip,
+  .app-side-nav__rail-item:focus-visible .app-side-nav__tooltip {
+    display: block;
+  }
+
+  .app-side-nav__rail-item.app-side-nav__rail-item--tooltip-dismissed
+    .app-side-nav__tooltip {
+    display: none;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Narrow screens: the nav moves behind the toolbar's menu button. Without
+// JavaScript it simply stacks above the content instead.
+// ---------------------------------------------------------------------------
+
+@include govuk-media-query($until: desktop) {
+  .app-shell {
+    display: block;
+  }
+
+  // Resizing is a desktop affordance; the drawer has its own fixed width.
+  .app-shell__resize {
+    display: none;
+  }
+
+  .app-shell__nav {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .app-shell__nav,
+  .app-shell--collapsed .app-shell__nav {
+    position: static;
+    width: auto;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid $app-side-nav-divider;
+  }
+
+  .app-side-nav--rail {
+    align-items: stretch;
+    padding: govuk-spacing(2);
+  }
+
+  .app-side-nav__rail-list {
+    align-items: stretch;
+  }
+
+  .app-side-nav__rail-item {
+    justify-content: flex-start;
+    gap: 10px;
+    width: auto;
+    padding: 0 govuk-spacing(3);
+  }
+
+  .app-side-nav__rail-dot {
+    position: static;
+    margin-left: auto;
+  }
+
+  .govuk-frontend-supported {
+    .app-shell__nav,
+    .app-shell--collapsed .app-shell__nav {
+      position: fixed;
+      z-index: 1000;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: min(320px, 85vw);
+      overflow-y: auto;
+      border-right: 1px solid $app-side-nav-divider;
+      border-bottom: 0;
+      box-shadow: 4px 0 16px rgba($govuk-black, 0.2);
+      transform: translateX(-105%);
+      visibility: hidden;
+      transition:
+        transform 0.2s ease,
+        visibility 0s linear 0.2s;
+    }
+
+    .app-shell--drawer-open .app-shell__nav {
+      transform: none;
+      visibility: visible;
+      transition: transform 0.2s ease;
+    }
+
+    .app-shell--drawer-open .app-shell__backdrop {
+      display: block;
+    }
+  }
+}
+
+// Mid-width windows: until someone collapses or expands the nav themselves,
+// it auto-collapses to the rail (pure CSS, so it works without JS). The
+// rail's buttons and the toolbar's expand button submit collapsed=false,
+// which keeps the full nav open at every width from then on.
+@media (min-width: 769px) and (max-width: #{$app-side-nav-auto-collapse - 0.02px}) {
+  .app-shell--auto {
+    .app-shell__nav,
+    .app-shell__resize,
+    .app-shell__toolbar-toggle--wide {
+      display: none;
+    }
+
+    .app-shell__rail {
+      display: block;
+    }
+
+    .app-shell__toolbar-toggle.app-shell__toolbar-toggle--mid {
+      display: inline-flex;
+    }
+  }
+}
+
+.app-shell__backdrop {
+  position: fixed;
+  z-index: 999;
+  inset: 0;
+  display: none;
+  background-color: rgba($govuk-black, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__nav,
+  .app-side-nav__chevron {
+    transition: none !important;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hub: quick-filter chips (mirror the nav's lists) and pin stars
+// ---------------------------------------------------------------------------
+
+.app-quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: govuk-spacing(2) govuk-spacing(3);
+  margin-bottom: govuk-spacing(5);
+}
+
+.app-quick-filters__label {
+  @include govuk-font($size: 16, $weight: bold);
+  margin: 0;
+}
+
+.app-quick-filters__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-quick-filters__chip {
+  @include govuk-font($size: 16);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 4px 8px 4px 12px;
+  border: 1px solid $app-side-nav-muted;
+  border-radius: 20px;
+  background-color: $govuk-white;
+  text-decoration: none;
+
+  &:link,
+  &:visited {
+    color: $govuk-black;
+  }
+
+  .app-side-nav-icon {
+    color: $app-side-nav-muted;
+  }
+
+  &:hover {
+    background-color: $govuk-light-grey;
+    text-decoration: underline;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+.app-quick-filters__chip--selected {
+  border: 2px solid $defra-green;
+  background-color: $defra-light-green;
+  font-weight: 700;
+
+  &:link,
+  &:visited {
+    color: $defra-green-hover;
+  }
+
+  .app-side-nav-icon {
+    color: $defra-green-hover;
+  }
+
+  &:hover {
+    background-color: $defra-light-green;
+  }
+}
+
+.app-quick-filters__tick {
+  font-weight: 700;
+}
+
+.app-quick-filters__count {
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background-color: $govuk-light-grey;
+  color: $govuk-black;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+}
+
+.app-search-results__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+}
+
+.app-search-results__item--pinned {
+  border-left: 4px solid $defra-green;
+  padding-left: govuk-spacing(3);
+}
+
+.app-pin-toggle {
+  flex: none;
+  margin: -6px -6px 0 0;
+}
+
+.app-pin-toggle__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: $app-side-nav-muted;
+  cursor: pointer;
+
+  .app-side-nav-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  &[aria-pressed='true'] {
+    color: $defra-green-hover;
+  }
+
+  &:hover {
+    background-color: $govuk-light-grey;
+    color: $govuk-black;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+// The traditional viewer's in-page contents list (GOV.UK contents list
+// shape: em-dash markers), back in the page now the pane is gone.
+.app-contents-list {
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-contents-list__list li {
+  position: relative;
+  padding-left: 25px;
+
+  &::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+  }
+}
+
+// "Bookmark to a case" on a guide page (partials/bookmark-form.njk).
+.app-bookmark-form {
+  margin-bottom: govuk-spacing(6);
+  padding: govuk-spacing(3) govuk-spacing(4) govuk-spacing(4);
+  border-left: 4px solid $app-side-nav-divider;
+  background-color: $govuk-light-grey;
+
+  .govuk-form-group {
+    margin-bottom: govuk-spacing(3);
+  }
+
+  // Short option labels — keep "Case ID" on one line beside its radio.
+  .govuk-radios__label {
+    white-space: nowrap;
+  }
+}
+
+.app-bookmark-form__existing li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: govuk-spacing(2);
+  margin-bottom: govuk-spacing(1);
+}
+
+.app-bookmark-form__remove {
+  display: inline;
+}
+
+// Reference field and its button side by side where there's room.
+.app-bookmark-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: govuk-spacing(3);
+}
+
+// "Pin guide" on document pages — a secondary button with a star.
+.app-pin-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  .app-side-nav-icon {
+    width: 20px;
+    height: 20px;
+  }
+}

@@ -1,27 +1,15 @@
-{#
-  Option A, step 3: one document converted.
-
-  The conversion has already happened, so the quality issues are reported here
-  as information and a next action, not as a blocker.
-
-  The designer cannot publish. A converted document is a draft until an owner
-  approves it, which happens in a journey that is not designed yet.
-#}
-{% extends "layouts/main.html" %}
-
-{% from "govuk/components/panel/macro.njk" import govukPanel %}
-{% from "govuk/components/button/macro.njk" import govukButton %}
-
-{% set pageName = "Document migrated" %}
-
-{% block content %}
+{# Option A, step 3: one document converted. The conversion has already
+happened, so the quality issues are reported here as information and a next
+action, not as a blocker. The designer cannot publish. A converted document is a
+draft until an owner approves it, which happens in a journey that is not
+designed yet. #} {% extends "layouts/main.html" %} {% from
+"govuk/components/panel/macro.njk" import govukPanel %} {% from
+"govuk/components/button/macro.njk" import govukButton %} {% set pageName =
+"Document migrated" %} {% block content %}
 
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
-
-    {{ govukPanel({
-      titleText: "Document migrated",
-      html: library.current.name
+    {{ govukPanel({ titleText: "Document migrated", html: library.current.name
     }) }}
 
     <h2 class="govuk-heading-m">What happens next</h2>
@@ -37,19 +25,17 @@
       owner for approval — an owner is the only person who can publish it.
     </p>
 
-    {{ govukButton({
-      text: "Review and fix the issues",
-      href: nextHref
-    }) }}
+    {{ govukButton({ text: "Review and fix the issues", href: nextHref }) }}
 
     <p class="govuk-body">
-      <a class="govuk-link" href="/v1/designer/migrate/single/upload">Migrate another document</a>
+      <a class="govuk-link" href="/v1/designer/migrate/single/upload"
+        >Migrate another document</a
+      >
     </p>
 
     <p class="govuk-body">
       <a class="govuk-link" href="/v1/designer/documents">See your documents</a>
     </p>
-
   </div>
 </div>
 

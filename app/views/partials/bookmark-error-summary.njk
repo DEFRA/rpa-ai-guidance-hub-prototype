@@ -1,0 +1,9 @@
+{#
+  Error summary for the guide page's "Bookmark to a case" form
+  (partials/bookmark-form.njk) — included at the top of the page's content,
+  per the GOV.UK validation pattern. GOV.UK Frontend moves focus to it on load.
+#}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% if bookmarkForm and bookmarkForm.errorList.length %}
+  {{ govukErrorSummary({ titleText: "There is a problem", errorList: bookmarkForm.errorList }) }}
+{% endif %}

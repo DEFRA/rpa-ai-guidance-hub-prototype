@@ -18,6 +18,11 @@
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 
+{# Full-width header/footer/main on side-nav pages (_app-side-nav.scss). #}
+{% if sideNav %}
+  {% set bodyClasses = (bodyClasses + " " if bodyClasses else "") + "app-has-side-nav" %}
+{% endif %}
+
 {% block pageTitle %}
   {% if pageName %}{{ pageName }} - {% endif %}{{ serviceName }}
 {% endblock %}
@@ -33,11 +38,79 @@
 {% endblock %}
 
 {#
-  On a journey step the banner says which version the participant is looking at
-  and where they are in the sequence, so a research session can be recorded
-  against the right version. Both come from app/data/prototypes.js.
+  The GOV.UK template's own `main` block, reproduced so a playground page can
+  wrap it in the side navigation shell. Only pages with `sideNav` set (every
+  playground page but sign-in — app/views/playground/routes.js) get the
+  shell; everything else, frozen versions and snapshots included, renders
+  exactly the template's markup. Nunjucks won't let a block be defined
+  twice, so beforeContent/content live inside this one block rather than
+  in an if/else with super().
 #}
-{% block beforeContent %}
+{% block main %}
+{% if sideNav %}
+  <div class="app-shell{% if sideNav.collapsed %} app-shell--collapsed{% endif %}{% if sideNav.autoCollapse %} app-shell--auto{% endif %}" data-module="app-side-nav"{% if sideNav.width and not sideNav.collapsed %} style="--app-side-nav-width: {{ sideNav.width }}px"{% endif %}>
+    <form id="side-nav-toggle-form" method="post" action="{{ sideNav.toggleHref }}" hidden>
+      <input type="hidden" name="collapsed" value="{{ 'false' if sideNav.collapsed else 'true' }}">
+      <input type="hidden" name="returnTo" value="{{ sideNav.returnTo }}">
+    </form>
+    {% if sideNav.autoCollapse %}
+      {#
+        Until the nav has been collapsed or expanded by hand, mid-width windows
+        show this rail instead of the full nav (CSS only). Its buttons expand
+        via their own form, since the toggle form above would collapse.
+      #}
+      <form id="side-nav-expand-form" method="post" action="{{ sideNav.toggleHref }}" hidden>
+        <input type="hidden" name="collapsed" value="false">
+        <input type="hidden" name="returnTo" value="{{ sideNav.returnTo }}">
+      </form>
+      <div class="app-shell__rail">
+        {% set railForm = "side-nav-expand-form" %}
+        {% include "partials/side-nav-rail.njk" %}
+      </div>
+    {% endif %}
+    <div class="app-shell__nav" id="app-shell-nav">
+      {% if sideNav.collapsed %}
+        {% include "partials/side-nav-rail.njk" %}
+      {% else %}
+        {% include "partials/side-nav.njk" %}
+      {% endif %}
+    </div>
+    {% if not sideNav.collapsed %}
+      {#
+        Drag/arrow-key resize handle, [hidden] until side-nav.js attaches.
+        Without JS the nav's native resize grip (bottom corner) still works.
+      #}
+      <div class="app-shell__resize" role="separator" aria-orientation="vertical"
+           aria-label="Resize navigation" aria-controls="app-shell-nav"
+           aria-valuemin="{{ sideNav.widthLimits.min }}" aria-valuemax="{{ sideNav.widthLimits.max }}"
+           data-side-nav-resize data-width-href="{{ sideNav.widthHref }}" tabindex="0" hidden></div>
+    {% endif %}
+    <div class="app-shell__main">
+      <div class="app-shell__toolbar">
+        {% from "partials/side-nav-icon.njk" import sideNavIcon %}
+        <button type="submit" form="side-nav-toggle-form" class="app-shell__toolbar-toggle app-shell__toolbar-toggle--wide" aria-controls="app-shell-nav" data-side-nav-toolbar-toggle>
+          {{ sideNavIcon("sidebar") }}
+          <span class="govuk-visually-hidden" data-side-nav-toolbar-label>{{ "Expand navigation" if sideNav.collapsed else "Collapse navigation" }}</span>
+        </button>
+        {% if sideNav.autoCollapse %}
+          {# Swapped in for the button above on mid-width windows, where the nav shows as the rail. #}
+          <button type="submit" form="side-nav-expand-form" class="app-shell__toolbar-toggle app-shell__toolbar-toggle--mid">
+            {{ sideNavIcon("sidebar") }}
+            <span class="govuk-visually-hidden">Expand navigation</span>
+          </button>
+        {% endif %}
+        <span class="app-shell__toolbar-divider" aria-hidden="true"></span>
+        {# Visual echo of the page <title>/<h1>, so hidden from assistive tech. #}
+        <span class="app-shell__toolbar-title" aria-hidden="true">{{ pageName or serviceName }}</span>
+      </div>
+{% endif %}
+  <div class="govuk-width-container{% if containerClasses %} {{ containerClasses }}{% endif %}">
+    {#
+      On a journey step the banner says which version the participant is looking at
+      and where they are in the sequence, so a research session can be recorded
+      against the right version. Both come from app/data/prototypes.js.
+    #}
+    {% block beforeContent %}
   {% set bannerHtml %}
     {% if journey %}
       {{ journeyVersion.name }} &middot; {{ journey.name }}
@@ -69,6 +142,17 @@
   {% if resolvedBackHref %}
     {{ govukBackLink({ text: backLinkText | default("Back"), href: resolvedBackHref }) }}
   {% endif %}
+    {% endblock %}
+    <main class="govuk-main-wrapper{% if mainClasses %} {{ mainClasses }}{% endif %}" id="main-content"{% if mainLang %} lang="{{ mainLang }}"{% endif %}>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+{% if sideNav %}
+    </div>
+    {# A page can add its own right-hand column here, styled to match .app-shell__nav — see app/views/playground/guide/page.njk. #}
+    {% block shellAside %}{% endblock %}
+  </div>
+{% endif %}
 {% endblock %}
 
 {% block footer %}
@@ -86,6 +170,11 @@
 {% block scripts %}
   <script src="/public/javascripts/quality-checks.js"></script>
   <script src="/public/javascripts/notes-panel.js"></script>
+  <script src="/public/javascripts/context-pane-resize.js"></script>
+  {% if sideNav %}
+    <script src="/public/javascripts/vendor/accessible-autocomplete.min.js"></script>
+    <script src="/public/javascripts/side-nav.js"></script>
+  {% endif %}
   {% include "govuk-prototype-kit/includes/scripts.njk" %}
   {% block pageScripts %}{% endblock %}
 {% endblock %}
