@@ -4,8 +4,8 @@
 // here fails safe: a network error, a non-2xx response, or unparsable JSON
 // all log a `[guidance-api-client]`-prefixed message to stderr and resolve
 // null, the same "never crash the dev server" convention
-// app/lib/guidance-loader.js and app/lib/guidance-api-loader.js already
-// use — callers never need a try/catch of their own around these.
+// app/lib/guidance-api-loader.js already uses — callers never need a
+// try/catch of their own around these.
 //
 // Uses Node's global fetch (available unprompted on the Node 24 this
 // project runs on locally — see CLAUDE.md) rather than adding an HTTP

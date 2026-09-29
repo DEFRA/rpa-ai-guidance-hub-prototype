@@ -8,10 +8,7 @@
 // change): metadata.js's 23 documents, each with its real step content
 // merged back on from its own .md file in ./content/ (see
 // app/lib/guidance-content-loader.js — most ids have no .md file and so
-// no steps, same as before), plus whatever app/lib/guidance-loader.js
-// finds in Documents/Guidance-data (project root — .gitignore'd, real
-// guidance .docx files are never committed), appended after them and
-// skipped on an id collision.
+// no steps, same as before).
 //
 // getGuidanceDocuments() below is the API-aware entry point: the hub and
 // guide pages (the only two that render a live guide list/a single
@@ -23,7 +20,6 @@
 const { GUIDANCE_API_ENABLED } = require('../../lib/feature-flags')
 const { loadGuidanceFromApi } = require('../../lib/guidance-api-loader')
 const { loadGuidanceContent } = require('../../lib/guidance-content-loader')
-const { loadGuidanceFromWordDocs } = require('../../lib/guidance-loader')
 const metadataDocuments = require('./metadata')
 
 const hardcodedGuidanceDocuments = metadataDocuments.map((document) => {
@@ -35,11 +31,7 @@ const hardcodedGuidanceDocuments = metadataDocuments.map((document) => {
 // (manage-guidance.js, document/, editor, both frozen snapshots) keeps
 // reading this exactly as before, API flag or not, since none of them can
 // await a fetch mid-render.
-const guidanceDocuments = hardcodedGuidanceDocuments.concat(
-  loadGuidanceFromWordDocs(
-    hardcodedGuidanceDocuments.map((document) => document.id)
-  )
-)
+const guidanceDocuments = hardcodedGuidanceDocuments
 
 // The API-aware entry point — hub and guide, the two pages that actually
 // need live API-sourced guides, call this instead. Fetches the manifest
