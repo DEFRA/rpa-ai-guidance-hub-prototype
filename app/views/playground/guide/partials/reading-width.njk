@@ -1,0 +1,19 @@
+{#
+  "Page width": Standard, Wide or Full width — after feedback that guides
+  were easier to read in Word, whose page is wider and centred. One form,
+  one submit button per width (name="width"), so it works without
+  JavaScript; aria-pressed marks the current one. Reads `readingWidth`,
+  `readingWidths`, `readingWidthHref` and `returnTo`
+  (guide/view-model.js).
+#}
+<form class="app-guide-reading-width" method="post" action="{{ readingWidthHref }}">
+  <input type="hidden" name="returnTo" value="{{ returnTo }}">
+  <span class="app-guide-reading-width__label" id="guide-reading-width-label">Page width</span>
+  <div class="app-guide-format-toggle app-guide-reading-width__options" role="group" aria-labelledby="guide-reading-width-label">
+    {% for option in readingWidths %}
+      <button type="submit" name="width" value="{{ option.value }}"
+        class="app-guide-format-toggle__option{{ ' app-guide-format-toggle__option--active' if option.value == readingWidth }}"
+        aria-pressed="{{ 'true' if option.value == readingWidth else 'false' }}">{{ option.text }}</button>
+    {% endfor %}
+  </div>
+</form>

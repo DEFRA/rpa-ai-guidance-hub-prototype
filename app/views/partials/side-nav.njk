@@ -143,7 +143,16 @@
             {% if case.guides.length %}
               <ul class="app-side-nav__sublist" aria-label="Guides bookmarked for {{ case.typeFullLabel }} {{ case.ref }}">
                 {% for guide in case.guides %}
-                  <li><a class="app-side-nav__sublink" href="{{ guide.href }}">{{ guide.title }}</a></li>
+                  <li>
+                    <a class="app-side-nav__sublink" href="{{ guide.href }}">{{ guide.title }}</a>
+                    {% if guide.sections.length %}
+                      <ul class="app-side-nav__section-list" aria-label="Bookmarked sections of {{ guide.title }}">
+                        {% for section in guide.sections %}
+                          <li><a class="app-side-nav__section-link" href="{{ section.href }}">{{ section.label }}</a></li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </li>
                 {% endfor %}
               </ul>
             {% endif %}

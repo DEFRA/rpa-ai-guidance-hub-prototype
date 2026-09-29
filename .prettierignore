@@ -4,3 +4,15 @@ coverage
 .tmp/
 .env
 migrate.log
+# Third-party/built bundles, and TipTap extensions kept byte-for-byte with
+# rpa-ai-guidance-hub-ui so they can be re-synced (scripts/tiptap-viewer/README.md).
+app/assets/javascripts/vendor/
+scripts/tiptap-viewer/src/extensions.js
+scripts/tiptap-viewer/src/coloured-text.js
+scripts/tiptap-viewer/src/tables.js
+scripts/tiptap-viewer/src/text-colours.js
+# Converted guide Markdown, kept as the converter writes it.
+app/data/guides/
+# Implementation plans quote code verbatim (including upstream files), which
+# Prettier would otherwise reformat inside their code blocks.
+docs/plans/

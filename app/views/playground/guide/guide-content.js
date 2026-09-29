@@ -2,6 +2,11 @@ const { Marked } = require('marked')
 const {
   documents: genericGuidanceContent
 } = require('../../../data/generic-guidance-content')
+const { guidanceDocuments } = require('../../../data/guidance-documents')
+const {
+  readGuideMarkdown,
+  splitGuideMarkdown
+} = require('../../../data/guide-markdown')
 const { fetchGuideContent } = require('../../../lib/guidance-api-client')
 
 // A guide's images fetch lazily, and only once near the viewport — without
@@ -45,7 +50,7 @@ function splitMarkdownIntoSections(markdown) {
   })
   if (!sectionStarts.length) return null
 
-  const rawSections = sectionStarts.map((start, sectionIndex) => {
+  return sectionStarts.map((start, sectionIndex) => {
     const end =
       sectionIndex + 1 < sectionStarts.length
         ? sectionStarts[sectionIndex + 1]
@@ -63,11 +68,27 @@ function splitMarkdownIntoSections(markdown) {
     if (!partStarts.length) {
       return {
         sectionName,
-        parts: [{ heading: sectionHeading, markdown: sectionLines.join('\n') }]
+        parts: [
+          {
+            heading: sectionHeading,
+            markdown: sectionLines.join('\n'),
+            isLead: true
+          }
+        ]
       }
     }
 
-    const parts = partStarts.map((partStart, partIndex) => {
+    const parts = []
+    const leadMarkdown = sectionLines.slice(0, partStarts[0]).join('\n').trim()
+    if (leadMarkdown) {
+      parts.push({
+        heading: sectionHeading,
+        markdown: leadMarkdown,
+        isLead: true
+      })
+    }
+
+    partStarts.forEach((partStart, partIndex) => {
       const partEnd =
         partIndex + 1 < partStarts.length
           ? partStarts[partIndex + 1]
@@ -75,47 +96,15 @@ function splitMarkdownIntoSections(markdown) {
       const partHeadingMatch = sectionLines[partStart].match(HEADING_LINE)
       const partName = partHeadingMatch[2].trim()
       const heading = (partHeadingMatch[3] || partName).trim()
-      return {
+      parts.push({
+        partName,
         heading,
         markdown: sectionLines.slice(partStart + 1, partEnd).join('\n')
-      }
+      })
     })
 
     return { sectionName, parts }
   })
-
-  // Numbers sections/parts and renders each part's own Markdown slice to
-  // HTML in one pass, the same convention guide-content.js's own
-  // fromSections (below) uses for mock content's structured body.
-  let partNumber = 0
-  const sections = rawSections.map((section, index) => {
-    const sectionNumber = index + 1
-    const parts = section.parts.map((part) => {
-      partNumber += 1
-      return {
-        id: 'part-' + partNumber,
-        partNumber,
-        sectionNumber,
-        sectionName: section.sectionName,
-        heading: part.heading,
-        html: marked.parse(part.markdown)
-      }
-    })
-    return {
-      id: 'section-' + sectionNumber,
-      sectionNumber,
-      sectionName: section.sectionName,
-      firstPartNumber: parts[0].partNumber,
-      parts
-    }
-  })
-
-  const flatParts = sections.reduce(
-    (all, section) => all.concat(section.parts),
-    []
-  )
-
-  return { sections, flatParts }
 }
 
 // A guide's Markdown content, fetched from the Prototype guides API
@@ -133,6 +122,7 @@ async function buildMarkdownGuideContent(documentId, versionId) {
   if (!markdown) {
     return {
       isMarkdown: true,
+      isApiGuide: true,
       error: true,
       html: '<p class="govuk-body">This guide could not be loaded right now.</p>'
     }
@@ -147,11 +137,15 @@ async function buildMarkdownGuideContent(documentId, versionId) {
     /\.\.\/assets\//g,
     `/playground/guide/${encodeURIComponent(documentId)}/assets/`
   )
+  const markdownSections = splitMarkdownIntoSections(rewritten)
 
   return {
     isMarkdown: true,
+    isApiGuide: true,
     html: marked.parse(rewritten),
-    ...(splitMarkdownIntoSections(rewritten) || {})
+    ...(markdownSections
+      ? fromSections(markdownSections, { renderMarkdown: true })
+      : {})
   }
 }
 
@@ -169,7 +163,15 @@ async function buildMarkdownGuideContent(documentId, versionId) {
 // the handful with real step content) falls back to
 // generic-guidance-content.js's placeholder 3-phase content, same as
 // before.
-function buildGuideContent(guidanceDocument) {
+//
+// A converted guide's Markdown (guide-markdown.js's splitGuideMarkdown)
+// takes precedence over all of these: its parts carry `markdown`, rendered
+// by the TipTap viewer, instead of a `body`.
+function buildGuideContent(guidanceDocument, markdownSections) {
+  if (Array.isArray(markdownSections) && markdownSections.length) {
+    return { ...fromSections(markdownSections), isMarkdown: true }
+  }
+
   if (guidanceDocument && guidanceDocument.steps) {
     const isNestedSteps = Array.isArray(guidanceDocument.steps[0].parts)
 
@@ -213,7 +215,7 @@ function buildGuideContent(guidanceDocument) {
 // stepper mode paginates over — the same numbering document/view/stepper's
 // controller.js already built for nested steps, just shared across all
 // three content shapes instead of only the nested one.
-function fromSections(rawSections) {
+function fromSections(rawSections, { renderMarkdown = false } = {}) {
   let partNumber = 0
   const sections = rawSections.map((section, index) => {
     const sectionNumber = index + 1
@@ -224,8 +226,16 @@ function fromSections(rawSections) {
         partNumber,
         sectionNumber,
         sectionName: section.sectionName,
+        partName: part.partName,
         heading: part.heading,
-        body: part.body
+        body: part.body,
+        markdown: part.markdown,
+        html:
+          part.html ||
+          (renderMarkdown && part.markdown
+            ? marked.parse(part.markdown)
+            : null),
+        isLead: Boolean(part.isLead)
       }
     })
     return {
@@ -245,4 +255,79 @@ function fromSections(rawSections) {
   return { sections, flatParts }
 }
 
-module.exports = { buildGuideContent, buildMarkdownGuideContent }
+// A guide's content by id: its content.md where one exists, otherwise
+// its structured JS content. Shared by the guide page and the pages that
+// need to resolve its sections (bookmark/, section/, position/).
+function loadGuideContent(id) {
+  const guidanceDocument = guidanceDocuments.find(
+    (candidate) => candidate.id === id
+  )
+  const markdown = readGuideMarkdown(id)
+  const content = buildGuideContent(
+    guidanceDocument,
+    markdown ? splitGuideMarkdown(markdown, id) : null
+  )
+  return { guidanceDocument, content }
+}
+
+// The stepper's "pages": groups of whole sections, from the guide's
+// metadata (guide-metadata.js's getStepperPages) or one section per page
+// by default. A section a grouping leaves out gets a page of its own at
+// the end, so a mistyped grouping never hides content.
+function groupPages(content, groups) {
+  const byNumber = {}
+  content.sections.forEach((section) => {
+    byNumber[section.sectionNumber] = section
+  })
+
+  const used = {}
+  const pages = []
+  ;(groups || []).forEach((group) => {
+    const sections = group.sections
+      .map((number) => byNumber[number])
+      .filter((section) => section && !used[section.sectionNumber])
+    if (!sections.length) return
+    sections.forEach((section) => {
+      used[section.sectionNumber] = true
+    })
+    pages.push({ title: group.title || sections[0].sectionName, sections })
+  })
+
+  content.sections
+    .filter((section) => !used[section.sectionNumber])
+    .forEach((section) => {
+      pages.push({ title: section.sectionName, sections: [section] })
+    })
+
+  return pages.map((page, index) => ({ ...page, pageNumber: index + 1 }))
+}
+
+// Where a section-N / part-N anchor lives: its page, and a label for it
+// (the part's heading, or the section's name) — or null if it isn't one
+// of this guide's.
+function findAnchor(pages, anchor) {
+  for (const page of pages) {
+    for (const section of page.sections) {
+      if (section.id === anchor) {
+        return {
+          anchor,
+          pageNumber: page.pageNumber,
+          label: section.sectionName
+        }
+      }
+      const part = section.parts.find((candidate) => candidate.id === anchor)
+      if (part) {
+        return { anchor, pageNumber: page.pageNumber, label: part.heading }
+      }
+    }
+  }
+  return null
+}
+
+module.exports = {
+  buildGuideContent,
+  buildMarkdownGuideContent,
+  loadGuideContent,
+  groupPages,
+  findAnchor
+}

@@ -137,20 +137,91 @@ $app-guide-panel-max-width: 480px;
   margin-left: govuk-spacing(2);
 }
 
-// Reading measure and hierarchy — capped width, generous line-height and
-// vertical rhythm, a Word-style heading scale (.app-guide-heading-1/-2)
+// Reading hierarchy — generous line-height and vertical rhythm (the width
+// is the page's, .app-guide-reading below), a Word-style heading scale (.app-guide-heading-1/-2)
 // with a rule only where a section itself ends (.app-guide-divider) so a
 // long guide still reads as distinct sections rather than one flat
 // scroll.
 .app-guide-body-text {
-  max-width: 42em;
   font-size: 19px;
   line-height: 1.5;
   margin-bottom: govuk-spacing(4);
 }
 
-.app-guide-section {
-  max-width: 42em;
+// The reading "page": centred in the space between the side nav and the
+// panel, one width for everything on it (title, contents, headings, body)
+// so it all lines up like a Word page, rather than each block capping
+// itself at its own em-based measure. The reader picks the width
+// (partials/reading-width.njk, guide/reading-width/); the widest just
+// fills the space available.
+.app-guide-reading {
+  max-width: 960px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.app-guide-reading--wide {
+  max-width: 1200px;
+}
+
+.app-guide-reading--full {
+  max-width: none;
+}
+
+// Pin guide and Page width, on one row under the title.
+.app-guide-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: govuk-spacing(2) govuk-spacing(4);
+  margin-bottom: govuk-spacing(4);
+
+  .app-pin-button {
+    margin-bottom: 0 !important;
+  }
+}
+
+.app-guide-reading-width {
+  display: flex;
+  align-items: center;
+  gap: govuk-spacing(2);
+}
+
+.app-guide-reading-width__label {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+// The format toggle's segmented look, on buttons rather than links.
+.app-guide-reading-width__options {
+  margin-bottom: 0;
+
+  .app-guide-format-toggle__option {
+    margin: 0;
+    border: 0;
+    background-color: $govuk-white;
+    color: $govuk-black;
+    cursor: pointer;
+
+    &:not(:last-child) {
+      border-right: 2px solid $govuk-black;
+    }
+  }
+
+  .app-guide-format-toggle__option--active {
+    background-color: $defra-green;
+    color: $govuk-white;
+  }
+
+  .app-guide-format-toggle__option:focus {
+    @include govuk-focused-text;
+  }
+}
+
+// The contents list stays a readable block, not a page-wide grey band.
+.app-guide-reading .app-guide-contents {
+  max-width: 640px;
 }
 
 .app-guide-section__eyebrow {
@@ -167,7 +238,6 @@ $app-guide-panel-max-width: 480px;
 // heading-1, every other part in that section is heading-2, told apart by
 // size/tag alone, the same way Word tells its own heading styles apart.
 .app-guide-heading-1 {
-  max-width: 42em;
   margin: govuk-spacing(6) 0 govuk-spacing(2);
   font-family: $govuk-font-family;
   font-weight: 700;
@@ -175,7 +245,6 @@ $app-guide-panel-max-width: 480px;
 }
 
 .app-guide-heading-2 {
-  max-width: 42em;
   margin: govuk-spacing(4) 0 govuk-spacing(2);
   font-family: $govuk-font-family;
   font-weight: 700;
@@ -195,21 +264,18 @@ $app-guide-panel-max-width: 480px;
 // the next within the same section, which read as nested under it by
 // heading size alone rather than a rule.
 .app-guide-divider {
-  max-width: 42em;
   margin: govuk-spacing(6) 0;
   border: 0;
   border-top: 1px solid $govuk-mid-grey;
 }
 
 .app-guide-progress {
-  max-width: 42em;
   margin-bottom: govuk-spacing(4);
 }
 
 // Contents lists — traditional's in-page anchor list and stepper's jump
 // list (current section/part marked, not colour alone).
 .app-guide-contents {
-  max-width: 42em;
   padding: govuk-spacing(3) govuk-spacing(4);
   margin-bottom: govuk-spacing(6);
   background-color: $govuk-light-grey;
@@ -239,7 +305,6 @@ $app-guide-panel-max-width: 480px;
 
 // The CASE_NOTE_BLOCK template placeholder.
 .app-guide-callout {
-  max-width: 42em;
   padding: govuk-spacing(3) govuk-spacing(4);
   margin-bottom: govuk-spacing(4);
   border-left: 5px solid $govuk-yellow;
@@ -264,7 +329,6 @@ $app-guide-panel-max-width: 480px;
 // and decide" moment doesn't look like the same thing as a template to
 // fill in.
 .app-guide-branch {
-  max-width: 42em;
   padding: govuk-spacing(3) govuk-spacing(4);
   margin-bottom: govuk-spacing(4);
   border-left: 5px solid govuk-colour('blue');
@@ -354,4 +418,93 @@ $app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3
   .app-guide-markdown--track-images img[loading='lazy']:not(.is-loaded) {
     background-image: url($app-guide-image-spinner-static);
   }
+}
+
+// A case's bookmarked sections of this guide, under the case itself.
+.app-guide-panel__bookmark-sections {
+  flex-basis: 100%;
+  margin: 0 0 0 govuk-spacing(3);
+  font-size: 16px;
+}
+
+.app-guide-panel__bookmark-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+  margin-bottom: govuk-spacing(1);
+}
+
+// A section heading with its bookmark icon beside it. The row takes the
+// heading's own margins so spacing matches a heading without one. The
+// icon is always visible (not hover-only) so it works for keyboard and
+// touch, and 36px square for a comfortable target (WCAG 2.5.8).
+.app-guide-heading-row {
+  display: flex;
+  align-items: center;
+  gap: govuk-spacing(1);
+  margin: govuk-spacing(6) 0 govuk-spacing(2);
+
+  .app-guide-heading-1,
+  .app-guide-heading-2 {
+    margin: 0;
+  }
+}
+
+// A subheading's row, with .app-guide-heading-2's own tighter spacing.
+.app-guide-heading-row--sub {
+  margin: govuk-spacing(4) 0 govuk-spacing(2);
+}
+
+.app-guide-section-bookmark {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+
+  // Pinned for :visited too — a purple icon would read as "visited", not
+  // as the bookmarked state the fill already shows.
+  &:link,
+  &:visited {
+    color: $govuk-link-colour;
+  }
+
+  &:hover {
+    background-color: $govuk-light-grey;
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    @include govuk-focused-text;
+  }
+}
+
+// Reuses the side nav's tooltip (_app-side-nav.scss), shown on hover and
+// keyboard focus and dismissed with Esc by side-nav.js.
+@include govuk-media-query($from: desktop) {
+  .app-guide-section-bookmark:hover .app-guide-section-bookmark__tooltip,
+  .app-guide-section-bookmark:focus-visible
+    .app-guide-section-bookmark__tooltip {
+    display: block;
+  }
+
+  .app-guide-section-bookmark.app-side-nav__rail-item--tooltip-dismissed
+    .app-guide-section-bookmark__tooltip {
+    display: none;
+  }
+}
+
+.app-guide-section-bookmarked {
+  margin: 0 0 govuk-spacing(3);
+  color: $govuk-secondary-text-colour;
+  font-size: 16px;
+}
+
+.app-search-results__resume {
+  margin-bottom: govuk-spacing(2);
 }

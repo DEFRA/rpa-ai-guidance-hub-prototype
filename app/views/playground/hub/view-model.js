@@ -9,9 +9,11 @@ const {
   findBookmark,
   readBookmarkFilter,
   isPinned,
+  sectionHref,
   LISTS,
   BOOKMARK_TYPES
 } = require('../../../data/side-nav')
+const { getGuidePosition } = require('../../../data/guide-positions')
 
 // Slug (querystring/form value) -> full label (the value buildManageGuidance
 // SearchResults' documents actually carry) for each single-choice facet.
@@ -164,10 +166,20 @@ async function fromSession(req) {
           overviewHref: `/playground/guide/${document.id}`
         })
       )
-  const allResults = baseResults.map((document) => ({
-    ...document,
-    pinned: isPinned(req, document.id)
-  }))
+  const allResults = baseResults.map((document) => {
+    // In the Recently opened list, a guide the reader has scrolled through
+    // opens where they left off (guide-positions.js, via guide/section/).
+    const position =
+      list === 'recently-opened' ? getGuidePosition(req, document.id) : null
+    return {
+      ...document,
+      overviewHref: position
+        ? sectionHref('/playground', document.id, position.anchor)
+        : document.overviewHref,
+      resumeLabel: position ? position.label : null,
+      pinned: isPinned(req, document.id)
+    }
+  })
 
   const searchText = q.toLowerCase()
   const stateLabels = states.map((value) => STATE_LABELS[value])

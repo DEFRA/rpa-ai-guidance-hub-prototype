@@ -31,7 +31,18 @@ function mapError(error, type) {
   }
 }
 
-function bookmarkPageViewModel(id, documentName, body, error) {
+// Back, Cancel and the post-submit redirect all return to the section
+// being bookmarked (via guide/section/), not the top of the guide.
+function returnHref(id, section) {
+  const guide = `/playground/guide/${encodeURIComponent(id)}`
+  return section
+    ? `${guide}/section/${encodeURIComponent(section.anchor)}`
+    : guide
+}
+
+// `section` ({ anchor, label }) makes this a section bookmark: the same
+// question, asked about one section rather than the whole guide.
+function bookmarkPageViewModel(id, documentName, section, body, error) {
   const type = body.type || ''
   const mapped = mapError(error, type)
   const errors = {}
@@ -40,6 +51,14 @@ function bookmarkPageViewModel(id, documentName, body, error) {
   return {
     id,
     documentName,
+    section,
+    heading: section
+      ? 'Bookmark this section to a case'
+      : 'Bookmark this guide to a case',
+    hintText: section
+      ? `‘${section.label}’ in ${documentName} will show under that case in the side navigation.`
+      : `${documentName} will show in that case's guide list on the side navigation.`,
+    cancelHref: returnHref(id, section),
     types: Object.keys(BOOKMARK_TYPES).map((key) => ({
       value: key,
       label: BOOKMARK_TYPES[key].label,
@@ -53,4 +72,4 @@ function bookmarkPageViewModel(id, documentName, body, error) {
   }
 }
 
-module.exports = { bookmarkPageViewModel, refFromBody }
+module.exports = { bookmarkPageViewModel, refFromBody, returnHref }

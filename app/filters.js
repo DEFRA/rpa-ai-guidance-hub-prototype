@@ -4,6 +4,7 @@
 //
 
 const govukPrototypeKit = require('govuk-prototype-kit')
+const { renderMarkdownFallback } = require('./lib/markdown-fallback')
 const addFilter = govukPrototypeKit.views.addFilter
 
 // Add your filters here
@@ -47,3 +48,17 @@ function renderLinkMarkers(value) {
 }
 
 addFilter('renderLinkMarkers', renderLinkMarkers, { renderAsHtml: true })
+
+// JSON for a <script type="application/json"> block. Every "<" is escaped
+// so content containing "</script>" can't end the block early.
+addFilter(
+  'jsonScript',
+  (value) => JSON.stringify(value).replace(/</g, '\\u003c'),
+  { renderAsHtml: true }
+)
+
+// A converted guide's Markdown rendered server-side (app/lib/markdown-fallback.js):
+// the no-JS view, and what find-in-page searches on hidden stepper pages.
+// Only renders committed sample content (app/data/guides), same trust as
+// page notes.
+addFilter('markdownFallback', renderMarkdownFallback, { renderAsHtml: true })

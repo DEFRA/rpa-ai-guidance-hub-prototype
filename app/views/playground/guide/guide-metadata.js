@@ -43,4 +43,19 @@ function getGuideMetadata(id) {
   return METADATA_BY_ID[id] || DEFAULT_METADATA
 }
 
-module.exports = { getGuideMetadata }
+// How the stepper groups a guide's top-level sections into pages (by
+// section number), for guides where one section per page is too fine.
+// A guide with no entry gets one section per page (guide-content.js's
+// groupPages). Would be set at upload in the real service.
+const STEPPER_PAGES_BY_ID = {
+  'sfi-nutrient-management-actions': [
+    { sections: [1] },
+    { title: 'Checking and finishing', sections: [2, 3] }
+  ]
+}
+
+function getStepperPages(id) {
+  return STEPPER_PAGES_BY_ID[id] || null
+}
+
+module.exports = { getGuideMetadata, getStepperPages }

@@ -111,7 +111,7 @@
 
 {% block content %}
 
-<div class="app-guide-reading">
+<div class="app-guide-reading app-guide-reading--{{ readingWidth }}"{% if positionHref %} data-guide-position-href="{{ positionHref }}"{% endif %}>
 
   {% if bookmarkSuccess %}
     {% call govukNotificationBanner({ type: "success" }) %}
@@ -127,19 +127,30 @@
 
   <h1 class="app-guide-title">{{ document.name }}</h1>
 
-  {% set pinDocumentId = document.id %}
-  {% include "partials/pin-button.njk" %}
+  <div class="app-guide-tools">
+    {% set pinDocumentId = document.id %}
+    {% include "partials/pin-button.njk" %}
+    {% include "playground/guide/partials/reading-width.njk" %}
+  </div>
 
-  {% if isMarkdown and (format != "stepper" or not content.sections) %}
+  {#
+    Resume reading: where this reader last was (saved as they scroll by
+    guide-position.js), offered on a fresh visit rather than jumped to, so
+    opening a guide stays predictable. The script hides it when the URL
+    already points somewhere (#anchor).
+  #}
+  {% if resume %}
+    <div class="govuk-inset-text app-guide-resume" data-guide-resume>
+      You were last reading <strong>{{ resume.label }}</strong>.
+      <a class="govuk-link" href="{{ resume.href }}">Continue reading<span class="govuk-visually-hidden"> from {{ resume.label }}</span></a>
+    </div>
+  {% endif %}
+
+  {% if content.html and (format != "stepper" or not content.sections) %}
     {#
-      An API-sourced guide (app/lib/guidance-api-loader.js) still has no
-      stepper/traditional split for its traditional format — content.html
-      is the whole guide, already rendered from its content.md by marked
-      (guide/guide-content.js's buildMarkdownGuideContent), so it's just
-      dropped in directly rather than through reading-content.njk's
-      section/part/pagination markup. Also the fallback when the fetch
-      failed (content.error) or the Markdown had no `## ` headings to
-      split on — reading-content.njk has nothing to paginate either way.
+      An API-sourced guide (app/lib/guidance-api-loader.js) still falls
+      back to one rendered blob for its traditional format when it has no
+      section split to paginate, or when the content fetch failed.
     #}
     <div class="app-guide-markdown">{{ content.html | safe }}</div>
   {% else %}
@@ -156,7 +167,8 @@
 
 {% block pageScripts %}
   {% include "partials/checks-widget-script.njk" %}
-  {% if isMarkdown %}
-    <script src="/public/javascripts/guide-images.js"></script>
-  {% endif %}
+  {% if isMarkdown and not isApiGuide %}<script src="/public/javascripts/vendor/tiptap-viewer.js"></script>{% endif %}
+  {% if isMarkdown or isApiGuide %}<script src="/public/javascripts/guide-images.js"></script>{% endif %}
+  {% if stepperPages %}<script src="/public/javascripts/guide-pages.js"></script>{% endif %}
+  {% if positionHref %}<script src="/public/javascripts/guide-position.js"></script>{% endif %}
 {% endblock %}
