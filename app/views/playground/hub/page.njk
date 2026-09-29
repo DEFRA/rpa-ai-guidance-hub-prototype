@@ -254,7 +254,7 @@
 
           <div class="app-search-results__top">
             <div class="govuk-!-margin-bottom-2">
-              {{ govukTag(versionTags[result.version]) }}
+              {% if versionTags[result.version] %}{{ govukTag(versionTags[result.version]) }}{% endif %}
               {{ govukTag(stateTags[result.state]) }}
               {% if result.pinned %}<strong class="govuk-tag govuk-tag--grey app-search-results__pinned-tag">Pinned</strong>{% endif %}
             </div>

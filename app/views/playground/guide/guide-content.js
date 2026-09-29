@@ -1,6 +1,39 @@
+const { marked } = require('marked')
 const {
   documents: genericGuidanceContent
 } = require('../../../data/generic-guidance-content')
+const { fetchGuideContent } = require('../../../lib/guidance-api-client')
+
+// A guide's Markdown content, fetched from the Prototype guides API
+// (app/lib/guidance-api-client.js) rather than parsed off a
+// guidanceDocuments entry's own `steps` — for these, latestVersionId
+// (app/lib/guidance-api-loader.js) already names the exact version to
+// read, so there's no manifest lookup to do here. Returns
+// `{ isMarkdown: true, html }`, a different shape entirely from
+// buildGuideContent's `{ sections, flatParts }` — the stepper/traditional
+// format machinery doesn't apply to a plain rendered document, so
+// guide/view-model.js short-circuits around it for these.
+async function buildMarkdownGuideContent(documentId, versionId) {
+  const markdown = await fetchGuideContent(documentId, versionId)
+  if (!markdown) {
+    return {
+      isMarkdown: true,
+      html: '<p class="govuk-body">This guide could not be loaded right now.</p>'
+    }
+  }
+
+  // Images in the fetched Markdown are relative links into a shared
+  // assets/ folder the browser can't reach directly (see
+  // docs/prototype-guides-api.md's "Rendering images" section) — rewritten
+  // here to the proxy route guide/routes.js exposes, which fetches the
+  // real bytes server-side.
+  const rewritten = markdown.replace(
+    /\.\.\/assets\//g,
+    `/playground/guide/${encodeURIComponent(documentId)}/assets/`
+  )
+
+  return { isMarkdown: true, html: marked.parse(rewritten) }
+}
 
 // A single content shape for the guide page's three design directions,
 // generalising the per-format logic the old stepper/traditional viewers
@@ -92,4 +125,4 @@ function fromSections(rawSections) {
   return { sections, flatParts }
 }
 
-module.exports = { buildGuideContent }
+module.exports = { buildGuideContent, buildMarkdownGuideContent }

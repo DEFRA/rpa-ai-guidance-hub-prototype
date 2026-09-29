@@ -7,9 +7,16 @@
 //
 
 // Switches app/data/guidance-documents/index.js between today's baked-in
-// dataset and the real API-backed one (currently a stub — see
-// app/lib/guidance-api-loader.js — since no endpoint, auth or Markdown
-// renderer exist in this prototype yet).
+// dataset and the real API-backed one — see app/lib/guidance-api-loader.js,
+// which reads the Prototype guides API (docs/prototype-guides-api.md) at
+// GUIDANCE_API_BASE_URL below.
 const GUIDANCE_API_ENABLED = process.env.GUIDANCE_API_ENABLED === 'true'
 
-module.exports = { GUIDANCE_API_ENABLED }
+// Base URL of the Prototype guides API (see
+// app/lib/guidance-api-client.js). Defaults to the local dev port the API
+// runs on so GUIDANCE_API_ENABLED works out of the box locally without
+// also having to set this.
+const GUIDANCE_API_BASE_URL =
+  process.env.GUIDANCE_API_BASE_URL || 'http://localhost:8085'
+
+module.exports = { GUIDANCE_API_ENABLED, GUIDANCE_API_BASE_URL }

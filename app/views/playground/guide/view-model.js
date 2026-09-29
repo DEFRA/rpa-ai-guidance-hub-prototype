@@ -1,9 +1,18 @@
-const { guidanceDocuments } = require('../../../data/guidance-documents')
-const { buildGuideContent } = require('./guide-content')
+const {
+  guidanceDocuments,
+  getGuidanceDocuments
+} = require('../../../data/guidance-documents')
+const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
+const { buildGuideContent, buildMarkdownGuideContent } = require('./guide-content')
 const { getGuideMetadata } = require('./guide-metadata')
 const { documentOverviewViewModel } = require('../document/view-model')
 const { getRole } = require('../../../data/context-pane')
-const { getBookmarks, BOOKMARK_TYPES } = require('../../../data/side-nav')
+const {
+  getBookmarks,
+  BOOKMARK_TYPES,
+  isPinned,
+  buildBookmarkForm
+} = require('../../../data/side-nav')
 const {
   uploadedGuide,
   V4_SCHEMES,
@@ -172,7 +181,70 @@ function buildEditorActions(id, status, document) {
   }
 }
 
-function guideViewModel(req, id) {
+// An API-sourced guide (app/lib/guidance-api-loader.js's isApiGuide
+// entries) has no editing/awaiting-approval/published session state, so
+// this bypasses documentOverviewViewModel's mock-lookup chain entirely
+// rather than trying to make a uuid id match it — and no
+// stepper/traditional sections/parts model either, so it also skips
+// guideViewModel's own pagination/branch-resolution logic below, going
+// straight from buildMarkdownGuideContent's `{ isMarkdown: true, html }`
+// to the view model. Everything else genuinely shared between a mock and
+// an API guide (pin, case bookmarks, reader metadata, the side panel
+// itself) is built the same way either path.
+async function buildMarkdownGuideViewModel(req, document) {
+  const content = await buildMarkdownGuideContent(
+    document.id,
+    document.latestVersionId
+  )
+  const defaultVersionKey =
+    document.version === 'Version 1' ? 'version1' : 'version2'
+
+  return {
+    id: document.id,
+    isMarkdown: true,
+    version: document.version,
+    document: {
+      id: document.id,
+      name: document.title,
+      version: document.version,
+      versions: document.versions,
+      description: document.description
+    },
+    currentVersion: document.versions[defaultVersionKey],
+    status: 'Published',
+    pin: {
+      pinned: isPinned(req, document.id),
+      href: '/playground/pin-toggle',
+      returnTo: req.originalUrl
+    },
+    caseBookmarks: buildCaseBookmarks(req, document.id),
+    bookmarkSuccess: buildBookmarkSuccess(req, document.id),
+    metadata: buildMetadata(req, document.id, document),
+    // No versions/publishing-checks data exists for an API guide (the
+    // Prototype guides API is read-only — docs/prototype-guides-api.md's
+    // "What this feature deliberately does not do") — so there is nothing
+    // for editor tools to act on, designer or not.
+    isEditor: false,
+    editorActions: null,
+    content,
+    panelCollapsed: getPanelCollapsed(req),
+    panelToggleHref: '/playground/guide/panel-toggle',
+    panelWidth: getPanelWidth(req),
+    panelWidthLimits: PANEL_WIDTH,
+    panelWidthHref: '/playground/guide/panel-width',
+    returnTo: req.originalUrl
+  }
+}
+
+async function guideViewModel(req, id) {
+  if (GUIDANCE_API_ENABLED) {
+    const documents = await getGuidanceDocuments()
+    const apiDocument = documents.find(
+      (candidate) => candidate.isApiGuide && candidate.id === id
+    )
+    if (apiDocument) return buildMarkdownGuideViewModel(req, apiDocument)
+  }
+
   const overview = documentOverviewViewModel(req, id)
   if (!overview) return null
 

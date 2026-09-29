@@ -94,7 +94,9 @@
       <div class="app-guide-panel__body" id="guide-panel-body">
         {% include "playground/guide/partials/case-bookmarks.njk" %}
 
-        {% include "playground/guide/partials/format-toggle.njk" %}
+        {% if not isMarkdown %}
+          {% include "playground/guide/partials/format-toggle.njk" %}
+        {% endif %}
 
         {% include "playground/guide/partials/metadata-list.njk" %}
 
@@ -119,7 +121,7 @@
   {% endif %}
 
   <div class="app-guide-byline">
-    {{ govukTag(versionTags[version]) }}
+    {% if versionTags[version] %}{{ govukTag(versionTags[version]) }}{% endif %}
     <span class="app-guide-byline__updated">Updated {{ currentVersion.lastUpdated }}</span>
   </div>
 
@@ -128,7 +130,19 @@
   {% set pinDocumentId = document.id %}
   {% include "partials/pin-button.njk" %}
 
-  {% include "playground/guide/partials/reading-content.njk" %}
+  {% if isMarkdown %}
+    {#
+      An API-sourced guide (app/lib/guidance-api-loader.js) has no
+      sections/parts/stepper model to walk — content.html is the whole
+      guide, already rendered from its content.md by marked
+      (guide/guide-content.js's buildMarkdownGuideContent), so it's just
+      dropped in directly rather than through reading-content.njk's
+      section/part/pagination markup.
+    #}
+    <div class="app-guide-markdown">{{ content.html | safe }}</div>
+  {% else %}
+    {% include "playground/guide/partials/reading-content.njk" %}
+  {% endif %}
 
 </div>
 
