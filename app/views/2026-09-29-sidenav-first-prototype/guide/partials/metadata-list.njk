@@ -1,0 +1,45 @@
+{#
+  Upload-journey metadata (scheme, audience, systems, owner, purpose,
+  required knowledge) as a plain description list — shared markup for the
+  panel (aside) and toolbar (disclosure) directions. The inline direction
+  weaves the same fields into the body instead, so it doesn't use this.
+  Reads `metadata` (2026-09-29-sidenav-first-prototype/guide/view-model.js's buildMetadata).
+#}
+<dl class="app-guide-metadata-list">
+  {% if metadata.scheme %}
+    <div class="app-guide-metadata-list__row">
+      <dt>Scheme</dt>
+      <dd>{{ metadata.scheme }}</dd>
+    </div>
+  {% endif %}
+  {% if metadata.audience.length %}
+    <div class="app-guide-metadata-list__row">
+      <dt>Who it's for</dt>
+      <dd>{{ metadata.audience | join(", ") }}</dd>
+    </div>
+  {% endif %}
+  {% if metadata.systems.length %}
+    <div class="app-guide-metadata-list__row">
+      <dt>Systems used</dt>
+      <dd>{{ metadata.systems | join(", ") }}</dd>
+    </div>
+  {% endif %}
+  {% if metadata.goal %}
+    <div class="app-guide-metadata-list__row">
+      <dt>Purpose</dt>
+      <dd>{{ metadata.goal }}</dd>
+    </div>
+  {% endif %}
+  {% if metadata.requirements %}
+    <div class="app-guide-metadata-list__row">
+      <dt>Required knowledge</dt>
+      <dd>{{ metadata.requirements }}</dd>
+    </div>
+  {% endif %}
+  {% if metadata.owner %}
+    <div class="app-guide-metadata-list__row">
+      <dt>Owner</dt>
+      <dd><a class="govuk-link" href="mailto:{{ metadata.owner }}">{{ metadata.owner }}</a></dd>
+    </div>
+  {% endif %}
+</dl>

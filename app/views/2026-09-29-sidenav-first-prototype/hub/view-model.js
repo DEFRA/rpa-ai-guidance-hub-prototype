@@ -1,9 +1,7 @@
 const {
   buildManageGuidanceSearchResults
 } = require('../../../data/manage-guidance')
-const {
-  getGuidanceDocuments
-} = require('../../../data/guidance-documents')
+const { getGuidanceDocuments } = require('../../../data/guidance-documents')
 const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
 const {
   getListIds,
@@ -48,12 +46,12 @@ function readSlug(value, fallback) {
 // page, so the reader doesn't scroll back down past the hero each time.
 const RESULTS_ANCHOR = '#guide-results'
 
-// Builds a /playground/hub?... href carrying every currently-applied filter
+// Builds a /2026-09-29-sidenav-first-prototype/hub?... href carrying every currently-applied filter
 // except the overrides given — used for both "this facet's own href when
 // nothing has changed yet" (not needed) and, more importantly, each
 // selected-filter tag's "remove just this one" link and Clear filters.
 // Omits a param entirely when it's at its default, so an unfiltered visit
-// stays a bare /playground/hub rather than growing empty querystring cruft.
+// stays a bare /2026-09-29-sidenav-first-prototype/hub rather than growing empty querystring cruft.
 function buildHref({
   q,
   list,
@@ -75,7 +73,9 @@ function buildHref({
   if (sort !== 'most-relevant') params.set('sort', sort)
 
   const query = params.toString()
-  const path = query ? `/playground/hub?${query}` : '/playground/hub'
+  const path = query
+    ? `/2026-09-29-sidenav-first-prototype/hub?${query}`
+    : '/2026-09-29-sidenav-first-prototype/hub'
   return path + RESULTS_ANCHOR
 }
 
@@ -103,7 +103,7 @@ function buildApiSearchResults(documents, overviewHrefBase) {
 }
 
 // The hub is now the single all-guidance list: what used to be the
-// separate /playground/hub/search page (its own Category/State/Scheme/
+// separate /2026-09-29-sidenav-first-prototype/hub/search page (its own Category/State/Scheme/
 // Year/Version filters and results — buildManageGuidanceSearchResults(),
 // unchanged) is rendered straight onto the hub, replacing the four tabs
 // (Recently opened, Saved guidance, Editing, Awaiting approval) that used
@@ -134,7 +134,10 @@ async function fromSession(req) {
   const knownBookmark = Boolean(
     bookmark && findBookmark(req, bookmark.type, bookmark.ref)
   )
-  const quickFilters = getQuickFilters(req, '/playground')
+  const quickFilters = getQuickFilters(
+    req,
+    '/2026-09-29-sidenav-first-prototype'
+  )
   const requestedList = readSlug(req.query.list, '')
   const list =
     !bookmark && quickFilters.some((filter) => filter.id === requestedList)
@@ -152,20 +155,24 @@ async function fromSession(req) {
   // fallback-to-mock logic itself.
   const documents = await getGuidanceDocuments()
   const baseResults = GUIDANCE_API_ENABLED
-    ? buildApiSearchResults(documents, '/playground/guide')
-    : buildManageGuidanceSearchResults(req, '/playground/document').map(
-        (document) => ({
-          ...document,
-          // buildManageGuidanceSearchResults() always joins its
-          // overviewHrefBase with a ?id= query string — the v6
-          // manage-guidance/document-overview convention. The hub links
-          // straight to the merged guide page (playground/guide/**)
-          // instead — one click from here to the guide itself, rather
-          // than through the old document overview/format-choice pages
-          // first.
-          overviewHref: `/playground/guide/${document.id}`
-        })
+    ? buildApiSearchResults(
+        documents,
+        '/2026-09-29-sidenav-first-prototype/guide'
       )
+    : buildManageGuidanceSearchResults(
+        req,
+        '/2026-09-29-sidenav-first-prototype/document'
+      ).map((document) => ({
+        ...document,
+        // buildManageGuidanceSearchResults() always joins its
+        // overviewHrefBase with a ?id= query string — the v6
+        // manage-guidance/document-overview convention. The hub links
+        // straight to the merged guide page (2026-09-29-sidenav-first-prototype/guide/**)
+        // instead — one click from here to the guide itself, rather
+        // than through the old document overview/format-choice pages
+        // first.
+        overviewHref: `/2026-09-29-sidenav-first-prototype/guide/${document.id}`
+      }))
   const allResults = baseResults.map((document) => ({
     ...document,
     pinned: isPinned(req, document.id)
@@ -295,9 +302,10 @@ async function fromSession(req) {
     },
     selectedSort: sort,
     selectedFilters,
-    clearFiltersHref: '/playground/hub' + RESULTS_ANCHOR,
+    clearFiltersHref:
+      '/2026-09-29-sidenav-first-prototype/hub' + RESULTS_ANCHOR,
     results,
-    pinToggleHref: '/playground/pin-toggle'
+    pinToggleHref: '/2026-09-29-sidenav-first-prototype/pin-toggle'
   }
 }
 

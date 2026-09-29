@@ -1,8 +1,8 @@
 {#
-  The playground hub — the de-versioned home page (the plan's own
+  The 2026-09-29-sidenav-first-prototype hub — the de-versioned home page (the plan's own
   disposition for /v6/unified-guidance: "keep as-is, becomes / (home)";
-  here that's /playground/hub, since the site's actual "/" still serves
-  the frozen versions index — see the playground build's own decisions
+  here that's /2026-09-29-sidenav-first-prototype/hub, since the site's actual "/" still serves
+  the frozen versions index — see the 2026-09-29-sidenav-first-prototype build's own decisions
   log for why). The hero is carried over unchanged from /v6/unified-guidance.
 
   Navigation (see page.notes.md): the side navigation (layouts/main.html,
@@ -82,7 +82,7 @@
     </div>
 
     <div class="govuk-width-container">
-      <form class="defra-home-header__search" method="get" action="/playground/hub" role="search">
+      <form class="defra-home-header__search" method="get" action="/2026-09-29-sidenav-first-prototype/hub" role="search">
         <label class="defra-home-header__search-label" for="defra-home-header-search-input">Search hub</label>
         <div class="defra-search-bar">
           <input class="govuk-input defra-search-bar__input" id="defra-home-header-search-input" name="q" type="search" autocomplete="off" value="{{ initialSearchQuery }}">
@@ -145,7 +145,7 @@
       its own. A hidden q field mirrors the current search text so applying
       a filter doesn't drop whatever's already been searched for.
     #}
-    <form id="hub-filters" method="get" action="/playground/hub#guide-results">
+    <form id="hub-filters" method="get" action="/2026-09-29-sidenav-first-prototype/hub#guide-results">
       <input type="hidden" name="q" value="{{ initialSearchQuery }}">
       {% if selectedList %}<input type="hidden" name="list" value="{{ selectedList }}">{% endif %}
       {% if selectedBookmark %}<input type="hidden" name="{{ selectedBookmark.param }}" value="{{ selectedBookmark.ref }}">{% endif %}

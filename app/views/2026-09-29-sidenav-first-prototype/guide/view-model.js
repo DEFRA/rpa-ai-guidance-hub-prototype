@@ -3,7 +3,10 @@ const {
   getGuidanceDocuments
 } = require('../../../data/guidance-documents')
 const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
-const { buildGuideContent, buildMarkdownGuideContent } = require('./guide-content')
+const {
+  buildGuideContent,
+  buildMarkdownGuideContent
+} = require('./guide-content')
 const { getGuideMetadata } = require('./guide-metadata')
 const { documentOverviewViewModel } = require('../document/view-model')
 const { getRole } = require('../../../data/context-pane')
@@ -80,7 +83,7 @@ function buildHref(id, format, step, anchor) {
   const params = new URLSearchParams({ format })
   if (step) params.set('step', step)
   return (
-    '/playground/guide/' +
+    '/2026-09-29-sidenav-first-prototype/guide/' +
     encodeURIComponent(id) +
     '?' +
     params.toString() +
@@ -121,7 +124,11 @@ function buildMetadata(req, id, document) {
 // The panel's "Case bookmarks" section — reads app/data/side-nav.js's own
 // store directly (getBookmarks) rather than buildBookmarkForm, which also
 // builds the add/remove form now moved to its own page (guide/bookmark/).
-function buildCaseBookmarks(req, id, base = '/playground') {
+function buildCaseBookmarks(
+  req,
+  id,
+  base = '/2026-09-29-sidenav-first-prototype'
+) {
   const items = getBookmarks(req)
     .filter((bookmark) => bookmark.documentIds.indexOf(id) !== -1)
     .map((bookmark) => ({
@@ -149,7 +156,11 @@ const BOOKMARK_SUCCESS_PHRASE = {
   sbi: 'SBI application number'
 }
 
-function buildBookmarkSuccess(req, id, base = '/playground') {
+function buildBookmarkSuccess(
+  req,
+  id,
+  base = '/2026-09-29-sidenav-first-prototype'
+) {
   const flash = req.session.data.guideBookmarkAdded
   if (!flash || flash.documentId !== id) return null
   delete req.session.data.guideBookmarkAdded
@@ -177,13 +188,16 @@ function buildEditorActions(id, status, document) {
     changesRequested: document.changesRequested,
     continueEditingHref:
       status !== 'Published'
-        ? '/playground/editor?id=' + encodeURIComponent(id)
+        ? '/2026-09-29-sidenav-first-prototype/editor?id=' +
+          encodeURIComponent(id)
         : null,
     startEditingHref:
       status === 'Published'
-        ? '/playground/document/' + encodeURIComponent(id) + '/start-editing'
+        ? '/2026-09-29-sidenav-first-prototype/document/' +
+          encodeURIComponent(id) +
+          '/start-editing'
         : null,
-    issuesHref: '/playground/issues'
+    issuesHref: '/2026-09-29-sidenav-first-prototype/issues'
   }
 }
 
@@ -220,7 +234,7 @@ async function buildMarkdownGuideViewModel(req, document) {
     status: 'Published',
     pin: {
       pinned: isPinned(req, document.id),
-      href: '/playground/pin-toggle',
+      href: '/2026-09-29-sidenav-first-prototype/pin-toggle',
       returnTo: req.originalUrl
     },
     caseBookmarks: buildCaseBookmarks(req, document.id),
@@ -234,10 +248,10 @@ async function buildMarkdownGuideViewModel(req, document) {
     editorActions: null,
     content,
     panelCollapsed: getPanelCollapsed(req),
-    panelToggleHref: '/playground/guide/panel-toggle',
+    panelToggleHref: '/2026-09-29-sidenav-first-prototype/guide/panel-toggle',
     panelWidth: getPanelWidth(req),
     panelWidthLimits: PANEL_WIDTH,
-    panelWidthHref: '/playground/guide/panel-width',
+    panelWidthHref: '/2026-09-29-sidenav-first-prototype/guide/panel-width',
     returnTo: req.originalUrl
   }
 }
@@ -381,10 +395,10 @@ async function guideViewModel(req, id) {
     prevLink,
     nextLink,
     panelCollapsed: getPanelCollapsed(req),
-    panelToggleHref: '/playground/guide/panel-toggle',
+    panelToggleHref: '/2026-09-29-sidenav-first-prototype/guide/panel-toggle',
     panelWidth: getPanelWidth(req),
     panelWidthLimits: PANEL_WIDTH,
-    panelWidthHref: '/playground/guide/panel-width',
+    panelWidthHref: '/2026-09-29-sidenav-first-prototype/guide/panel-width',
     returnTo: req.originalUrl
   }
 }
