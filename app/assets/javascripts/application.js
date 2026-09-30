@@ -793,12 +793,8 @@ window.GOVUKPrototypeKit.documentReady(() => {
   // other imports, or its schema checks fail against a duplicate copy.
   Promise.all([
     import('https://esm.sh/@tiptap/core@2?deps=@tiptap/pm@2'),
-    import(
-      'https://esm.sh/@tiptap/starter-kit@2?deps=@tiptap/core@2,@tiptap/pm@2'
-    ),
-    import(
-      'https://esm.sh/tiptap-markdown@0.8.10?deps=@tiptap/core@2,@tiptap/pm@2'
-    )
+    import('https://esm.sh/@tiptap/starter-kit@2?deps=@tiptap/core@2,@tiptap/pm@2'),
+    import('https://esm.sh/tiptap-markdown@0.8.10?deps=@tiptap/core@2,@tiptap/pm@2')
   ])
     .then(([core, starterKit, markdown]) => {
       const editor = new core.Editor({

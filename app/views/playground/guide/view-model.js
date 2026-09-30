@@ -3,7 +3,10 @@ const {
   getGuidanceDocuments
 } = require('../../../data/guidance-documents')
 const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
-const { buildGuideContent, buildMarkdownGuideContent } = require('./guide-content')
+const {
+  buildGuideContent,
+  buildMarkdownGuideContent
+} = require('./guide-content')
 const { getGuideMetadata } = require('./guide-metadata')
 const { documentOverviewViewModel } = require('../document/view-model')
 const { getRole } = require('../../../data/context-pane')

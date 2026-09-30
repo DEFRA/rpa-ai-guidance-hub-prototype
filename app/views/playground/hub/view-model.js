@@ -1,9 +1,7 @@
 const {
   buildManageGuidanceSearchResults
 } = require('../../../data/manage-guidance')
-const {
-  getGuidanceDocuments
-} = require('../../../data/guidance-documents')
+const { getGuidanceDocuments } = require('../../../data/guidance-documents')
 const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
 const {
   getListIds,

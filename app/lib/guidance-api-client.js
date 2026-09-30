@@ -35,10 +35,7 @@ async function fetchManifest() {
     }
     return await response.json()
   } catch (error) {
-    console.error(
-      '[guidance-api-client] manifest fetch failed:',
-      error.message
-    )
+    console.error('[guidance-api-client] manifest fetch failed:', error.message)
     return null
   }
 }

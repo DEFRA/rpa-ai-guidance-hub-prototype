@@ -83,17 +83,6 @@ module.exports = {
       author: 'Shaun Fitzsimons',
       changes: [],
       journeys: []
-    },
-    {
-      id: '2026-09-29-sidenav-first-prototype',
-      name: 'Sidenav First Prototype',
-      status: 'archived',
-      date: '29 September 2026 at 17:47',
-      entryHref: '/2026-09-29-sidenav-first-prototype/',
-      purpose: 'Save first side nav prototype after UR',
-      author: 'sfitz42',
-      changes: [],
-      journeys: []
     }
   ]
 }
