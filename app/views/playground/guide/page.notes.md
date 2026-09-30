@@ -129,3 +129,13 @@ Ctrl+F in the stepper, after research criticised it only searching the current p
 - **Revealed pages keep the server-rendered HTML** rather than mounting TipTap. Swapping the DOM under the browser's find highlight would lose the match and break "find next". So only the current page carries the Markdown for the viewer, which also keeps a 200-page guide from starting 200 editors. The server-rendered HTML (`app/lib/markdown-fallback.js`) now matches TipTap for colour spans, highlights and lists in table cells, so the two look the same.
 
 Open question: on a 200-page guide the stepper's HTML is the whole guide. Check the page weight with a real converted document. Subheadings get the same icon, and the bookmark stores their `part-N` anchor, which the bookmark page, `section/`, the panel and the side nav already resolve. Headings nested inside a converted part's Markdown (`####` and deeper, rendered by TipTap) don't get one yet: they have no anchor of their own.
+
+---
+
+**Shaun Fitzsimons — 29 September 2026**
+
+API guides now get the stepper, and the Traditional/Stepper toggle. Their Markdown goes through the same split as a local `content.md`, so pages come from the headings, one section per page.
+
+- **No per-guide grouping yet.** `getStepperPages` is keyed by local id. The manifest would need an optional `stepperPages` field to group sections for an API guide.
+- **Bookmarks are off for API guides.** The bookmark, `section/` and `position/` modules re-read content by local id, so heading bookmarks and "resume reading" are hidden for now.
+- **A guide with no headings** still renders flat, as before.

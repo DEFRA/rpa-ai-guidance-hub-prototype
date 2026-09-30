@@ -5,10 +5,10 @@ const { locateAnchor, readFormat, buildHref } = require('../view-model')
 // that lands on the right stepper page or traditional anchor for however
 // this reader views the guide, since only the guide knows which page holds
 // which section.
-function get(req, res) {
+async function get(req, res) {
   const { id, anchor } = req.params
   const guideHref = '/playground/guide/' + encodeURIComponent(id)
-  const found = locateAnchor(id, anchor)
+  const found = await locateAnchor(req, id, anchor)
 
   if (!found) {
     res.redirect(guideHref)

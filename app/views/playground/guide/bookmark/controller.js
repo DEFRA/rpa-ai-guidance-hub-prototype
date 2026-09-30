@@ -1,44 +1,53 @@
 const { documentOverviewViewModel } = require('../../document/view-model')
 const { addBookmark, normaliseReference } = require('../../../../data/side-nav')
-const { locateAnchor } = require('../view-model')
+const { locateAnchor, findApiGuide } = require('../view-model')
 const {
   bookmarkPageViewModel,
   refFromBody,
   returnHref
 } = require('./view-model')
 
+// The guide's name (an API guide has no mock document overview) — null
+// when the id is neither.
+async function guideName(req, id) {
+  const apiGuide = await findApiGuide(req, id)
+  if (apiGuide) return { name: apiGuide.title }
+  const overview = documentOverviewViewModel(req, id)
+  return overview ? { name: overview.document.name } : null
+}
+
 // A section bookmark (?section= from a section heading, or the form's
 // hidden field on submit) — null for a whole-guide bookmark or an anchor
 // this guide doesn't have.
-function sectionFrom(id, anchor) {
-  return anchor ? locateAnchor(id, String(anchor)) : null
+async function sectionFrom(req, id, anchor) {
+  return anchor ? locateAnchor(req, id, String(anchor)) : null
 }
 
-function get(req, res) {
+async function get(req, res) {
   const id = req.params.id
-  const overview = documentOverviewViewModel(req, id)
-  if (!overview) {
+  const guide = await guideName(req, id)
+  if (!guide) {
     res.redirect('/playground/hub')
     return
   }
 
-  const section = sectionFrom(id, req.query.section)
+  const section = await sectionFrom(req, id, req.query.section)
   res.locals.backHref = returnHref(id, section)
   res.render(
     'playground/guide/bookmark/page.njk',
-    bookmarkPageViewModel(id, overview.document.name, section, {}, null)
+    bookmarkPageViewModel(id, guide.name, section, {}, null)
   )
 }
 
-function post(req, res) {
+async function post(req, res) {
   const id = req.params.id
-  const overview = documentOverviewViewModel(req, id)
-  if (!overview) {
+  const guide = await guideName(req, id)
+  if (!guide) {
     res.redirect('/playground/hub')
     return
   }
 
-  const section = sectionFrom(id, req.body.section)
+  const section = await sectionFrom(req, id, req.body.section)
   const type = req.body.type
   const ref = refFromBody(type, req.body)
   const error = addBookmark(req, type, ref, id, section)
@@ -47,13 +56,7 @@ function post(req, res) {
     res.locals.backHref = returnHref(id, section)
     res.render(
       'playground/guide/bookmark/page.njk',
-      bookmarkPageViewModel(
-        id,
-        overview.document.name,
-        section,
-        req.body,
-        error
-      )
+      bookmarkPageViewModel(id, guide.name, section, req.body, error)
     )
     return
   }

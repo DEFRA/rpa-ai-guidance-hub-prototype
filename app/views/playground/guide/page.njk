@@ -146,12 +146,25 @@
     </div>
   {% endif %}
 
-  {% if content.html and (format != "stepper" or not content.sections) %}
+  {% if isApiGuide and not content.sections %}
     {#
-      An API-sourced guide (app/lib/guidance-api-loader.js) still falls
-      back to one rendered blob for its traditional format when it has no
-      section split to paginate, or when the content fetch failed.
+      An API guide with no headings to split on has no
+      sections/parts/stepper model to walk — content.html is the whole
+      guide, already rendered from its content.md by marked
+      (guide/guide-content.js's buildMarkdownGuideContent), so it's just
+      dropped in directly rather than through reading-content.njk's
+      section/part/pagination markup.
     #}
+    {% if content.contents.length %}
+      <nav class="app-guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
+        <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
+        <ul class="govuk-list app-guide-contents__list app-guide-contents__list--flat">
+          {% for heading in content.contents %}
+            <li class="app-guide-contents__item--depth-{{ heading.depth }}"><a class="govuk-link app-guide-contents__link" href="#{{ heading.id }}" data-guide-toc-target="{{ heading.id }}">{{ heading.text }}</a></li>
+          {% endfor %}
+        </ul>
+      </nav>
+    {% endif %}
     <div class="app-guide-markdown">{{ content.html | safe }}</div>
   {% else %}
     {% include "playground/guide/partials/reading-content.njk" %}
@@ -167,8 +180,9 @@
 
 {% block pageScripts %}
   {% include "partials/checks-widget-script.njk" %}
-  {% if isMarkdown and not isApiGuide %}<script src="/public/javascripts/vendor/tiptap-viewer.js"></script>{% endif %}
-  {% if isMarkdown or isApiGuide %}<script src="/public/javascripts/guide-images.js"></script>{% endif %}
+  {% if isMarkdown %}<script src="/public/javascripts/vendor/tiptap-viewer.js"></script>{% endif %}
+  <script src="/public/javascripts/guide-images.js"></script>
   {% if stepperPages %}<script src="/public/javascripts/guide-pages.js"></script>{% endif %}
+  {% if content.contents %}<script src="/public/javascripts/guide-toc.js"></script>{% endif %}
   {% if positionHref %}<script src="/public/javascripts/guide-position.js"></script>{% endif %}
 {% endblock %}

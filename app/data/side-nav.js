@@ -60,7 +60,10 @@ const BOOKMARK_TYPES = {
 
 const REFERENCE_MAX_LENGTH = 20
 
+// With the API on, its guides replace the mock list entirely (as on the
+// hub); playground/routes.js fetches them onto req.apiGuides.
 function allDocuments(req) {
+  if (req.apiGuides) return req.apiGuides
   return manageGuidance.buildManageGuidanceSearchResults(req, '')
 }
 
@@ -129,22 +132,26 @@ function togglePin(req, id) {
 // an older session's differently shaped data is simply ignored.
 function getBookmarks(req) {
   if (!req.session.data.guideBookmarks) {
-    req.session.data.guideBookmarks = [
-      {
-        type: 'case',
-        ref: 'CASE-10482',
-        documentIds: [
-          'cs-ma-claim-parcel-not-under-control-of-sbi-signoff-2026',
-          'cs-ma-evidence-required-2026',
-          'cs-mid-tier-hedgerow-and-boundary-options'
+    // The seeded examples name mock guides, so with the API on they'd be
+    // empty cases — start with none.
+    req.session.data.guideBookmarks = req.apiGuides
+      ? []
+      : [
+          {
+            type: 'case',
+            ref: 'CASE-10482',
+            documentIds: [
+              'cs-ma-claim-parcel-not-under-control-of-sbi-signoff-2026',
+              'cs-ma-evidence-required-2026',
+              'cs-mid-tier-hedgerow-and-boundary-options'
+            ]
+          },
+          {
+            type: 'sbi',
+            ref: '123456789',
+            documentIds: ['sfi-soil-health-actions']
+          }
         ]
-      },
-      {
-        type: 'sbi',
-        ref: '123456789',
-        documentIds: ['sfi-soil-health-actions']
-      }
-    ]
   }
   // `sections` pins a bookmark to specific sections of its guides
   // ({ documentId, anchor, label }); `documentIds` still lists every guide

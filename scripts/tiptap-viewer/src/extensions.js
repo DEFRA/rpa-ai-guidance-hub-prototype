@@ -24,7 +24,9 @@ import { FaithfulTable } from './tables.js'
 // a converted document render as plain text.
 const EXTENSIONS = [
   StarterKit.configure({ underline: false }),
-  Image,
+  // Lazy, so images on hidden stepper pages and far down a traditional guide
+  // aren't fetched until they're near the viewport.
+  Image.configure({ HTMLAttributes: { loading: 'lazy', decoding: 'async' } }),
   // The stock Table pads its Markdown with a blank line at each end, welds the
   // blocks of a multi-block cell together, and reads a cell's list back as a
   // paragraph wearing hyphens. See `tables.js`.

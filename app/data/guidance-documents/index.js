@@ -53,4 +53,20 @@ async function getGuidanceDocuments() {
   return guidanceDocuments
 }
 
-module.exports = { guidanceDocuments, getGuidanceDocuments }
+// getGuidanceDocuments once per request, however many handlers ask — and
+// exposed on req.apiGuides (which app/data/side-nav.js reads synchronously)
+// when the API is on.
+async function getRequestGuidanceDocuments(req) {
+  if (!req.guidanceDocumentsPromise) {
+    req.guidanceDocumentsPromise = getGuidanceDocuments()
+  }
+  const documents = await req.guidanceDocumentsPromise
+  if (GUIDANCE_API_ENABLED) req.apiGuides = documents
+  return documents
+}
+
+module.exports = {
+  guidanceDocuments,
+  getGuidanceDocuments,
+  getRequestGuidanceDocuments
+}

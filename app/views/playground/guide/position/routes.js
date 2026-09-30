@@ -7,11 +7,11 @@ const { setGuidePosition } = require('../../../../data/guide-positions')
 // panel-width/routes.js. An anchor the guide doesn't have is ignored.
 const router = govukPrototypeKit.requests.setupRouter('/playground/guide')
 
-router.post('/:id/position', (req, res) => {
+router.post('/:id/position', async (req, res) => {
   setGuidePosition(
     req,
     req.params.id,
-    locateAnchor(req.params.id, String(req.body.anchor || ''))
+    await locateAnchor(req, req.params.id, String(req.body.anchor || ''))
   )
   res.sendStatus(204)
 })

@@ -63,6 +63,8 @@ Add a case note using this template, replacing the red text:
 
 > Nutrient management actions checked for [\[SBI\]]{.red}. Evidence reviewed: [\[list the evidence\]]{.red}. Outcome: [\[pass or query\]]{.red}.
 
+If the claim needs more evidence, go to [3.2 If the customer does not respond](#32-if-the-customer-does-not-respond) first.
+
 Then set the case status to **Checked** if everything passed, or **Awaiting customer** if you raised a query.
 
 ### 3.2 If the customer does not respond

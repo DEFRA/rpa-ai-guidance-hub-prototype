@@ -222,6 +222,97 @@ $app-guide-panel-max-width: 480px;
 // The contents list stays a readable block, not a page-wide grey band.
 .app-guide-reading .app-guide-contents {
   max-width: 640px;
+  padding: govuk-spacing(4) govuk-spacing(5);
+}
+
+// Wide enough for it, the contents list floats as a sticky sidebar beside
+// the reading column: everything else on the page moves to column 2, the
+// list spans every row of column 1 and sticks as the reader scrolls.
+$app-guide-toc-width: 340px;
+
+// The list is pinned to the left of the space available whatever the
+// reader's page width: the container fills it, and the width option caps
+// (and centres) the column beside the list instead.
+@media (min-width: 1100px) {
+  .app-guide-reading,
+  .app-guide-reading--wide,
+  .app-guide-reading--full {
+    display: grid;
+    grid-template-columns: $app-guide-toc-width minmax(0, 1fr);
+    column-gap: govuk-spacing(6);
+    max-width: none;
+    margin-right: 0;
+    margin-left: 0;
+
+    > * {
+      grid-column: 2;
+      width: 100%;
+      max-width: var(--app-guide-width, 960px);
+      margin-right: auto;
+      margin-left: auto;
+    }
+
+    > .app-guide-contents {
+      grid-column: 1;
+      grid-row: 1 / span 99;
+      align-self: start;
+      position: sticky;
+      top: govuk-spacing(4);
+      margin-right: 0;
+      margin-left: 0;
+      max-width: none;
+      max-height: calc(100vh - #{govuk-spacing(8)});
+      overflow-y: auto;
+    }
+  }
+
+  .app-guide-reading--wide {
+    --app-guide-width: 1200px;
+  }
+
+  .app-guide-reading--full {
+    --app-guide-width: none;
+  }
+}
+
+// The heading a jump link lands on isn't flush with the top of the window.
+.app-guide-reading [id] {
+  scroll-margin-top: govuk-spacing(4);
+}
+
+// Spacing follows the jump in heading level: a new section (h1 after h1)
+// gets the most room, a part after its section the least, and one part
+// after another sits in between.
+.app-guide-contents__list--flat .app-guide-contents__item--depth-3 {
+  padding-left: govuk-spacing(3);
+}
+
+.app-guide-contents__list--flat > li {
+  margin-bottom: 0;
+}
+
+.app-guide-contents__item--depth-2 {
+  margin-top: govuk-spacing(5);
+}
+
+.app-guide-contents__item--depth-3 {
+  margin-top: govuk-spacing(2);
+}
+
+.app-guide-contents__item--depth-2 + .app-guide-contents__item--depth-3 {
+  margin-top: govuk-spacing(1);
+}
+
+.app-guide-contents__list--flat > li:first-child {
+  margin-top: 0;
+}
+
+.app-guide-contents__link--group,
+.app-guide-contents__link[aria-current='location'],
+.app-guide-contents__section-link[aria-current='location'] {
+  font-weight: 700;
+  color: $govuk-black;
+  text-decoration: none;
 }
 
 .app-guide-section__eyebrow {
@@ -286,11 +377,25 @@ $app-guide-panel-max-width: 480px;
   // list padding to 0, so an unmarked, indented sub-list needs its own).
   margin-bottom: 0;
   padding-left: govuk-spacing(4);
+
+  > li {
+    margin-bottom: 0;
+  }
 }
 
 .app-guide-contents__section {
-  margin: govuk-spacing(2) 0 govuk-spacing(1);
+  margin: govuk-spacing(5) 0 govuk-spacing(1);
   font-weight: 700;
+
+  &:first-of-type {
+    margin-top: govuk-spacing(2);
+  }
+}
+
+// Part after part: closer than section to section, further than a section
+// to its first part.
+.app-guide-contents__list > li + li {
+  margin-top: govuk-spacing(2);
 }
 
 .app-guide-contents__section--current .app-guide-contents__section-link {
@@ -399,27 +504,6 @@ $app-guide-panel-max-width: 480px;
   display: block;
 }
 
-// Space held for a lazy image until it loads (guide-images.js), so the ones
-// further down don't all sit at 0px height inside the browser's load range,
-// with a spinner (an animated SVG, static for reduced motion) so it reads
-// as loading rather than as a gap.
-$app-guide-image-spinner: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23b1b4b6' stroke-width='4'/%3E%3Cpath d='M20 4a16 16 0 0 1 16 16' fill='none' stroke='%231d70b8' stroke-width='4' stroke-linecap='round'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 20 20' to='360 20 20' dur='0.9s' repeatCount='indefinite'/%3E%3C/path%3E%3C/svg%3E";
-$app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23b1b4b6' stroke-width='4'/%3E%3Cpath d='M20 4a16 16 0 0 1 16 16' fill='none' stroke='%231d70b8' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E";
-
-.app-guide-markdown--track-images img[loading='lazy']:not(.is-loaded) {
-  display: block;
-  width: 100%;
-  min-height: 30rem;
-  background: govuk-colour('light-grey') url($app-guide-image-spinner) no-repeat
-    center;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-guide-markdown--track-images img[loading='lazy']:not(.is-loaded) {
-    background-image: url($app-guide-image-spinner-static);
-  }
-}
-
 // A case's bookmarked sections of this guide, under the case itself.
 .app-guide-panel__bookmark-sections {
   flex-basis: 100%;
@@ -507,4 +591,25 @@ $app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3
 
 .app-search-results__resume {
   margin-bottom: govuk-spacing(2);
+}
+
+// Space held for a lazy image until it loads (guide-images.js), so the ones
+// further down don't all sit at 0px height inside the browser's load range,
+// with a spinner (an animated SVG, static for reduced motion) so it reads
+// as loading rather than as a gap.
+$app-guide-image-spinner: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23b1b4b6' stroke-width='4'/%3E%3Cpath d='M20 4a16 16 0 0 1 16 16' fill='none' stroke='%231d70b8' stroke-width='4' stroke-linecap='round'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 20 20' to='360 20 20' dur='0.9s' repeatCount='indefinite'/%3E%3C/path%3E%3C/svg%3E";
+$app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23b1b4b6' stroke-width='4'/%3E%3Cpath d='M20 4a16 16 0 0 1 16 16' fill='none' stroke='%231d70b8' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E";
+
+.app-guide-reading--track-images img[loading='lazy']:not(.is-loaded) {
+  display: block;
+  width: 100%;
+  min-height: 30rem;
+  background: govuk-colour('light-grey') url($app-guide-image-spinner) no-repeat
+    center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-guide-reading--track-images img[loading='lazy']:not(.is-loaded) {
+    background-image: url($app-guide-image-spinner-static);
+  }
 }

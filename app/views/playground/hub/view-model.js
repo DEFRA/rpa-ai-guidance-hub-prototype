@@ -1,7 +1,9 @@
 const {
   buildManageGuidanceSearchResults
 } = require('../../../data/manage-guidance')
-const { getGuidanceDocuments } = require('../../../data/guidance-documents')
+const {
+  getRequestGuidanceDocuments
+} = require('../../../data/guidance-documents')
 const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
 const {
   getListIds,
@@ -122,6 +124,8 @@ function buildApiSearchResults(documents, overviewHrefBase) {
 // year/state/sort/q), not client-side JS, so the page works with
 // JavaScript off — see page.notes.md for why that changed.
 async function fromSession(req) {
+  // First, so req.apiGuides is set before anything reads the guide list.
+  const documents = await getRequestGuidanceDocuments(req)
   const q = (req.query.q || '').trim()
 
   const category = readSlug(req.query.category, 'all')
@@ -150,7 +154,6 @@ async function fromSession(req) {
   // buildManageGuidanceSearchResults' mock editing/awaiting/published
   // rows. See app/data/guidance-documents/index.js for the API-call/
   // fallback-to-mock logic itself.
-  const documents = await getGuidanceDocuments()
   const baseResults = GUIDANCE_API_ENABLED
     ? buildApiSearchResults(documents, '/playground/guide')
     : buildManageGuidanceSearchResults(req, '/playground/document').map(

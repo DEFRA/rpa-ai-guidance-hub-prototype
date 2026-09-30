@@ -58,11 +58,13 @@
 {% macro headingBookmark(target, name) %}
   {% set isBookmarked = target.bookmarkedTo.length > 0 %}
   {% set label = "Bookmarked – add another case" if isBookmarked else "Bookmark to a case" %}
+  {% if target.bookmarkHref %}
   <a class="app-guide-section-bookmark{{ ' app-guide-section-bookmark--active' if isBookmarked }}" href="{{ target.bookmarkHref }}" data-side-nav-tooltip>
     {{ sideNavIcon("bookmark-filled" if isBookmarked else "bookmark") }}
     <span class="govuk-visually-hidden">{{ label }}: {{ name }}</span>
     <span class="app-side-nav__tooltip app-guide-section-bookmark__tooltip" aria-hidden="true">{{ label }}</span>
   </a>
+  {% endif %}
 {% endmacro %}
 
 {# Which cases a heading is bookmarked to, as text under it — a tooltip
@@ -195,16 +197,16 @@
   state — the sections on the page being shown; in traditional everything
   is on the one page, so nothing is current.
 #}
-<nav class="app-guide-contents" aria-labelledby="guide-contents-heading">
+<nav class="app-guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
   <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
   {% for section in content.sections %}
     <p class="app-guide-contents__section{{ ' app-guide-contents__section--current' if section.isCurrent }}"{% if format != "traditional" %} data-guide-contents-page="{{ section.pageNumber }}"{% endif %}>
-      <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}"{% if section.isCurrent %} aria-current="true"{% endif %}>{{ section.sectionName }}</a>
+      <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}" data-guide-toc-target="{{ section.id }}"{% if section.isCurrent %} aria-current="true"{% endif %}>{{ section.sectionName }}</a>
     </p>
     {% if section.contentsParts.length %}
       <ol class="govuk-list app-guide-contents__list">
         {% for part in section.contentsParts %}
-          <li><a class="govuk-link app-guide-contents__link" href="{{ part.href }}">{{ part.partName or part.heading }}</a></li>
+          <li><a class="govuk-link app-guide-contents__link" href="{{ part.href }}" data-guide-toc-target="{{ part.id }}">{{ part.partName or part.heading }}</a></li>
         {% endfor %}
       </ol>
     {% endif %}

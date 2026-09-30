@@ -14,7 +14,10 @@
   const root = document.querySelector('[data-guide-position-href]')
   if (!root) return
 
+  // API guides have no position URL (saving one would re-fetch the guide
+  // from the API on every scroll).
   const href = root.getAttribute('data-guide-position-href')
+  if (!href) return
   const headings = Array.from(document.querySelectorAll('[data-guide-anchor]'))
   if (!headings.length) return
 

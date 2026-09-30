@@ -54,7 +54,24 @@ const highlight = {
   }
 }
 
-const marked = new Marked({ extensions: [colouredSpan, highlight] })
+function escapeAttribute(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+// Lazy, like TipTap's Image (extensions.js): images far down a guide or on
+// hidden stepper pages aren't fetched until they're near the viewport.
+const renderer = {
+  image({ href, title, text }) {
+    const titleAttribute = title ? ` title="${escapeAttribute(title)}"` : ''
+    return `<img src="${escapeAttribute(href)}" alt="${escapeAttribute(text)}"${titleAttribute} loading="lazy" decoding="async">`
+  }
+}
+
+const marked = new Marked({ extensions: [colouredSpan, highlight], renderer })
 
 // A GFM cell can only be one line, so the converter writes a cell's list
 // as `- one<br>- two`. TipTap's FaithfulTable (scripts/tiptap-viewer/src/

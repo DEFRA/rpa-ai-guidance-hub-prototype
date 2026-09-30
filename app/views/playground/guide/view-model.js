@@ -1,11 +1,15 @@
-const { getGuidanceDocuments } = require('../../../data/guidance-documents')
+const {
+  getRequestGuidanceDocuments
+} = require('../../../data/guidance-documents')
 const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
 const {
   buildMarkdownGuideContent,
+  loadApiGuideContent,
   loadGuideContent,
   groupPages,
   findAnchor
 } = require('./guide-content')
+const { resolveHashLinks } = require('../../../lib/heading-links')
 const { getGuideMetadata, getStepperPages } = require('./guide-metadata')
 const { getGuidePosition } = require('../../../data/guide-positions')
 const { documentOverviewViewModel } = require('../document/view-model')
@@ -256,13 +260,18 @@ function buildEditorActions(id, status, document) {
   }
 }
 
-// A guide page can now step through whole pages of sections rather than
-// single parts: grouped by metadata where needed, one section per page by
-// default, with a legacy ?step=N still resolving to the page that part now
-// lives on so old research links keep working.
-function buildGuideFields(req, id, content) {
+// The stepper/traditional model — pages, sections with jump links, per-page
+// Previous/Next — shared by local and API guides (the bookmark/section
+// modules re-read content by id through locateAnchor).
+function buildFormatModel(req, id, content, stepperGroups) {
   const format = readFormat(req, id)
-  const pages = groupPages(content, getStepperPages(id))
+
+  // The stepper steps through pages — groups of whole sections from the
+  // guide's metadata, or one section per page (guide-content.js's
+  // groupPages) — not single parts, which don't scale to a 200-page Word
+  // document. A legacy ?step=N (part number) still resolves to the page
+  // holding that part, so old research links keep working.
+  const pages = groupPages(content, stepperGroups)
   const totalPages = pages.length
 
   const pageOfPart = (partNumber) => {
@@ -335,28 +344,42 @@ function buildGuideFields(req, id, content) {
     bookmarkedTo: sectionBookmarks[anchor] || []
   })
 
-  const sections = content.sections.map((section) => ({
-    ...section,
-    ...bookmarkFields(section.id),
-    href: anchorHref(section),
-    // Only the stepper has a "current" place in the contents list — the
-    // sections on the page shown. Traditional has everything on one page.
-    isCurrent:
-      format !== 'traditional' &&
-      pageNumberBySection[section.sectionNumber] === pageNumber,
-    // Lets guide-pages.js move the contents list's "current" mark when
-    // find-in-page reveals another stepper page.
-    pageNumber: pageNumberBySection[section.sectionNumber],
-    // The contents list's sub-list: a section's lead part is the section
-    // itself, so only the parts after it are listed.
-    contentsParts: section.parts.filter((part) => !part.isLead),
-    parts: section.parts.map((part) => ({
+  // Intra-document links in a converted guide resolve to the heading they
+  // name, on whichever stepper page holds it.
+  const linkTargets = content.flatParts.map((part) => ({
+    text: part.heading,
+    href: anchorHref(part)
+  }))
+  const linkedMarkdown = (part) =>
+    part.markdown && resolveHashLinks(part.markdown, linkTargets)
+
+  const sections = content.sections.map((section) => {
+    const parts = section.parts.map((part) => ({
       ...part,
       ...bookmarkFields(part.id),
       href: anchorHref(part),
+      markdown: linkedMarkdown(part),
       body: resolveBody(part.body)
     }))
-  }))
+
+    return {
+      ...section,
+      ...bookmarkFields(section.id),
+      href: anchorHref(section),
+      // Only the stepper has a "current" place in the contents list — the
+      // sections on the page shown. Traditional has everything on one page.
+      isCurrent:
+        format !== 'traditional' &&
+        pageNumberBySection[section.sectionNumber] === pageNumber,
+      // Lets guide-pages.js move the contents list's "current" mark when
+      // find-in-page reveals another stepper page.
+      pageNumber: pageNumberBySection[section.sectionNumber],
+      // The contents list's sub-list: a section's lead part is the section
+      // itself, so only the parts after it are listed.
+      contentsParts: parts.filter((part) => !part.isLead),
+      parts
+    }
+  })
 
   // Every stepper page, not just the current one: the others render
   // hidden="until-found" (reading-content.njk), so the browser's own
@@ -388,40 +411,42 @@ function buildGuideFields(req, id, content) {
   }))
 
   return {
+    format,
     pages,
+    pageNumber,
+    totalPages,
+    sections,
+    stepperPages,
     formatHrefs: {
       stepper: buildHref(id, 'stepper'),
       traditional: buildHref(id, 'traditional')
-    },
-    format,
-    content: { sections },
-    stepperPages,
-    pageNumber,
-    totalPages
+    }
   }
 }
 
 // An API-sourced guide (app/lib/guidance-api-loader.js's isApiGuide
 // entries) has no editing/awaiting-approval/published session state, so
 // this bypasses documentOverviewViewModel's mock-lookup chain entirely
-// rather than trying to make a uuid id match it. When its Markdown splits
-// into sections it still gets the same page-based stepper pagination as a
-// local converted guide; otherwise the page falls back to one rendered
-// blob and hides the format toggle.
+// rather than trying to make a uuid id match it — and no
+// stepper/traditional sections/parts model either, so it also skips
+// guideViewModel's own pagination/branch-resolution logic below, going
+// straight from buildMarkdownGuideContent's `{ isApiGuide: true, html }`
+// to the view model. Everything else genuinely shared between a mock and
+// an API guide (pin, case bookmarks, reader metadata, the side panel
+// itself) is built the same way either path.
 async function buildMarkdownGuideViewModel(req, document) {
-  const content = await buildMarkdownGuideContent(
-    document.id,
-    document.latestVersionId
-  )
-  const guideFields = content.sections
-    ? buildGuideFields(req, document.id, content)
+  const split = await loadApiGuideContent(document.id, document.latestVersionId)
+  const format = split
+    ? buildFormatModel(req, document.id, split, null)
     : null
+  const content = format
+    ? { sections: format.sections }
+    : await buildMarkdownGuideContent(document.id, document.latestVersionId)
   const defaultVersionKey =
     document.version === 'Version 1' ? 'version1' : 'version2'
 
   return {
     id: document.id,
-    isMarkdown: true,
     isApiGuide: true,
     version: document.version,
     document: {
@@ -447,12 +472,15 @@ async function buildMarkdownGuideViewModel(req, document) {
     // for editor tools to act on, designer or not.
     isEditor: false,
     editorActions: null,
-    content: guideFields ? guideFields.content : content,
-    format: guideFields ? guideFields.format : null,
-    formatHrefs: guideFields ? guideFields.formatHrefs : null,
-    stepperPages: guideFields ? guideFields.stepperPages : null,
-    pageNumber: guideFields ? guideFields.pageNumber : null,
-    totalPages: guideFields ? guideFields.totalPages : null,
+    content,
+    ...(format && {
+      isMarkdown: true,
+      format: format.format,
+      formatHrefs: format.formatHrefs,
+      stepperPages: format.stepperPages,
+      pageNumber: format.pageNumber,
+      totalPages: format.totalPages
+    }),
     readingWidth: getReadingWidth(req),
     readingWidths: READING_WIDTHS,
     readingWidthHref: '/playground/guide/reading-width',
@@ -466,27 +494,29 @@ async function buildMarkdownGuideViewModel(req, document) {
 }
 
 async function guideViewModel(req, id) {
-  if (GUIDANCE_API_ENABLED) {
-    const documents = await getGuidanceDocuments()
-    const apiDocument = documents.find(
-      (candidate) => candidate.isApiGuide && candidate.id === id
-    )
-    if (apiDocument) return buildMarkdownGuideViewModel(req, apiDocument)
-  }
+  const apiDocument = await findApiGuide(req, id)
+  if (apiDocument) return buildMarkdownGuideViewModel(req, apiDocument)
 
   const overview = documentOverviewViewModel(req, id)
   if (!overview) return null
 
-  // A converted guide's content.md, where one exists, wins over the
-  // structured JS content (see guide-content.js's loadGuideContent).
   const { guidanceDocument, content } = loadGuideContent(id)
-  const guideFields = buildGuideFields(req, id, content)
-  const isGenuineEntry = !req.query.page && !req.query.step
+  const {
+    format,
+    pages,
+    pageNumber,
+    totalPages,
+    sections,
+    stepperPages,
+    formatHrefs
+  } = buildFormatModel(req, id, content, getStepperPages(id))
+
   const isEditor = getRole(req) === 'designer'
+  const isGenuineEntry = !req.query.page && !req.query.step
 
   return {
-    formatHrefs: guideFields.formatHrefs,
-    format: guideFields.format,
+    formatHrefs,
+    format,
     id,
     trackRecentlyOpened: Boolean(guidanceDocument) && isGenuineEntry,
     version: overview.document.version,
@@ -496,19 +526,19 @@ async function guideViewModel(req, id) {
     pin: overview.pin,
     caseBookmarks: buildCaseBookmarks(req, id),
     bookmarkSuccess: buildBookmarkSuccess(req, id),
-    resume: isGenuineEntry ? buildResume(req, id, guideFields.pages) : null,
+    resume: isGenuineEntry ? buildResume(req, id, pages) : null,
     positionHref: `/playground/guide/${encodeURIComponent(id)}/position`,
     metadata: buildMetadata(req, id, overview.document),
     isEditor,
     editorActions: isEditor
       ? buildEditorActions(id, overview.status, overview.document)
       : null,
-    content: guideFields.content,
+    content: { sections },
     isMarkdown: Boolean(content.isMarkdown),
     isApiGuide: false,
-    stepperPages: guideFields.stepperPages,
-    pageNumber: guideFields.pageNumber,
-    totalPages: guideFields.totalPages,
+    stepperPages,
+    pageNumber,
+    totalPages,
     readingWidth: getReadingWidth(req),
     readingWidths: READING_WIDTHS,
     readingWidthHref: '/playground/guide/reading-width',
@@ -521,15 +551,31 @@ async function guideViewModel(req, id) {
   }
 }
 
+// The API guide with this id, or null (always null with the flag off).
+async function findApiGuide(req, id) {
+  if (!GUIDANCE_API_ENABLED) return null
+  const documents = await getRequestGuidanceDocuments(req)
+  return (
+    documents.find(
+      (candidate) => candidate.isApiGuide && candidate.id === id
+    ) || null
+  )
+}
+
 // The section/ and position/ modules' shared lookup: where an anchor
 // lives in a guide (its stepper page and label), or null.
-function locateAnchor(id, anchor) {
-  const { content } = loadGuideContent(id)
+async function locateAnchor(req, id, anchor) {
+  const apiGuide = await findApiGuide(req, id)
+  const content = apiGuide
+    ? await loadApiGuideContent(id, apiGuide.latestVersionId)
+    : loadGuideContent(id).content
+  if (!content) return null
   return findAnchor(groupPages(content, getStepperPages(id)), anchor)
 }
 
 module.exports = {
   guideViewModel,
+  findApiGuide,
   locateAnchor,
   readFormat,
   buildHref,
