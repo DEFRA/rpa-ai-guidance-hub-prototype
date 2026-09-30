@@ -154,4 +154,7 @@
 
 {% block pageScripts %}
   {% include "partials/checks-widget-script.njk" %}
+  {% if isMarkdown %}
+    <script src="/public/javascripts/guide-images.js"></script>
+  {% endif %}
 {% endblock %}

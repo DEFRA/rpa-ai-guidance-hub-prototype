@@ -1,8 +1,26 @@
-const { marked } = require('marked')
+const { Marked } = require('marked')
 const {
   documents: genericGuidanceContent
 } = require('../../../data/generic-guidance-content')
 const { fetchGuideContent } = require('../../../lib/guidance-api-client')
+
+// A guide's images fetch lazily, and only once near the viewport — without
+// this a guide with several images fetches all of them upfront, whether
+// they're ever scrolled to or not. See _app-guide.scss and
+// guide-images.js for the reserved-space placeholder this depends on
+// (without it, a run of same-sized lazy images collapses to 0px height,
+// so the browser treats every one of them as "near" the viewport too).
+const marked = new Marked({
+  renderer: {
+    image({ href, title, text }) {
+      const alt = String(text).replace(/"/g, '&quot;')
+      const titleAttr = title
+        ? ` title="${String(title).replace(/"/g, '&quot;')}"`
+        : ''
+      return `<img src="${href}" alt="${alt}"${titleAttr} loading="lazy" decoding="async">`
+    }
+  }
+})
 
 // A guide's Markdown content, fetched from the Prototype guides API
 // (app/lib/guidance-api-client.js) rather than parsed off a
