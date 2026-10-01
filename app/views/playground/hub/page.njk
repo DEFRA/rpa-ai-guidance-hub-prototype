@@ -145,7 +145,7 @@
       its own. A hidden q field mirrors the current search text so applying
       a filter doesn't drop whatever's already been searched for.
     #}
-    <form id="hub-filters" method="get" action="/playground/hub">
+    <form id="hub-filters" method="get" action="/playground/hub#guide-results">
       <input type="hidden" name="q" value="{{ initialSearchQuery }}">
       {% if selectedList %}<input type="hidden" name="list" value="{{ selectedList }}">{% endif %}
       {% if selectedBookmark %}<input type="hidden" name="{{ selectedBookmark.param }}" value="{{ selectedBookmark.ref }}">{% endif %}
@@ -225,7 +225,7 @@
     </form>
   </div>
 
-  <div class="app-search-results__header">
+  <div class="app-search-results__header" id="guide-results">
     <h2 class="govuk-heading-m app-search-results__count">{{ results.length }} guide{{ "s" if results.length != 1 }}</h2>
 
     <div class="app-search-results__sort">
@@ -254,7 +254,7 @@
 
           <div class="app-search-results__top">
             <div class="govuk-!-margin-bottom-2">
-              {{ govukTag(versionTags[result.version]) }}
+              {% if versionTags[result.version] %}{{ govukTag(versionTags[result.version]) }}{% endif %}
               {{ govukTag(stateTags[result.state]) }}
               {% if result.pinned %}<strong class="govuk-tag govuk-tag--grey app-search-results__pinned-tag">Pinned</strong>{% endif %}
             </div>

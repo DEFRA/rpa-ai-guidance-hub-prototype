@@ -1,6 +1,8 @@
 const {
   buildManageGuidanceSearchResults
 } = require('../../../data/manage-guidance')
+const { getGuidanceDocuments } = require('../../../data/guidance-documents')
+const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
 const {
   getListIds,
   getQuickFilters,
@@ -40,6 +42,10 @@ function readSlug(value, fallback) {
   return typeof value === 'string' && value ? value : fallback
 }
 
+// Every filter link/redirect lands on the results table, not the top of the
+// page, so the reader doesn't scroll back down past the hero each time.
+const RESULTS_ANCHOR = '#guide-results'
+
 // Builds a /playground/hub?... href carrying every currently-applied filter
 // except the overrides given — used for both "this facet's own href when
 // nothing has changed yet" (not needed) and, more importantly, each
@@ -67,7 +73,31 @@ function buildHref({
   if (sort !== 'most-relevant') params.set('sort', sort)
 
   const query = params.toString()
-  return query ? `/playground/hub?${query}` : '/playground/hub'
+  const path = query ? `/playground/hub?${query}` : '/playground/hub'
+  return path + RESULTS_ANCHOR
+}
+
+// The API-mode equivalent of buildManageGuidanceSearchResults — an
+// API-sourced guide (app/lib/guidance-api-loader.js) has no
+// editing/awaiting-approval/published session state to branch on, so this
+// is a plain map rather than that function's three-way merge. Produces
+// the same row shape (id/title/description/version/lastUpdated/published/
+// category/scheme/year/state/overviewHref) so every filter/sort/pin step
+// below works unchanged regardless of which source built allResults.
+function buildApiSearchResults(documents, overviewHrefBase) {
+  return documents.map((document) => ({
+    id: document.id,
+    title: document.title,
+    description: document.description,
+    version: document.version,
+    lastUpdated: document.lastUpdated,
+    published: document.published,
+    category: document.category,
+    scheme: document.scheme,
+    year: document.year,
+    state: 'Published',
+    overviewHref: `${overviewHrefBase}/${encodeURIComponent(document.id)}`
+  }))
 }
 
 // The hub is now the single all-guidance list: what used to be the
@@ -89,7 +119,7 @@ function buildHref({
 // Filtering/sorting is a real querystring round-trip (category/scheme/
 // year/state/sort/q), not client-side JS, so the page works with
 // JavaScript off — see page.notes.md for why that changed.
-function fromSession(req) {
+async function fromSession(req) {
   const q = (req.query.q || '').trim()
 
   const category = readSlug(req.query.category, 'all')
@@ -110,18 +140,32 @@ function fromSession(req) {
       : ''
   const listIds = bookmark || list ? getListIds(req, list, bookmark) : null
 
-  const allResults = buildManageGuidanceSearchResults(
-    req,
-    '/playground/document'
-  ).map((document) => ({
+  // GUIDANCE_API_ENABLED swaps the whole list's source, not just adds to
+  // it (per the earlier design decision — the mock manage-guidance rows
+  // and a live API guide can't be merged meaningfully, since the API has
+  // no editing/awaiting-approval state of its own): a live manifest fetch
+  // via getGuidanceDocuments(), fetched fresh on this request, in place of
+  // buildManageGuidanceSearchResults' mock editing/awaiting/published
+  // rows. See app/data/guidance-documents/index.js for the API-call/
+  // fallback-to-mock logic itself.
+  const documents = await getGuidanceDocuments()
+  const baseResults = GUIDANCE_API_ENABLED
+    ? buildApiSearchResults(documents, '/playground/guide')
+    : buildManageGuidanceSearchResults(req, '/playground/document').map(
+        (document) => ({
+          ...document,
+          // buildManageGuidanceSearchResults() always joins its
+          // overviewHrefBase with a ?id= query string — the v6
+          // manage-guidance/document-overview convention. The hub links
+          // straight to the merged guide page (playground/guide/**)
+          // instead — one click from here to the guide itself, rather
+          // than through the old document overview/format-choice pages
+          // first.
+          overviewHref: `/playground/guide/${document.id}`
+        })
+      )
+  const allResults = baseResults.map((document) => ({
     ...document,
-    // buildManageGuidanceSearchResults() always joins its overviewHrefBase
-    // with a ?id= query string — the v6 manage-guidance/document-overview
-    // convention. The hub links straight to the merged guide page
-    // (playground/guide/**) instead — one click from here to the guide
-    // itself, rather than through the old document overview/format-choice
-    // pages first.
-    overviewHref: `/playground/guide/${document.id}`,
     pinned: isPinned(req, document.id)
   }))
 
@@ -249,7 +293,7 @@ function fromSession(req) {
     },
     selectedSort: sort,
     selectedFilters,
-    clearFiltersHref: '/playground/hub',
+    clearFiltersHref: '/playground/hub' + RESULTS_ANCHOR,
     results,
     pinToggleHref: '/playground/pin-toggle'
   }

@@ -1,0 +1,162 @@
+{#
+  The merged guide page — settled on the side-panel direction after
+  comparing it against a top-toolbar and an inline layout (see
+  page.notes.md). Reading column plus a persistent right-hand panel
+  holding case bookmarks, the reader-facing metadata (metadata-list.njk)
+  and, for a designer only, an "Editor tools" section (editor-controls.njk)
+  — version switching, publishing checks and Continue editing sit
+  alongside the guide rather than gating it behind a separate screen,
+  without costing a viewer a click.
+
+  The panel is a third column in the side-nav shell itself
+  (layouts/main.html's shellAside block), not part of this page's own
+  content column — a mirror image of .app-shell__nav (same full-height,
+  sticky, flush-right column; _app-guide.scss reuses its tokens). Without
+  the shell (sideNav unset — a future frozen snapshot), the same markup
+  renders inline instead, stacked below the reading column, so a snapshot
+  never silently loses it.
+#}
+{% extends "common/layouts/base.njk" %}
+
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "partials/side-nav-icon.njk" import sideNavIcon %}
+
+{% set bodyClasses = "app-full-width" %}
+{% set pageName = document.name %}
+
+{% set versionTags = {
+  "Version 1": { text: "Version 1", classes: "govuk-tag--green" },
+  "Version 2": { text: "Version 2", classes: "govuk-tag--purple" }
+} %}
+
+{% set guidePanel %}
+  <form id="guide-panel-toggle-form" method="post" action="{{ panelToggleHref }}" hidden>
+    <input type="hidden" name="collapsed" value="{{ 'false' if panelCollapsed else 'true' }}">
+    <input type="hidden" name="returnTo" value="{{ returnTo }}">
+  </form>
+
+  {% if not panelCollapsed %}
+    {#
+      Drag/arrow-key resize handle, [hidden] until side-nav.js attaches
+      (its own setupResize, shared with the nav's own handle below) —
+      without JS the native corner grip (_app-guide.scss's `resize:
+      horizontal`) still works. Sits before the aside, mirroring the nav's
+      own handle sitting before .app-shell__main in layouts/main.html —
+      side-nav.js drags it in the opposite direction (this edge is the
+      panel's left, not its right).
+    #}
+    <div class="app-shell__resize app-shell__resize--aside" role="separator" aria-orientation="vertical"
+         aria-label="Resize guide details" aria-controls="guide-panel-body"
+         aria-valuemin="{{ panelWidthLimits.min }}" aria-valuemax="{{ panelWidthLimits.max }}"
+         data-guide-panel-resize data-width-href="{{ panelWidthHref }}" tabindex="0" hidden></div>
+  {% endif %}
+
+  <aside class="app-guide-panel{% if panelCollapsed %} app-guide-panel--collapsed{% endif %}" aria-label="About this guide"{% if panelWidth and not panelCollapsed %} style="--app-guide-panel-width: {{ panelWidth }}px"{% endif %}>
+    {% if panelCollapsed %}
+      {#
+        The collapsed rail — the side nav's own rail component
+        (partials/side-nav-rail.njk, _app-side-nav.scss) reused directly
+        rather than a single full-width button, so there's a jump straight
+        to Case bookmarks as well as a plain expand (crit: unreachable when
+        collapsed). Both submit guide-panel-toggle-form; the bookmarks item
+        overrides its returnTo with a #fragment the same way the nav
+        rail's own railExpand does (panel-toggle/routes.js's own
+        [].concat(...).pop()).
+      #}
+      <nav class="app-side-nav app-side-nav--rail" aria-label="About this guide">
+        <ul class="app-side-nav__rail-list">
+          <li>
+            <button type="submit" form="guide-panel-toggle-form" class="app-side-nav__rail-item" data-side-nav-tooltip>
+              {{ sideNavIcon("collapse") }}
+              <span class="app-side-nav__rail-label">Show guide details</span>
+              <span class="app-side-nav__tooltip" aria-hidden="true">Show guide details</span>
+            </button>
+          </li>
+          <li>
+            <button type="submit" form="guide-panel-toggle-form" name="returnTo" value="{{ returnTo.split('#')[0] }}#guide-case-bookmarks" class="app-side-nav__rail-item" data-side-nav-tooltip>
+              {{ sideNavIcon("bookmark") }}
+              <span class="app-side-nav__rail-label">Case bookmarks</span>
+              <span class="app-side-nav__tooltip" aria-hidden="true">Case bookmarks</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+    {% else %}
+      <div class="app-guide-panel__header">
+        <h2 class="govuk-heading-s govuk-!-margin-bottom-0">About this guide</h2>
+        <button type="submit" form="guide-panel-toggle-form" class="app-side-nav__icon-button" aria-controls="guide-panel-body">
+          {{ sideNavIcon("expand") }}
+          <span class="govuk-visually-hidden">Hide guide details</span>
+        </button>
+      </div>
+
+      <div class="app-guide-panel__body" id="guide-panel-body">
+        {% include "2026-10-01-side-nav-first-iteration/guide/partials/case-bookmarks.njk" %}
+
+        {% if formatHrefs %}
+          {% include "2026-10-01-side-nav-first-iteration/guide/partials/format-toggle.njk" %}
+        {% endif %}
+
+        {% include "2026-10-01-side-nav-first-iteration/guide/partials/metadata-list.njk" %}
+
+        {% if isEditor %}
+          <h2 class="govuk-heading-s govuk-!-margin-top-6">Editor tools</h2>
+          {% include "2026-10-01-side-nav-first-iteration/guide/partials/editor-controls.njk" %}
+        {% endif %}
+      </div>
+    {% endif %}
+  </aside>
+{% endset %}
+
+{% block content %}
+
+<div class="app-guide-reading">
+
+  {% if bookmarkSuccess %}
+    {% call govukNotificationBanner({ type: "success" }) %}
+      <h3 class="govuk-notification-banner__heading">{{ bookmarkSuccess.text }}</h3>
+      <p class="govuk-body"><a class="govuk-notification-banner__link" href="{{ bookmarkSuccess.href }}">View all guides for this case</a></p>
+    {% endcall %}
+  {% endif %}
+
+  <div class="app-guide-byline">
+    {% if versionTags[version] %}{{ govukTag(versionTags[version]) }}{% endif %}
+    <span class="app-guide-byline__updated">Updated {{ currentVersion.lastUpdated }}</span>
+  </div>
+
+  <h1 class="app-guide-title">{{ document.name }}</h1>
+
+  {% set pinDocumentId = document.id %}
+  {% include "partials/pin-button.njk" %}
+
+  {% if isMarkdown and (format != "stepper" or not content.sections) %}
+    {#
+      An API-sourced guide (app/lib/guidance-api-loader.js) still has no
+      stepper/traditional split for its traditional format — content.html
+      is the whole guide, already rendered from its content.md by marked
+      (guide/guide-content.js's buildMarkdownGuideContent), so it's just
+      dropped in directly rather than through reading-content.njk's
+      section/part/pagination markup. Also the fallback when the fetch
+      failed (content.error) or the Markdown had no `## ` headings to
+      split on — reading-content.njk has nothing to paginate either way.
+    #}
+    <div class="app-guide-markdown">{{ content.html | safe }}</div>
+  {% else %}
+    {% include "2026-10-01-side-nav-first-iteration/guide/partials/reading-content.njk" %}
+  {% endif %}
+
+</div>
+
+{% if not sideNav %}{{ guidePanel | safe }}{% endif %}
+
+{% endblock %}
+
+{% block shellAside %}{% if sideNav %}{{ guidePanel | safe }}{% endif %}{% endblock %}
+
+{% block pageScripts %}
+  {% include "partials/checks-widget-script.njk" %}
+  {% if isMarkdown %}
+    <script src="/public/javascripts/guide-images.js"></script>
+  {% endif %}
+{% endblock %}

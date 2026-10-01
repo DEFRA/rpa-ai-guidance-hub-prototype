@@ -334,3 +334,24 @@ $app-guide-panel-max-width: 480px;
 .app-guide-panel__bookmarks-link {
   display: block;
 }
+
+// Space held for a lazy image until it loads (guide-images.js), so the ones
+// further down don't all sit at 0px height inside the browser's load range,
+// with a spinner (an animated SVG, static for reduced motion) so it reads
+// as loading rather than as a gap.
+$app-guide-image-spinner: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23b1b4b6' stroke-width='4'/%3E%3Cpath d='M20 4a16 16 0 0 1 16 16' fill='none' stroke='%231d70b8' stroke-width='4' stroke-linecap='round'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 20 20' to='360 20 20' dur='0.9s' repeatCount='indefinite'/%3E%3C/path%3E%3C/svg%3E";
+$app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23b1b4b6' stroke-width='4'/%3E%3Cpath d='M20 4a16 16 0 0 1 16 16' fill='none' stroke='%231d70b8' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E";
+
+.app-guide-markdown--track-images img[loading='lazy']:not(.is-loaded) {
+  display: block;
+  width: 100%;
+  min-height: 30rem;
+  background: govuk-colour('light-grey') url($app-guide-image-spinner) no-repeat
+    center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-guide-markdown--track-images img[loading='lazy']:not(.is-loaded) {
+    background-image: url($app-guide-image-spinner-static);
+  }
+}

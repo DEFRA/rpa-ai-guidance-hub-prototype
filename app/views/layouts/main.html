@@ -38,15 +38,17 @@
 {% endblock %}
 
 {#
-  The GOV.UK template's own `main` block, reproduced so a playground page can
-  wrap it in the side navigation shell. Only pages with `sideNav` set (every
-  playground page but sign-in — app/views/playground/routes.js) get the
-  shell; everything else, frozen versions and snapshots included, renders
+  The GOV.UK template's own `container` block (width container, beforeContent,
+  main), reproduced so a playground page can wrap it in the side navigation
+  shell. Overriding `main` alone would nest inside the template's container.
+
+  Only pages with `sideNav` set (every playground page but sign-in —
+  app/views/playground/routes.js) get the shell; everything else, frozen versions and snapshots included, renders
   exactly the template's markup. Nunjucks won't let a block be defined
   twice, so beforeContent/content live inside this one block rather than
   in an if/else with super().
 #}
-{% block main %}
+{% block container %}
 {% if sideNav %}
   <div class="app-shell{% if sideNav.collapsed %} app-shell--collapsed{% endif %}{% if sideNav.autoCollapse %} app-shell--auto{% endif %}" data-module="app-side-nav"{% if sideNav.width and not sideNav.collapsed %} style="--app-side-nav-width: {{ sideNav.width }}px"{% endif %}>
     <form id="side-nav-toggle-form" method="post" action="{{ sideNav.toggleHref }}" hidden>

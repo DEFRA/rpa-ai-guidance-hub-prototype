@@ -402,8 +402,8 @@ function buildSideNav(req, base = DEFAULT_BASE) {
       href: bookmarkFilterHref(hub, bookmark.type, bookmark.ref),
       current: Boolean(
         activeBookmark &&
-          activeBookmark.type === bookmark.type &&
-          activeBookmark.ref === bookmark.ref
+        activeBookmark.type === bookmark.type &&
+        activeBookmark.ref === bookmark.ref
       ),
       guides
     }

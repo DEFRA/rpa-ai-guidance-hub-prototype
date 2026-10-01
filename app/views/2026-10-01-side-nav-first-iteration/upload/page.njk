@@ -1,0 +1,60 @@
+{#
+  The entry point into the upload journey: pick the Word document here,
+  wait through the scan (processing), add the guide's details (details/
+  owner), check everything (check), then convert (converted). Nothing is
+  really uploaded — the details live in the session (controller.js).
+
+  Layout borrows the hub's design language (see page.notes.md): a grey
+  panel holding the form with GOV.UK's enhanced drop-zone file upload,
+  beside a tips sidebar. No green hero — that's reserved for the hub and
+  sign-in.
+#}
+{% extends "common/layouts/base.njk" %}
+
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% set pageName = "Upload guidance" %}
+{# Tighter than the default 40px under the back link. #}
+{% set mainClasses = "govuk-!-padding-top-4" %}
+
+{% block content %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Upload guidance</h1>
+      <p class="govuk-body-l">Upload a Word document and the hub will convert it into a guide. The file is scanned for viruses before it is accepted.</p>
+    </div>
+  </div>
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+
+      <div class="app-upload">
+        <form method="post" action="/2026-10-01-side-nav-first-iteration/upload">
+
+          {{ govukFileUpload({
+            id: "guide-file",
+            name: "guideFile",
+            javascript: true,
+            label: { text: "Upload a file", classes: "govuk-label--m" },
+            hint: { text: "Word document (.docx). One guide per file." }
+          }) }}
+
+          {{ govukButton({ text: "Upload", classes: "govuk-!-margin-bottom-0" }) }}
+
+        </form>
+      </div>
+
+      <h2 class="govuk-heading-m">What happens next</h2>
+      <ol class="govuk-list govuk-list--number">
+        <li>We scan the file for viruses.</li>
+        <li>You check the title and choose the schemes it relates to.</li>
+        <li>You add the owner and who the guidance is for.</li>
+        <li>You check your answers and convert it into a guide.</li>
+      </ol>
+
+    </div>
+  </div>
+
+{% endblock %}
