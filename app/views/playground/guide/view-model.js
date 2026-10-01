@@ -436,9 +436,7 @@ function buildFormatModel(req, id, content, stepperGroups) {
 // itself) is built the same way either path.
 async function buildMarkdownGuideViewModel(req, document) {
   const split = await loadApiGuideContent(document.id, document.latestVersionId)
-  const format = split
-    ? buildFormatModel(req, document.id, split, null)
-    : null
+  const format = split ? buildFormatModel(req, document.id, split, null) : null
   const content = format
     ? { sections: format.sections }
     : await buildMarkdownGuideContent(document.id, document.latestVersionId)
