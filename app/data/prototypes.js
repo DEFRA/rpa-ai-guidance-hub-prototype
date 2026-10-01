@@ -83,6 +83,18 @@ module.exports = {
       author: 'Shaun Fitzsimons',
       changes: [],
       journeys: []
+    },
+    {
+      id: '2026-10-01-side-nav-first-iteration',
+      name: 'Side nav first iteration',
+      status: 'archived',
+      date: '1 October 2026 at 08:55',
+      entryHref: '/2026-10-01-side-nav-first-iteration/',
+      purpose:
+        'Create a snapshot of the first side nav iteration used in 29/09/26 UR session',
+      author: 'Shaun Fitzsimons',
+      changes: [],
+      journeys: []
     }
   ]
 }

@@ -1,0 +1,183 @@
+{#
+  The guide content itself — shared by all three design directions
+  (../panel.njk, ../toolbar.njk, ../inline.njk), so the visual redesign of
+  the reading experience (capped measure, numbered section/part hierarchy,
+  a styled callout for the CASE_NOTE_BLOCK template) lives in one place
+  rather than three. Reads `content` ({ sections, flatParts } —
+  app/data/guide-content.js), `format` ("stepper" shows one part with a
+  contents list and Previous/Next; "traditional" shows every section
+  continuously with an in-page contents list) and, for stepper,
+  `currentPart`/`partNumber`/`totalParts`/`prevLink`/`nextLink`.
+
+  A part's body can include a branch — real guides don't always read
+  section 1, 2, 3…: guidance-documents.js's own case-note content routes a
+  caseworker to a different part depending on the answer to a question
+  ("Is there a resolved case present?"). renderPart's branch handling
+  (below) renders a branch entry's options as real links to the part they
+  target, resolved by guide/view-model.js's resolveBranchOptions — not
+  Previous/Next replaced by a forced fork, since the guide's own content
+  never actually blocks reading on an answer, only offers a shortcut.
+
+  Deliberately not a page in itself (no <h1>, no extends) — each direction
+  template renders its own title/byline/controls above this and includes
+  it for the body only.
+#}
+{% from "govuk/components/pagination/macro.njk" import govukPagination %}
+
+{#
+  Word-style heading hierarchy: a rule only where a section (the "Heading
+  1" level) ends, never between parts within one section (the "Heading 2"
+  level) — those are told apart by heading size/tag alone, the same way a
+  Word document doesn't rule off every subheading, only reads as a new
+  chapter at the top level.
+#}
+{% macro sectionDivider() %}
+  <hr class="app-guide-divider">
+{% endmacro %}
+
+{% macro renderPart(part, level=1) %}
+  {% if level == 1 %}
+    <h2 class="app-guide-heading-1" id="{{ part.id }}">
+      {% if part.partName %}<span class="app-guide-part-heading__eyebrow">{{ part.partName }}</span>{% endif %}
+      {{ part.heading }}
+    </h2>
+  {% else %}
+    <h3 class="app-guide-heading-2" id="{{ part.id }}">
+      {% if part.partName %}<span class="app-guide-part-heading__eyebrow">{{ part.partName }}</span>{% endif %}
+      {{ part.heading }}
+    </h3>
+  {% endif %}
+  {% if part.html %}
+    {#
+      An API-sourced guide's part — rendered from its own Markdown slice
+      by marked (guide-content.js's splitMarkdownIntoSections), not the
+      mock content's structured body entries below, so it's dropped in
+      directly rather than walked entry-by-entry. Still wrapped in
+      .app-guide-markdown so guide-images.js's lazy-image tracking (which
+      selects that class) keeps working the same as the traditional/blob
+      view.
+    #}
+    <div class="app-guide-markdown">{{ part.html | safe }}</div>
+  {% else %}
+  {% for entry in part.body %}
+    {% if entry == "CASE_NOTE_BLOCK" %}
+      <div class="app-guide-callout">
+        <p class="app-guide-callout__label">Template — edit the highlighted text before saving to the case</p>
+        <p class="govuk-body">Is the option being checked <span class="app-guide-callout__highlight">AB5</span> against the <span class="app-guide-callout__highlight">Historical layer and Moorland</span>?</p>
+        <p class="govuk-body">If "Yes" cross check the options map (found on CRM) with the HEFER/FER to ensure the option is eligible. If the options map is unavailable, request an updated options map that confirms the <span class="app-guide-callout__highlight">AB5</span> location for the current revenue claim year from the Agreement Holder.</p>
+        <p class="govuk-body">If "No" continue</p>
+        <ul class="govuk-list govuk-list--bullet">
+          <li>If 'No', go to section 4.2 Close Case.</li>
+          <li>If 'Yes', continue to section 3 Work the anomaly</li>
+        </ul>
+      </div>
+    {% elif entry.type == "branch" %}
+      {#
+        A branching decision point, inline in the flow rather than at the
+        bottom of the part with Previous/Next — the guide's own content
+        (guidance-documents.js) decides where in a part the question
+        actually falls, and it's usually mid-part, not at the end. An
+        option only gets a link when it names a real target part
+        (guide/view-model.js's resolveBranchOptions) — one that just means
+        "keep reading" stays plain text rather than linking to itself.
+        Previous/Next below is unaffected: a branch is an early-exit
+        alongside normal reading order, not a replacement for it, since
+        the content never actually blocks forward reading on an answer.
+      #}
+      <div class="app-guide-branch">
+        <p class="app-guide-branch__question">{{ entry.question }}</p>
+        <ul class="app-guide-branch__options govuk-list">
+          {% for option in entry.options %}
+            <li class="app-guide-branch__option">
+              {% if option.href %}
+                <a class="govuk-link app-guide-branch__link" href="{{ option.href }}"><strong>{{ option.text }}</strong> — {{ option.description }}</a>
+              {% else %}
+                <strong>{{ option.text }}</strong> — {{ option.description }}
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% elif entry is string %}
+      <p class="govuk-body app-guide-body-text">{{ entry | renderLinkMarkers }}</p>
+    {% else %}
+      <ul class="govuk-list govuk-list--bullet app-guide-body-text">
+        {% for item in entry %}<li>{{ item | renderLinkMarkers }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  {% endfor %}
+  {% endif %}
+{% endmacro %}
+
+{% if format == "traditional" %}
+
+  <nav class="app-guide-contents" aria-labelledby="guide-contents-heading">
+    <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
+    {% for section in content.sections %}
+      <p class="app-guide-contents__section{{ ' app-guide-contents__section--current' if section.sectionNumber == currentPart.sectionNumber }}">
+        <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}">{{ section.sectionName }}</a>
+      </p>
+      {% if section.parts.length > 1 %}
+        <ol class="govuk-list app-guide-contents__list">
+          {% for part in section.parts %}
+            <li>
+              {% if part.partNumber == currentPart.partNumber %}
+                <span class="app-guide-contents__link app-guide-contents__link--current" aria-current="true">{{ part.partName or part.heading }}</span>
+              {% else %}
+                <a class="govuk-link app-guide-contents__link" href="{{ part.href }}">{{ part.partName or part.heading }}</a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+    {% endfor %}
+  </nav>
+
+  {% for section in content.sections %}
+    {% if not loop.first %}{{ sectionDivider() }}{% endif %}
+    <div class="app-guide-section" id="{{ section.id }}">
+      {% for part in section.parts %}
+        {{ renderPart(part, 1 if loop.first else 2) }}
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+{% else %}
+
+  <nav class="app-guide-contents" aria-labelledby="guide-contents-heading">
+    <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
+    {% for section in content.sections %}
+      <p class="app-guide-contents__section{{ ' app-guide-contents__section--current' if section.sectionNumber == currentPart.sectionNumber }}">
+        <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}">{{ section.sectionName }}</a>
+      </p>
+      {% if section.parts.length > 1 %}
+        <ol class="govuk-list app-guide-contents__list">
+          {% for part in section.parts %}
+            <li>
+              {% if part.partNumber == currentPart.partNumber %}
+                <span class="app-guide-contents__link app-guide-contents__link--current" aria-current="true">{{ part.partName or part.heading }}</span>
+              {% else %}
+                <a class="govuk-link app-guide-contents__link" href="{{ part.href }}">{{ part.partName or part.heading }}</a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+    {% endfor %}
+  </nav>
+
+  <p class="app-guide-section__eyebrow">Section {{ currentPart.sectionNumber }} of {{ content.sections.length }} · Part {{ partNumber }} of {{ totalParts }}</p>
+  <div class="app-progress__track app-guide-progress" role="presentation">
+    <div class="app-progress__bar" style="width: {{ (partNumber / totalParts * 100) | round }}%"></div>
+  </div>
+
+  {{ renderPart(currentPart) }}
+
+  {% if prevLink or nextLink %}
+    {{ govukPagination({
+      previous: { href: prevLink.href, labelText: prevLink.labelText } if prevLink else null,
+      next: { href: nextLink.href, labelText: nextLink.labelText } if nextLink else null
+    }) }}
+  {% endif %}
+
+{% endif %}
