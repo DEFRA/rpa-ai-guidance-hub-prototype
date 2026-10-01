@@ -52,9 +52,7 @@ function splitMarkdownIntoSections(markdown) {
         : lines.length
     const sectionHeadingMatch = lines[start].match(HEADING_LINE)
     const sectionName = sectionHeadingMatch[2].trim()
-    const sectionHeading = (
-      sectionHeadingMatch[3] || sectionName
-    ).trim()
+    const sectionHeading = (sectionHeadingMatch[3] || sectionName).trim()
     const sectionLines = lines.slice(start + 1, end)
 
     const partStarts = []
@@ -65,9 +63,7 @@ function splitMarkdownIntoSections(markdown) {
     if (!partStarts.length) {
       return {
         sectionName,
-        parts: [
-          { heading: sectionHeading, markdown: sectionLines.join('\n') }
-        ]
+        parts: [{ heading: sectionHeading, markdown: sectionLines.join('\n') }]
       }
     }
 
