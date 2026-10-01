@@ -19,6 +19,11 @@ Tooling for the snapshot system described in the root `CLAUDE.md`'s
 - `hooks/block-frozen-edit.js` — a Claude Code `PreToolUse` hook (wired up in
   `.claude/settings.json`) that blocks Edit/Write/MultiEdit/NotebookEdit
   calls targeting a file inside a frozen snapshot.
+- `update-vendor.js` — `npm run update:vendor`. Copies browser artifacts
+  (currently `accessible-autocomplete`) from `node_modules` into
+  `app/assets/javascripts/vendor/`, which is committed. Bump the dev dependency,
+  run this, commit the result. TipTap is bundled separately by
+  `npm run build:tiptap`.
 - `lib/` — helpers shared between the above: `slugify.js`, `rewrite-paths.js`
   (rewrites a copied snapshot's internal `/playground/...` references to its
   own id), and `manifest.js` (the hashing used by both `snapshot.js` and
