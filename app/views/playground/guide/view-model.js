@@ -193,18 +193,96 @@ function buildEditorActions(id, status, document) {
 // An API-sourced guide (app/lib/guidance-api-loader.js's isApiGuide
 // entries) has no editing/awaiting-approval/published session state, so
 // this bypasses documentOverviewViewModel's mock-lookup chain entirely
-// rather than trying to make a uuid id match it — and no
-// stepper/traditional sections/parts model either, so it also skips
-// guideViewModel's own pagination/branch-resolution logic below, going
-// straight from buildMarkdownGuideContent's `{ isMarkdown: true, html }`
-// to the view model. Everything else genuinely shared between a mock and
-// an API guide (pin, case bookmarks, reader metadata, the side panel
-// itself) is built the same way either path.
+// rather than trying to make a uuid id match it. It does still get the
+// stepper's pagination (see buildMarkdownStepperFields below) when
+// buildMarkdownGuideContent's own heading split succeeds — just not the
+// branch-resolution logic below, which only ever applies to mock content's
+// `[[BRANCH:...]]` placeholders. Everything else genuinely shared between
+// a mock and an API guide (pin, case bookmarks, reader metadata, the side
+// panel itself) is built the same way either path.
+//
+// A mock guide's format/pagination fields (formatHrefs, format, content,
+// currentPart, partNumber, totalParts, prevLink, nextLink) are built once,
+// per-part-of-a-whole-document, by guideViewModel below; an API guide
+// reuses the exact same buildHref/readFormat this function shares with it,
+// just walking buildMarkdownGuideContent's own `{ sections, flatParts }`
+// instead of buildGuideContent's. When that split didn't happen (no `##`
+// headings, or the fetch itself failed) this returns `{}` — the page
+// falls back to content.html's single rendered blob and the format toggle
+// stays hidden, same as before this existed.
+function buildMarkdownStepperFields(req, id, content) {
+  if (!content.sections) return {}
+
+  const format = readFormat(req, id)
+  const totalParts = content.flatParts.length
+  const requestedPart = parseInt(req.query.step, 10)
+  const partNumber =
+    requestedPart >= 1 && requestedPart <= totalParts ? requestedPart : 1
+
+  // No traditional-format anchors to build here — unlike a mock guide,
+  // an API guide's traditional format stays the single html blob it
+  // already was (page.njk), so only stepper's `?step=` links are ever
+  // needed.
+  const stepperHref = (partNumber) =>
+    buildHref(
+      id,
+      'stepper',
+      partNumber,
+      content.flatParts[partNumber - 1] && content.flatParts[partNumber - 1].id
+    )
+
+  const contentWithHrefs = {
+    html: content.html,
+    sections: content.sections.map((section) => ({
+      ...section,
+      href: stepperHref(section.firstPartNumber),
+      parts: section.parts.map((part) => ({
+        ...part,
+        href: stepperHref(part.partNumber)
+      }))
+    })),
+    flatParts: content.flatParts.map((part) => ({
+      ...part,
+      href: stepperHref(part.partNumber)
+    }))
+  }
+
+  const prevLink =
+    partNumber > 1
+      ? {
+          href: stepperHref(partNumber - 1),
+          labelText: contentWithHrefs.flatParts[partNumber - 2].heading
+        }
+      : null
+  const nextLink =
+    partNumber < totalParts
+      ? {
+          href: stepperHref(partNumber + 1),
+          labelText: contentWithHrefs.flatParts[partNumber].heading
+        }
+      : null
+
+  return {
+    formatHrefs: {
+      stepper: buildHref(id, 'stepper'),
+      traditional: buildHref(id, 'traditional')
+    },
+    format,
+    content: contentWithHrefs,
+    currentPart: contentWithHrefs.flatParts[partNumber - 1],
+    partNumber,
+    totalParts,
+    prevLink,
+    nextLink
+  }
+}
+
 async function buildMarkdownGuideViewModel(req, document) {
   const content = await buildMarkdownGuideContent(
     document.id,
     document.latestVersionId
   )
+  const stepperFields = buildMarkdownStepperFields(req, document.id, content)
   const defaultVersionKey =
     document.version === 'Version 1' ? 'version1' : 'version2'
 
@@ -235,7 +313,14 @@ async function buildMarkdownGuideViewModel(req, document) {
     // for editor tools to act on, designer or not.
     isEditor: false,
     editorActions: null,
-    content,
+    content: stepperFields.content || content,
+    format: stepperFields.format || null,
+    formatHrefs: stepperFields.formatHrefs || null,
+    currentPart: stepperFields.currentPart || null,
+    partNumber: stepperFields.partNumber || null,
+    totalParts: stepperFields.totalParts || null,
+    prevLink: stepperFields.prevLink || null,
+    nextLink: stepperFields.nextLink || null,
     panelCollapsed: getPanelCollapsed(req),
     panelToggleHref: '/playground/guide/panel-toggle',
     panelWidth: getPanelWidth(req),

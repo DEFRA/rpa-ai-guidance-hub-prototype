@@ -47,6 +47,18 @@
       {{ part.heading }}
     </h3>
   {% endif %}
+  {% if part.html %}
+    {#
+      An API-sourced guide's part — rendered from its own Markdown slice
+      by marked (guide-content.js's splitMarkdownIntoSections), not the
+      mock content's structured body entries below, so it's dropped in
+      directly rather than walked entry-by-entry. Still wrapped in
+      .app-guide-markdown so guide-images.js's lazy-image tracking (which
+      selects that class) keeps working the same as the traditional/blob
+      view.
+    #}
+    <div class="app-guide-markdown">{{ part.html | safe }}</div>
+  {% else %}
   {% for entry in part.body %}
     {% if entry == "CASE_NOTE_BLOCK" %}
       <div class="app-guide-callout">
@@ -94,6 +106,7 @@
       </ul>
     {% endif %}
   {% endfor %}
+  {% endif %}
 {% endmacro %}
 
 {% if format == "traditional" %}

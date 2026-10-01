@@ -94,7 +94,7 @@
       <div class="app-guide-panel__body" id="guide-panel-body">
         {% include "playground/guide/partials/case-bookmarks.njk" %}
 
-        {% if not isMarkdown %}
+        {% if formatHrefs %}
           {% include "playground/guide/partials/format-toggle.njk" %}
         {% endif %}
 
@@ -130,14 +130,16 @@
   {% set pinDocumentId = document.id %}
   {% include "partials/pin-button.njk" %}
 
-  {% if isMarkdown %}
+  {% if isMarkdown and (format != "stepper" or not content.sections) %}
     {#
-      An API-sourced guide (app/lib/guidance-api-loader.js) has no
-      sections/parts/stepper model to walk — content.html is the whole
-      guide, already rendered from its content.md by marked
+      An API-sourced guide (app/lib/guidance-api-loader.js) still has no
+      stepper/traditional split for its traditional format — content.html
+      is the whole guide, already rendered from its content.md by marked
       (guide/guide-content.js's buildMarkdownGuideContent), so it's just
       dropped in directly rather than through reading-content.njk's
-      section/part/pagination markup.
+      section/part/pagination markup. Also the fallback when the fetch
+      failed (content.error) or the Markdown had no `## ` headings to
+      split on — reading-content.njk has nothing to paginate either way.
     #}
     <div class="app-guide-markdown">{{ content.html | safe }}</div>
   {% else %}

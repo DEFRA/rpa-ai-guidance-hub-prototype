@@ -22,20 +22,122 @@ const marked = new Marked({
   }
 })
 
+// Same `## section` / `### part` convention the mock content's own .md
+// files use (app/lib/guidance-content-loader.js's HEADING_LINE, including
+// its optional `[heading: ...]` sidebar/reading-heading override) — the
+// fetched Markdown is the same underlying guidance content, just served
+// from the Prototype guides API instead of a baked-in .md file, so
+// splitting on it lets an API guide's stepper walk real
+// section/part boundaries the same way a mock guide's does. Unlike the
+// mock loader, each part's body is rendered to real HTML via `marked`
+// (not hand-parsed into paragraphs/bullets) — an API guide's Markdown can
+// use the full dialect (bold, links, images, tables), not just the small
+// subset the mock content sticks to. Returns null when the content has no
+// `## ` headings at all, so callers can fall back to the single rendered
+// blob rather than a one-part "guide".
+const HEADING_LINE = /^(#{2,3})\s+(.+?)(?:\s*\[heading:\s*(.+?)\s*\])?$/
+
+function splitMarkdownIntoSections(markdown) {
+  const lines = markdown.split('\n')
+  const sectionStarts = []
+  lines.forEach((line, index) => {
+    if (/^##\s+/.test(line)) sectionStarts.push(index)
+  })
+  if (!sectionStarts.length) return null
+
+  const rawSections = sectionStarts.map((start, sectionIndex) => {
+    const end =
+      sectionIndex + 1 < sectionStarts.length
+        ? sectionStarts[sectionIndex + 1]
+        : lines.length
+    const sectionHeadingMatch = lines[start].match(HEADING_LINE)
+    const sectionName = sectionHeadingMatch[2].trim()
+    const sectionHeading = (
+      sectionHeadingMatch[3] || sectionName
+    ).trim()
+    const sectionLines = lines.slice(start + 1, end)
+
+    const partStarts = []
+    sectionLines.forEach((line, index) => {
+      if (/^###\s+/.test(line)) partStarts.push(index)
+    })
+
+    if (!partStarts.length) {
+      return {
+        sectionName,
+        parts: [
+          { heading: sectionHeading, markdown: sectionLines.join('\n') }
+        ]
+      }
+    }
+
+    const parts = partStarts.map((partStart, partIndex) => {
+      const partEnd =
+        partIndex + 1 < partStarts.length
+          ? partStarts[partIndex + 1]
+          : sectionLines.length
+      const partHeadingMatch = sectionLines[partStart].match(HEADING_LINE)
+      const partName = partHeadingMatch[2].trim()
+      const heading = (partHeadingMatch[3] || partName).trim()
+      return {
+        heading,
+        markdown: sectionLines.slice(partStart + 1, partEnd).join('\n')
+      }
+    })
+
+    return { sectionName, parts }
+  })
+
+  // Numbers sections/parts and renders each part's own Markdown slice to
+  // HTML in one pass, the same convention guide-content.js's own
+  // fromSections (below) uses for mock content's structured body.
+  let partNumber = 0
+  const sections = rawSections.map((section, index) => {
+    const sectionNumber = index + 1
+    const parts = section.parts.map((part) => {
+      partNumber += 1
+      return {
+        id: 'part-' + partNumber,
+        partNumber,
+        sectionNumber,
+        sectionName: section.sectionName,
+        heading: part.heading,
+        html: marked.parse(part.markdown)
+      }
+    })
+    return {
+      id: 'section-' + sectionNumber,
+      sectionNumber,
+      sectionName: section.sectionName,
+      firstPartNumber: parts[0].partNumber,
+      parts
+    }
+  })
+
+  const flatParts = sections.reduce(
+    (all, section) => all.concat(section.parts),
+    []
+  )
+
+  return { sections, flatParts }
+}
+
 // A guide's Markdown content, fetched from the Prototype guides API
 // (app/lib/guidance-api-client.js) rather than parsed off a
 // guidanceDocuments entry's own `steps` — for these, latestVersionId
 // (app/lib/guidance-api-loader.js) already names the exact version to
-// read, so there's no manifest lookup to do here. Returns
-// `{ isMarkdown: true, html }`, a different shape entirely from
-// buildGuideContent's `{ sections, flatParts }` — the stepper/traditional
-// format machinery doesn't apply to a plain rendered document, so
-// guide/view-model.js short-circuits around it for these.
+// read, so there's no manifest lookup to do here. Always carries the
+// whole-document `html` (used for the traditional format, unchanged), and
+// — when the content splits into sections — `sections`/`flatParts` too, so
+// guide/view-model.js can build the same stepper pagination a mock guide
+// gets. `error: true` (content fetch failed) is the one case with neither:
+// nothing to paginate, so the format toggle stays hidden for it.
 async function buildMarkdownGuideContent(documentId, versionId) {
   const markdown = await fetchGuideContent(documentId, versionId)
   if (!markdown) {
     return {
       isMarkdown: true,
+      error: true,
       html: '<p class="govuk-body">This guide could not be loaded right now.</p>'
     }
   }
@@ -50,7 +152,11 @@ async function buildMarkdownGuideContent(documentId, versionId) {
     `/playground/guide/${encodeURIComponent(documentId)}/assets/`
   )
 
-  return { isMarkdown: true, html: marked.parse(rewritten) }
+  return {
+    isMarkdown: true,
+    html: marked.parse(rewritten),
+    ...(splitMarkdownIntoSections(rewritten) || {})
+  }
 }
 
 // A single content shape for the guide page's three design directions,
