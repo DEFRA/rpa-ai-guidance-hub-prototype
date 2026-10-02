@@ -38,17 +38,20 @@ function mapManifestEntryToDocument(entry) {
     (version) => version.version === entry.latestVersion
   )
   const versionKey = entry.latestVersion === 2 ? 'version2' : 'version1'
+  // Both dates are optional in the manifest, so each falls back to the other.
+  const updatedAt = latest && (latest.updatedAt || latest.createdAt)
+  const createdAt = latest && (latest.createdAt || latest.updatedAt)
 
   return {
     id: entry.documentId,
     title: entry.title,
     description: '',
     version: `Version ${entry.latestVersion}`,
-    lastUpdated: latest ? formatDate(latest.createdAt) : '',
-    published: latest ? formatDate(latest.createdAt) : '',
+    lastUpdated: updatedAt ? formatDate(updatedAt) : '',
+    published: createdAt ? formatDate(createdAt) : '',
     category: 'General',
     scheme: 'General',
-    year: latest ? new Date(latest.createdAt).getFullYear() : undefined,
+    year: updatedAt ? new Date(updatedAt).getFullYear() : undefined,
     showOnOrganicSearch: true,
     // Mirrors metadata.js's own versions.version1/version2 shape (see
     // document/view-model.js's defaultVersionKey, which reads it back by
@@ -58,8 +61,8 @@ function mapManifestEntryToDocument(entry) {
     versions: {
       [versionKey]: {
         label: `Version ${entry.latestVersion}`,
-        lastUpdated: latest ? formatDate(latest.createdAt) : '',
-        published: latest ? formatDate(latest.createdAt) : '',
+        lastUpdated: updatedAt ? formatDate(updatedAt) : '',
+        published: createdAt ? formatDate(createdAt) : '',
         versionNotes: ''
       }
     },
@@ -71,12 +74,7 @@ function mapManifestEntryToDocument(entry) {
 
 async function loadGuidanceFromApi() {
   const manifest = await fetchManifest()
-  if (!manifest) {
-    console.error(
-      '[guidance-api-loader] no manifest available — returning no documents'
-    )
-    return []
-  }
+  if (!manifest) return []
 
   return Object.values(manifest).map(mapManifestEntryToDocument)
 }
