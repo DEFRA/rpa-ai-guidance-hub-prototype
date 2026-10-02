@@ -14,6 +14,10 @@
 
 const { GUIDANCE_API_BASE_URL } = require('./feature-flags')
 
+// Long enough for the API, short enough that a slow one never holds up a
+// page that can fall back to the mock guides.
+const TIMEOUT_MS = 3000
+
 function buildUrl(pathname, versionId) {
   const url = new URL(pathname, GUIDANCE_API_BASE_URL)
   if (versionId) url.searchParams.set('version_id', versionId)
@@ -26,7 +30,11 @@ function buildUrl(pathname, versionId) {
 async function fetchManifest() {
   const url = buildUrl('/prototype/guides/manifest')
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(TIMEOUT_MS)
+    })
+    // No manifest yet is the normal state of an environment with no guides.
+    if (response.status === 404) return null
     if (!response.ok) {
       console.error(
         `[guidance-api-client] manifest fetch failed: ${response.status} ${response.statusText}`

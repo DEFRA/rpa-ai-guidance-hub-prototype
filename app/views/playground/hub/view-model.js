@@ -1,10 +1,7 @@
 const {
   buildManageGuidanceSearchResults
 } = require('../../../data/manage-guidance')
-const {
-  getRequestGuidanceDocuments
-} = require('../../../data/guidance-documents')
-const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
+const { getRequestApiGuides } = require('../../../data/guidance-documents')
 const {
   getListIds,
   getQuickFilters,
@@ -125,7 +122,7 @@ function buildApiSearchResults(documents, overviewHrefBase) {
 // JavaScript off — see page.notes.md for why that changed.
 async function fromSession(req) {
   // First, so req.apiGuides is set before anything reads the guide list.
-  const documents = await getRequestGuidanceDocuments(req)
+  const apiGuides = await getRequestApiGuides(req)
   const q = (req.query.q || '').trim()
 
   const category = readSlug(req.query.category, 'all')
@@ -146,29 +143,26 @@ async function fromSession(req) {
       : ''
   const listIds = bookmark || list ? getListIds(req, list, bookmark) : null
 
-  // GUIDANCE_API_ENABLED swaps the whole list's source, not just adds to
-  // it (per the earlier design decision — the mock manage-guidance rows
-  // and a live API guide can't be merged meaningfully, since the API has
-  // no editing/awaiting-approval state of its own): a live manifest fetch
-  // via getGuidanceDocuments(), fetched fresh on this request, in place of
-  // buildManageGuidanceSearchResults' mock editing/awaiting/published
-  // rows. See app/data/guidance-documents/index.js for the API-call/
-  // fallback-to-mock logic itself.
-  const baseResults = GUIDANCE_API_ENABLED
-    ? buildApiSearchResults(documents, '/playground/guide')
-    : buildManageGuidanceSearchResults(req, '/playground/document').map(
-        (document) => ({
-          ...document,
-          // buildManageGuidanceSearchResults() always joins its
-          // overviewHrefBase with a ?id= query string — the v6
-          // manage-guidance/document-overview convention. The hub links
-          // straight to the merged guide page (playground/guide/**)
-          // instead — one click from here to the guide itself, rather
-          // than through the old document overview/format-choice pages
-          // first.
-          overviewHref: `/playground/guide/${document.id}`
-        })
-      )
+  // The API's guides, fetched fresh on this request, are added to the mock
+  // manage-guidance rows rather than replacing them, so the mock journeys
+  // keep working whether or not the API has any guides. Their ids are the
+  // API's uuids, so they never collide with a mock guide's.
+  const baseResults = [
+    ...buildApiSearchResults(apiGuides, '/playground/guide'),
+    ...buildManageGuidanceSearchResults(req, '/playground/document').map(
+      (document) => ({
+        ...document,
+        // buildManageGuidanceSearchResults() always joins its
+        // overviewHrefBase with a ?id= query string — the v6
+        // manage-guidance/document-overview convention. The hub links
+        // straight to the merged guide page (playground/guide/**)
+        // instead — one click from here to the guide itself, rather
+        // than through the old document overview/format-choice pages
+        // first.
+        overviewHref: `/playground/guide/${document.id}`
+      })
+    )
+  ]
   const allResults = baseResults.map((document) => {
     // In the Recently opened list, a guide the reader has scrolled through
     // opens where they left off (guide-positions.js, via guide/section/).

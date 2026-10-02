@@ -19,4 +19,14 @@ const GUIDANCE_API_ENABLED = process.env.GUIDANCE_API_ENABLED === 'true'
 const GUIDANCE_API_BASE_URL =
   process.env.GUIDANCE_API_BASE_URL || 'http://localhost:8085'
 
-module.exports = { GUIDANCE_API_ENABLED, GUIDANCE_API_BASE_URL }
+// The playground overlays API guides on the mock ones whenever the API is
+// configured, by base URL alone; GUIDANCE_API_ENABLED keeps its meaning for
+// the frozen snapshots, which swap rather than overlay.
+const GUIDANCE_API_CONFIGURED =
+  GUIDANCE_API_ENABLED || Boolean(process.env.GUIDANCE_API_BASE_URL)
+
+module.exports = {
+  GUIDANCE_API_ENABLED,
+  GUIDANCE_API_CONFIGURED,
+  GUIDANCE_API_BASE_URL
+}

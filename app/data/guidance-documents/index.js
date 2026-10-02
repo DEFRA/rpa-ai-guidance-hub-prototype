@@ -17,7 +17,10 @@
 // GUIDANCE_API_ENABLED is on.
 //
 
-const { GUIDANCE_API_ENABLED } = require('../../lib/feature-flags')
+const {
+  GUIDANCE_API_ENABLED,
+  GUIDANCE_API_CONFIGURED
+} = require('../../lib/feature-flags')
 const { loadGuidanceFromApi } = require('../../lib/guidance-api-loader')
 const { loadGuidanceContent } = require('../../lib/guidance-content-loader')
 const metadataDocuments = require('./metadata')
@@ -53,20 +56,23 @@ async function getGuidanceDocuments() {
   return guidanceDocuments
 }
 
-// getGuidanceDocuments once per request, however many handlers ask — and
-// exposed on req.apiGuides (which app/data/side-nav.js reads synchronously)
-// when the API is on.
-async function getRequestGuidanceDocuments(req) {
-  if (!req.guidanceDocumentsPromise) {
-    req.guidanceDocumentsPromise = getGuidanceDocuments()
+// The playground's entry point: just the API's guides, which it overlays on
+// the mock ones — [] when the API isn't configured, has no manifest yet or
+// can't be reached, so the mocks carry on alone. Fetched once per request
+// and exposed on req.apiGuides, which app/data/side-nav.js reads
+// synchronously.
+async function getRequestApiGuides(req) {
+  if (!req.apiGuidesPromise) {
+    req.apiGuidesPromise = GUIDANCE_API_CONFIGURED
+      ? loadGuidanceFromApi()
+      : Promise.resolve([])
   }
-  const documents = await req.guidanceDocumentsPromise
-  if (GUIDANCE_API_ENABLED) req.apiGuides = documents
-  return documents
+  req.apiGuides = await req.apiGuidesPromise
+  return req.apiGuides
 }
 
 module.exports = {
   guidanceDocuments,
   getGuidanceDocuments,
-  getRequestGuidanceDocuments
+  getRequestApiGuides
 }

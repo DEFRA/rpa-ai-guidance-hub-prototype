@@ -1,7 +1,4 @@
-const {
-  getRequestGuidanceDocuments
-} = require('../../../data/guidance-documents')
-const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
+const { getRequestApiGuides } = require('../../../data/guidance-documents')
 const {
   buildMarkdownGuideContent,
   loadApiGuideContent,
@@ -549,15 +546,11 @@ async function guideViewModel(req, id) {
   }
 }
 
-// The API guide with this id, or null (always null with the flag off).
+// The API guide with this id, or null (always null when the API isn't
+// configured or has no guides).
 async function findApiGuide(req, id) {
-  if (!GUIDANCE_API_ENABLED) return null
-  const documents = await getRequestGuidanceDocuments(req)
-  return (
-    documents.find(
-      (candidate) => candidate.isApiGuide && candidate.id === id
-    ) || null
-  )
+  const apiGuides = await getRequestApiGuides(req)
+  return apiGuides.find((candidate) => candidate.id === id) || null
 }
 
 // The section/ and position/ modules' shared lookup: where an anchor

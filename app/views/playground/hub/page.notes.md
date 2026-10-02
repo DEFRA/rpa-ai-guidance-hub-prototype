@@ -113,3 +113,14 @@ Side nav auto-collapses to icon rail at 769–1199px viewport width; pure CSS, n
 - Manual collapse/expand saved per session, overrides auto-collapse at any width
 - Expanding from rail posts `collapsed=false` form to avoid toggling back
 - Below 769px drawer unchanged
+
+---
+
+**Tim Gordon — 2 October 2026**
+
+API guides now sit alongside the mock guides instead of replacing them, so the mock journeys keep working whether or not the API has content.
+
+- The API is used whenever `GUIDANCE_API_BASE_URL` is set; `GUIDANCE_API_ENABLED` is no longer needed for the playground (the frozen snapshots still use it)
+- No manifest yet (404), an unreachable API or a slow one (3s timeout) leaves just the mock guides, with nothing logged for a 404
+- Side nav lists and seeded bookmarks keep the mock guides too
+- Open question: should an API guide replace a mock guide it duplicates, e.g. by matching manifest name to mock id?
