@@ -60,7 +60,10 @@ const BOOKMARK_TYPES = {
 
 const REFERENCE_MAX_LENGTH = 20
 
+// With the API on, its guides replace the mock list entirely (as on the
+// hub); playground/routes.js fetches them onto req.apiGuides.
 function allDocuments(req) {
+  if (req.apiGuides) return req.apiGuides
   return manageGuidance.buildManageGuidanceSearchResults(req, '')
 }
 
@@ -129,23 +132,34 @@ function togglePin(req, id) {
 // an older session's differently shaped data is simply ignored.
 function getBookmarks(req) {
   if (!req.session.data.guideBookmarks) {
-    req.session.data.guideBookmarks = [
-      {
-        type: 'case',
-        ref: 'CASE-10482',
-        documentIds: [
-          'cs-ma-claim-parcel-not-under-control-of-sbi-signoff-2026',
-          'cs-ma-evidence-required-2026',
-          'cs-mid-tier-hedgerow-and-boundary-options'
+    // The seeded examples name mock guides, so with the API on they'd be
+    // empty cases — start with none.
+    req.session.data.guideBookmarks = req.apiGuides
+      ? []
+      : [
+          {
+            type: 'case',
+            ref: 'CASE-10482',
+            documentIds: [
+              'cs-ma-claim-parcel-not-under-control-of-sbi-signoff-2026',
+              'cs-ma-evidence-required-2026',
+              'cs-mid-tier-hedgerow-and-boundary-options'
+            ]
+          },
+          {
+            type: 'sbi',
+            ref: '123456789',
+            documentIds: ['sfi-soil-health-actions']
+          }
         ]
-      },
-      {
-        type: 'sbi',
-        ref: '123456789',
-        documentIds: ['sfi-soil-health-actions']
-      }
-    ]
   }
+  // `sections` pins a bookmark to specific sections of its guides
+  // ({ documentId, anchor, label }); `documentIds` still lists every guide
+  // in it, so readers that only care about guides are unchanged. Backfilled
+  // for sessions from before section bookmarks.
+  req.session.data.guideBookmarks.forEach((bookmark) => {
+    bookmark.sections = bookmark.sections || []
+  })
   return req.session.data.guideBookmarks
 }
 
@@ -161,7 +175,9 @@ function normaliseReference(value) {
 
 // Returns an error { field, text } or null. Bookmarking a guide to a
 // reference that already exists adds it there rather than duplicating it.
-function addBookmark(req, type, rawRef, documentId) {
+// `section` ({ anchor, label }, already validated against the guide by the
+// caller) pins the bookmark to that section as well.
+function addBookmark(req, type, rawRef, documentId, section) {
   const kind = BOOKMARK_TYPES[type]
   if (!kind) {
     return {
@@ -189,20 +205,36 @@ function addBookmark(req, type, rawRef, documentId) {
     return { field: 'ref', text: 'This guide cannot be bookmarked' }
   }
 
-  const existing = findBookmark(req, type, ref)
-  if (existing) {
-    if (existing.documentIds.indexOf(documentId) === -1) {
-      existing.documentIds.push(documentId)
-    }
-  } else {
-    getBookmarks(req).unshift({ type, ref, documentIds: [documentId] })
+  let bookmark = findBookmark(req, type, ref)
+  if (!bookmark) {
+    bookmark = { type, ref, documentIds: [], sections: [] }
+    getBookmarks(req).unshift(bookmark)
+  }
+  if (bookmark.documentIds.indexOf(documentId) === -1) {
+    bookmark.documentIds.push(documentId)
+  }
+  if (
+    section &&
+    !bookmark.sections.some(
+      (entry) =>
+        entry.documentId === documentId && entry.anchor === section.anchor
+    )
+  ) {
+    bookmark.sections.push({
+      documentId,
+      anchor: section.anchor,
+      label: section.label
+    })
   }
   return null
 }
 
 // Without documentId, removes the whole bookmark (the nav's "…" menu);
-// with it, just takes that guide off the bookmark (the guide's own page).
-function removeBookmark(req, type, ref, documentId) {
+// with it, takes that guide off the bookmark (the guide's own page); with
+// an anchor too, just that section — and the guide with it once it was
+// the guide's last bookmarked section (a deliberate simplification: a
+// whole-guide bookmark and a section bookmark aren't tracked apart).
+function removeBookmark(req, type, ref, documentId, anchor) {
   const bookmarks = getBookmarks(req)
   const index = bookmarks.findIndex(
     (bookmark) => bookmark.type === type && bookmark.ref === ref
@@ -212,10 +244,26 @@ function removeBookmark(req, type, ref, documentId) {
     bookmarks.splice(index, 1)
     return
   }
-  const ids = bookmarks[index].documentIds
+  const bookmark = bookmarks[index]
+  const forGuide = (entry) => entry.documentId === documentId
+  if (anchor) {
+    bookmark.sections = bookmark.sections.filter(
+      (entry) => !(forGuide(entry) && entry.anchor === anchor)
+    )
+    if (bookmark.sections.some(forGuide)) return
+  } else {
+    bookmark.sections = bookmark.sections.filter((entry) => !forGuide(entry))
+  }
+  const ids = bookmark.documentIds
   const docIndex = ids.indexOf(documentId)
   if (docIndex !== -1) ids.splice(docIndex, 1)
   if (!ids.length) bookmarks.splice(index, 1)
+}
+
+// A section link that lands on the right stepper page (or traditional
+// anchor) — guide/section/'s redirect works that out from the guide itself.
+function sectionHref(base, documentId, anchor) {
+  return `${documentHref(base, documentId)}/section/${encodeURIComponent(anchor)}`
 }
 
 // The bookmark a hub request filters to (?case= or ?sbi=), or null.
@@ -392,7 +440,17 @@ function buildSideNav(req, base = DEFAULT_BASE) {
     const kind = BOOKMARK_TYPES[bookmark.type]
     const guides = bookmark.documentIds
       .filter((id) => titles[id])
-      .map((id) => ({ id, title: titles[id], href: documentHref(base, id) }))
+      .map((id) => ({
+        id,
+        title: titles[id],
+        href: documentHref(base, id),
+        sections: bookmark.sections
+          .filter((entry) => entry.documentId === id)
+          .map((entry) => ({
+            label: entry.label,
+            href: sectionHref(base, id, entry.anchor)
+          }))
+      }))
     return {
       type: bookmark.type,
       typeLabel: kind.short,
@@ -450,6 +508,7 @@ module.exports = {
   normaliseReference,
   addBookmark,
   removeBookmark,
+  sectionHref,
   readBookmarkFilter,
   getListIds,
   getQuickFilters,

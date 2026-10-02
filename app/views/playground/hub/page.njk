@@ -273,6 +273,10 @@
             <a class="govuk-link" href="{{ result.overviewHref }}?from=search&q={{ initialSearchQuery | urlencode }}">{{ result.title }}</a>
           </h3>
 
+          {% if result.resumeLabel %}
+            <p class="govuk-body-s app-search-results__resume">Continue from <strong>{{ result.resumeLabel }}</strong></p>
+          {% endif %}
+
           <p class="govuk-body app-search-results__description">{{ result.description }}</p>
 
           <p class="govuk-body-s app-search-results__dates">Last updated: {{ result.lastUpdated }} &middot; Published: {{ result.published }}</p>

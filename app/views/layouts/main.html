@@ -38,15 +38,15 @@
 {% endblock %}
 
 {#
-  The GOV.UK template's own `container` block (width container, beforeContent,
-  main), reproduced so a playground page can wrap it in the side navigation
-  shell. Overriding `main` alone would nest inside the template's container.
-
-  Only pages with `sideNav` set (every playground page but sign-in —
-  app/views/playground/routes.js) get the shell; everything else, frozen versions and snapshots included, renders
-  exactly the template's markup. Nunjucks won't let a block be defined
-  twice, so beforeContent/content live inside this one block rather than
-  in an if/else with super().
+  The GOV.UK template's own `container` block (the width container and
+  <main>; GOV.UK Frontend 6 split this out of `main`, which now covers only
+  <main>), reproduced so a playground page can wrap it in the side
+  navigation shell. Only pages with `sideNav` set (every playground page but
+  sign-in — app/views/playground/routes.js) get the shell; everything else,
+  frozen versions and snapshots included, renders exactly the template's
+  markup. Nunjucks won't let a block be defined twice, so
+  beforeContent/content live inside this one block rather than in an
+  if/else with super().
 #}
 {% block container %}
 {% if sideNav %}

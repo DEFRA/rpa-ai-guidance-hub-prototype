@@ -5,18 +5,19 @@
 // treats them all as near the viewport and fetches the lot.
 //
 ;(function () {
-  const root = document.querySelector('.app-guide-markdown')
+  const root = document.querySelector('.app-guide-reading')
   if (!root) return
 
   // Only with JavaScript, so a reader without it never gets stuck with the
   // reserved space.
-  root.classList.add('app-guide-markdown--track-images')
+  root.classList.add('app-guide-reading--track-images')
 
   function markLoaded(image) {
     image.classList.add('is-loaded')
   }
 
-  // `load` doesn't bubble, but does reach a capturing listener.
+  // `load` doesn't bubble, but does reach a capturing listener — which also
+  // covers images the TipTap viewer adds later.
   root.addEventListener(
     'load',
     (event) => {

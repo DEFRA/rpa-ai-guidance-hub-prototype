@@ -13,7 +13,7 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
-{% set pageName = "Bookmark this guide to a case" %}
+{% set pageName = heading %}
 {% if errorList and errorList.length %}{% set pageName = "Error: " + pageName %}{% endif %}
 
 {% block columns %}
@@ -51,6 +51,7 @@
   {% endset %}
 
   <form method="post" action="/playground/guide/{{ id }}/bookmark" novalidate>
+    {% if section %}<input type="hidden" name="section" value="{{ section.anchor }}">{% endif %}
 
     {{ govukRadios({
       idPrefix: "bookmark-type",
@@ -58,14 +59,12 @@
       value: type,
       fieldset: {
         legend: {
-          text: "Bookmark this guide to a case",
+          text: heading,
           isPageHeading: true,
           classes: "govuk-fieldset__legend--l"
         }
       },
-      hint: {
-        text: documentName + " will show in that case's guide list on the side navigation."
-      },
+      hint: { text: hintText },
       errorMessage: errors.type,
       items: [
         { value: "case", text: types[0].label, conditional: { html: caseHtml } },
@@ -74,8 +73,8 @@
     }) }}
 
     <div class="govuk-button-group">
-      {{ govukButton({ text: "Bookmark guide" }) }}
-      <a class="govuk-link" href="/playground/guide/{{ id }}">Cancel</a>
+      {{ govukButton({ text: "Bookmark section" if section else "Bookmark guide" }) }}
+      <a class="govuk-link" href="{{ cancelHref }}">Cancel</a>
     </div>
 
   </form>

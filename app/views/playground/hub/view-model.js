@@ -1,7 +1,9 @@
 const {
   buildManageGuidanceSearchResults
 } = require('../../../data/manage-guidance')
-const { getGuidanceDocuments } = require('../../../data/guidance-documents')
+const {
+  getRequestGuidanceDocuments
+} = require('../../../data/guidance-documents')
 const { GUIDANCE_API_ENABLED } = require('../../../lib/feature-flags')
 const {
   getListIds,
@@ -9,9 +11,11 @@ const {
   findBookmark,
   readBookmarkFilter,
   isPinned,
+  sectionHref,
   LISTS,
   BOOKMARK_TYPES
 } = require('../../../data/side-nav')
+const { getGuidePosition } = require('../../../data/guide-positions')
 
 // Slug (querystring/form value) -> full label (the value buildManageGuidance
 // SearchResults' documents actually carry) for each single-choice facet.
@@ -120,6 +124,8 @@ function buildApiSearchResults(documents, overviewHrefBase) {
 // year/state/sort/q), not client-side JS, so the page works with
 // JavaScript off — see page.notes.md for why that changed.
 async function fromSession(req) {
+  // First, so req.apiGuides is set before anything reads the guide list.
+  const documents = await getRequestGuidanceDocuments(req)
   const q = (req.query.q || '').trim()
 
   const category = readSlug(req.query.category, 'all')
@@ -148,7 +154,6 @@ async function fromSession(req) {
   // buildManageGuidanceSearchResults' mock editing/awaiting/published
   // rows. See app/data/guidance-documents/index.js for the API-call/
   // fallback-to-mock logic itself.
-  const documents = await getGuidanceDocuments()
   const baseResults = GUIDANCE_API_ENABLED
     ? buildApiSearchResults(documents, '/playground/guide')
     : buildManageGuidanceSearchResults(req, '/playground/document').map(
@@ -164,10 +169,20 @@ async function fromSession(req) {
           overviewHref: `/playground/guide/${document.id}`
         })
       )
-  const allResults = baseResults.map((document) => ({
-    ...document,
-    pinned: isPinned(req, document.id)
-  }))
+  const allResults = baseResults.map((document) => {
+    // In the Recently opened list, a guide the reader has scrolled through
+    // opens where they left off (guide-positions.js, via guide/section/).
+    const position =
+      list === 'recently-opened' ? getGuidePosition(req, document.id) : null
+    return {
+      ...document,
+      overviewHref: position
+        ? sectionHref('/playground', document.id, position.anchor)
+        : document.overviewHref,
+      resumeLabel: position ? position.label : null,
+      pinned: isPinned(req, document.id)
+    }
+  })
 
   const searchText = q.toLowerCase()
   const stateLabels = states.map((value) => STATE_LABELS[value])

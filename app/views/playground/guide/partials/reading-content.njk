@@ -3,11 +3,16 @@
   (../panel.njk, ../toolbar.njk, ../inline.njk), so the visual redesign of
   the reading experience (capped measure, numbered section/part hierarchy,
   a styled callout for the CASE_NOTE_BLOCK template) lives in one place
-  rather than three. Reads `content` ({ sections, flatParts } —
-  app/data/guide-content.js), `format` ("stepper" shows one part with a
-  contents list and Previous/Next; "traditional" shows every section
-  continuously with an in-page contents list) and, for stepper,
-  `currentPart`/`partNumber`/`totalParts`/`prevLink`/`nextLink`.
+  rather than three. Reads `content` ({ sections } — app/data/guide-content.js,
+  with hrefs from guide/view-model.js), `format` ("stepper" shows one page
+  — a group of whole sections, see guide-content.js's groupPages — with
+  Previous/Next; "traditional" shows every section continuously) and, for
+  stepper, `stepperPages` (every page, each with its own Previous/Next —
+  all rendered, the others hidden="until-found" so Ctrl+F still searches
+  them) and `pageNumber`/`totalPages`.
+  Every section heading carries a "Bookmark section" link (section-level
+  case bookmarks), and every heading a data-guide-anchor for the
+  resume-reading script (guide-position.js).
 
   A part's body can include a branch — real guides don't always read
   section 1, 2, 3…: guidance-documents.js's own case-note content routes a
@@ -18,11 +23,16 @@
   Previous/Next replaced by a forced fork, since the guide's own content
   never actually blocks reading on an answer, only offers a shortcut.
 
+  A converted guide (app/data/guides/<id>/content.md) has the same
+  sections/parts, split at its headings, but each part carries `markdown`
+  instead of `body` and is rendered by the TipTap viewer.
+
   Deliberately not a page in itself (no <h1>, no extends) — each direction
   template renders its own title/byline/controls above this and includes
   it for the body only.
 #}
 {% from "govuk/components/pagination/macro.njk" import govukPagination %}
+{% from "partials/side-nav-icon.njk" import sideNavIcon %}
 
 {#
   Word-style heading hierarchy: a rule only where a section (the "Heading
@@ -35,17 +45,77 @@
   <hr class="app-guide-divider">
 {% endmacro %}
 
-{% macro renderPart(part, level=1) %}
+{#
+  A heading's bookmark (any heading — a section's, or a subheading's):
+  the side nav's bookmark icon beside the heading (a sibling, not inside
+  it, so the heading text stays clean for screen readers and the contents
+  list), filled once it's bookmarked to any case. Its accessible name is
+  the visually hidden text; the tooltip is the side nav's own
+  Esc-dismissable one (side-nav.js), for sighted mouse and keyboard users.
+  `target` is a section or part (bookmarkHref/bookmarkedTo, from
+  guide/view-model.js), `name` the heading it labels.
+#}
+{% macro headingBookmark(target, name) %}
+  {% set isBookmarked = target.bookmarkedTo.length > 0 %}
+  {% set label = "Bookmarked – add another case" if isBookmarked else "Bookmark to a case" %}
+  {% if target.bookmarkHref %}
+  <a class="app-guide-section-bookmark{{ ' app-guide-section-bookmark--active' if isBookmarked }}" href="{{ target.bookmarkHref }}" data-side-nav-tooltip>
+    {{ sideNavIcon("bookmark-filled" if isBookmarked else "bookmark") }}
+    <span class="govuk-visually-hidden">{{ label }}: {{ name }}</span>
+    <span class="app-side-nav__tooltip app-guide-section-bookmark__tooltip" aria-hidden="true">{{ label }}</span>
+  </a>
+  {% endif %}
+{% endmacro %}
+
+{# Which cases a heading is bookmarked to, as text under it — a tooltip
+   never shows on touch. #}
+{% macro bookmarkedTo(target) %}
+  {% if target.bookmarkedTo.length %}
+    <p class="app-guide-section-bookmarked">
+      Bookmarked to
+      {% for bookmark in target.bookmarkedTo %}{{ bookmark.typeLabel }} {{ bookmark.ref }}{{ ", " if not loop.last }}{% endfor %}
+    </p>
+  {% endif %}
+{% endmacro %}
+
+{#
+  A section's first part is the section's own heading, so its bookmark is
+  the section's (section-N); every other part bookmarks itself (part-N).
+#}
+{% macro renderPart(part, level=1, section=null, live=true) %}
+  {% set target = section or part %}
   {% if level == 1 %}
-    <h2 class="app-guide-heading-1" id="{{ part.id }}">
-      {% if part.partName %}<span class="app-guide-part-heading__eyebrow">{{ part.partName }}</span>{% endif %}
-      {{ part.heading }}
-    </h2>
+    <div class="app-guide-heading-row">
+      <h2 class="app-guide-heading-1" id="{{ part.id }}" data-guide-anchor="{{ part.id }}">
+        {% if part.partName %}<span class="app-guide-part-heading__eyebrow">{{ part.partName }}</span>{% endif %}
+        {{ part.heading }}
+      </h2>
+      {{ headingBookmark(target, section.sectionName if section else part.heading) }}
+    </div>
   {% else %}
-    <h3 class="app-guide-heading-2" id="{{ part.id }}">
-      {% if part.partName %}<span class="app-guide-part-heading__eyebrow">{{ part.partName }}</span>{% endif %}
-      {{ part.heading }}
-    </h3>
+    <div class="app-guide-heading-row app-guide-heading-row--sub">
+      <h3 class="app-guide-heading-2" id="{{ part.id }}" data-guide-anchor="{{ part.id }}">
+        {% if part.partName %}<span class="app-guide-part-heading__eyebrow">{{ part.partName }}</span>{% endif %}
+        {{ part.heading }}
+      </h3>
+      {{ headingBookmark(part, part.heading) }}
+    </div>
+  {% endif %}
+  {{ bookmarkedTo(target) }}
+  {% if part.markdown %}
+    {#
+      A converted guide's part (app/data/guide-markdown.js): rendered by
+      the TipTap viewer bundle (scripts/tiptap-viewer), which replaces the
+      server-rendered fallback inside once it loads. Only a `live` part
+      carries the Markdown for it: a stepper page other than the current
+      one keeps the server-rendered HTML, which find-in-page searches, and
+      which the viewer must not swap out from under the browser's own
+      find highlight (see guide-pages.js).
+    #}
+    <div class="app-guide-markdown app-guide-body-text" data-tiptap-markdown>
+      {% if live %}<script type="application/json">{{ part.markdown | jsonScript }}</script>{% endif %}
+      <div class="app-guide-markdown__fallback">{{ part.markdown | markdownFallback }}</div>
+    </div>
   {% endif %}
   {% if part.html %}
     {#
@@ -109,75 +179,78 @@
   {% endif %}
 {% endmacro %}
 
-{% if format == "traditional" %}
-
-  <nav class="app-guide-contents" aria-labelledby="guide-contents-heading">
-    <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
-    {% for section in content.sections %}
-      <p class="app-guide-contents__section{{ ' app-guide-contents__section--current' if section.sectionNumber == currentPart.sectionNumber }}">
-        <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}">{{ section.sectionName }}</a>
-      </p>
-      {% if section.parts.length > 1 %}
-        <ol class="govuk-list app-guide-contents__list">
-          {% for part in section.parts %}
-            <li>
-              {% if part.partNumber == currentPart.partNumber %}
-                <span class="app-guide-contents__link app-guide-contents__link--current" aria-current="true">{{ part.partName or part.heading }}</span>
-              {% else %}
-                <a class="govuk-link app-guide-contents__link" href="{{ part.href }}">{{ part.partName or part.heading }}</a>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ol>
-      {% endif %}
+{#
+  A whole section: its first part as the section's heading (for a
+  converted guide that's the section's lead part, headed with its own
+  name) plus its section tools, then every other part as a subheading.
+#}
+{% macro renderSection(section, live=true) %}
+  <div class="app-guide-section" id="{{ section.id }}">
+    {% for part in section.parts %}
+      {{ renderPart(part, 1 if loop.first else 2, section if loop.first else null, live) }}
     {% endfor %}
-  </nav>
+  </div>
+{% endmacro %}
+
+{#
+  One contents list for both formats. Only the stepper has a "current"
+  state — the sections on the page being shown; in traditional everything
+  is on the one page, so nothing is current.
+#}
+<nav class="app-guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
+  <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
+  {% for section in content.sections %}
+    <p class="app-guide-contents__section{{ ' app-guide-contents__section--current' if section.isCurrent }}"{% if format != "traditional" %} data-guide-contents-page="{{ section.pageNumber }}"{% endif %}>
+      <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}" data-guide-toc-target="{{ section.id }}"{% if section.isCurrent %} aria-current="true"{% endif %}>{{ section.sectionName }}</a>
+    </p>
+    {% if section.contentsParts.length %}
+      <ol class="govuk-list app-guide-contents__list">
+        {% for part in section.contentsParts %}
+          <li><a class="govuk-link app-guide-contents__link" href="{{ part.href }}" data-guide-toc-target="{{ part.id }}">{{ part.partName or part.heading }}</a></li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+  {% endfor %}
+</nav>
+
+{% if format == "traditional" %}
 
   {% for section in content.sections %}
     {% if not loop.first %}{{ sectionDivider() }}{% endif %}
-    <div class="app-guide-section" id="{{ section.id }}">
-      {% for part in section.parts %}
-        {{ renderPart(part, 1 if loop.first else 2) }}
-      {% endfor %}
-    </div>
+    {{ renderSection(section) }}
   {% endfor %}
 
 {% else %}
 
-  <nav class="app-guide-contents" aria-labelledby="guide-contents-heading">
-    <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
-    {% for section in content.sections %}
-      <p class="app-guide-contents__section{{ ' app-guide-contents__section--current' if section.sectionNumber == currentPart.sectionNumber }}">
-        <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}">{{ section.sectionName }}</a>
-      </p>
-      {% if section.parts.length > 1 %}
-        <ol class="govuk-list app-guide-contents__list">
-          {% for part in section.parts %}
-            <li>
-              {% if part.partNumber == currentPart.partNumber %}
-                <span class="app-guide-contents__link app-guide-contents__link--current" aria-current="true">{{ part.partName or part.heading }}</span>
-              {% else %}
-                <a class="govuk-link app-guide-contents__link" href="{{ part.href }}">{{ part.partName or part.heading }}</a>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ol>
+  {#
+    Every page is in the HTML, not just the current one: the rest are
+    hidden="until-found", which hides them like [hidden] but still lets
+    the browser's find-in-page (Ctrl+F) search them and, on a match,
+    reveal that page (guide-pages.js then hides the one you were on).
+    Where a browser doesn't support until-found they behave as plain
+    [hidden] — find covers the current page only, as before. Each page
+    carries its own progress and Previous/Next, so switching page is just
+    swapping which block shows.
+  #}
+  {% for page in stepperPages %}
+    <div class="app-guide-page" data-guide-page="{{ page.pageNumber }}"{% if not page.isCurrent %} hidden="until-found"{% endif %}>
+      <p class="app-guide-section__eyebrow">Page {{ page.pageNumber }} of {{ totalPages }}</p>
+      <div class="app-progress__track app-guide-progress" role="presentation">
+        <div class="app-progress__bar" style="width: {{ (page.pageNumber / totalPages * 100) | round }}%"></div>
+      </div>
+
+      {% for section in page.sections %}
+        {% if not loop.first %}{{ sectionDivider() }}{% endif %}
+        {{ renderSection(section, page.isCurrent) }}
+      {% endfor %}
+
+      {% if page.prevLink or page.nextLink %}
+        {{ govukPagination({
+          previous: { href: page.prevLink.href, labelText: page.prevLink.labelText } if page.prevLink else null,
+          next: { href: page.nextLink.href, labelText: page.nextLink.labelText } if page.nextLink else null
+        }) }}
       {% endif %}
-    {% endfor %}
-  </nav>
-
-  <p class="app-guide-section__eyebrow">Section {{ currentPart.sectionNumber }} of {{ content.sections.length }} · Part {{ partNumber }} of {{ totalParts }}</p>
-  <div class="app-progress__track app-guide-progress" role="presentation">
-    <div class="app-progress__bar" style="width: {{ (partNumber / totalParts * 100) | round }}%"></div>
-  </div>
-
-  {{ renderPart(currentPart) }}
-
-  {% if prevLink or nextLink %}
-    {{ govukPagination({
-      previous: { href: prevLink.href, labelText: prevLink.labelText } if prevLink else null,
-      next: { href: nextLink.href, labelText: nextLink.labelText } if nextLink else null
-    }) }}
-  {% endif %}
+    </div>
+  {% endfor %}
 
 {% endif %}

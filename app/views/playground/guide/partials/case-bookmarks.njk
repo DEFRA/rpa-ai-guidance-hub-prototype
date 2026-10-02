@@ -29,6 +29,25 @@
             <input type="hidden" name="returnTo" value="{{ returnTo }}#guide-case-bookmarks">
             <button type="submit" class="govuk-link app-link-button govuk-body-s">Remove<span class="govuk-visually-hidden"> {{ bookmark.typeLabel }} {{ bookmark.ref }} from case bookmarks</span></button>
           </form>
+          {% if bookmark.sections.length %}
+            {# The sections this case is pinned to, each linking to where it
+               lives in either format (guide/section/). #}
+            <ul class="govuk-list app-guide-panel__bookmark-sections" aria-label="Sections bookmarked to {{ bookmark.typeLabel }} {{ bookmark.ref }}">
+              {% for section in bookmark.sections %}
+                <li class="app-guide-panel__bookmark-section">
+                  <a class="govuk-link" href="{{ section.href }}">{{ section.label }}</a>
+                  <form method="post" action="{{ bookmark.removeHref }}">
+                    <input type="hidden" name="type" value="{{ bookmark.type }}">
+                    <input type="hidden" name="ref" value="{{ bookmark.ref }}">
+                    <input type="hidden" name="documentId" value="{{ id }}">
+                    <input type="hidden" name="anchor" value="{{ section.anchor }}">
+                    <input type="hidden" name="returnTo" value="{{ returnTo }}#guide-case-bookmarks">
+                    <button type="submit" class="govuk-link app-link-button govuk-body-s">Remove<span class="govuk-visually-hidden"> {{ section.label }} from {{ bookmark.typeLabel }} {{ bookmark.ref }}</span></button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
         </li>
       {% endfor %}
     </ul>
