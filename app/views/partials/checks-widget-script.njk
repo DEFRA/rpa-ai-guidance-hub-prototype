@@ -15,6 +15,7 @@
     var bar = checksCell.querySelector('[data-checks-bar]')
     var headline = checksCell.querySelector('[data-checks-headline]')
     var breakdown = checksCell.querySelector('[data-checks-breakdown]')
+    var lastRun = checksCell.querySelector('[data-checks-last-run]')
 
     if (!startButton || !idleState || !runningState || !completeState) return
 
@@ -39,6 +40,19 @@
     function setCountdown (secondsRemaining) {
       countdownText.textContent = 'Running checks — estimated time remaining: ' + secondsRemaining + ' second' + (secondsRemaining !== 1 ? 's' : '')
     }
+
+    // Prototype-only memory of the last run, per page, in this browser.
+    var STORAGE_KEY = 'checks-last-run:' + window.location.pathname
+
+    function showLastRun (isoDate) {
+      if (!lastRun || !isoDate) return
+      var when = new Date(isoDate)
+      lastRun.textContent = 'Last run: ' + when.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) +
+        ' at ' + when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      lastRun.hidden = false
+    }
+
+    try { showLastRun(window.localStorage.getItem(STORAGE_KEY)) } catch (e) {}
 
     startButton.addEventListener('click', function () {
       idleState.hidden = true
@@ -71,6 +85,10 @@
 
         runningState.hidden = true
         completeState.hidden = false
+
+        var now = new Date().toISOString()
+        showLastRun(now)
+        try { window.localStorage.setItem(STORAGE_KEY, now) } catch (e) {}
       }, DURATION_SECONDS * 1000)
     })
   })()

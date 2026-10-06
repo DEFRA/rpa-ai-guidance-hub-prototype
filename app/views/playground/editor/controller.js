@@ -1,31 +1,34 @@
-const { guidanceDocuments } = require('../../../data/guidance-documents')
 const {
-  buildEditorSections,
+  getPlaygroundApiGuides
+} = require('../../../data/playground-api-guides')
+const { canEdit } = require('../../../data/permissions')
+const lifecycle = require('../../../data/guide-lifecycle')
+const { loadEditorSections } = require('./view-model')
+const { buildMetadata, buildPanelState } = require('../guide/view-model')
+const {
   buildEditorExperimentComments,
   buildAddedCommentAnchors
 } = require('../../../data/editor-experiment')
 
-// The one canonical document editor — the consolidation plan's "no debate"
-// decision, ported from /v5/editor-experiment (richest toolbar: undo/redo,
-// full formatting, images, search, dark mode). /v6/editor-2-3-view and its
-// /v6/editor-experiment twin are retired; every "Edit"/"Continue editing"
-// link in the playground build points here instead. Driven by whichever
-// document ?id= names — a direct visit with no ?id=, or one matching
-// nothing, falls back to the same fixed "SFI 23 Guidance document" sample
-// this page has always shown.
-//
-// ?title= (only used when ?id= matches nothing) lets a caller with no real
-// guidanceDocuments entry still show its own document's name here instead
-// of "SFI 23" — see the "Guidance converted" page's own use of this: that
-// flow never creates a tracked document (its details are session-only), so
-// there is no real id to thread through, but the consolidation plan still
-// flagged its "View the guidance" link as always showing the wrong name,
-// which this fixes without inventing a fuller draft-persistence feature
-// this build wasn't asked for.
-function get(req, res) {
-  const guidanceDocument = guidanceDocuments.find(
-    (candidate) => candidate.id === req.query.id
-  )
+// The one canonical document editor. Driven by the guide ?id= names (API
+// guides included) via view-model.js; a visit with no ?id=, or one matching
+// no guide, shows the fixed "SFI 23 Guidance document" sample. ?title= (only
+// used when ?id= matches nothing) names the document for the "Guidance
+// converted" flow, which has no real id to thread through.
+async function get(req, res) {
+  await getPlaygroundApiGuides(req)
+  // A guide's editor is its draft: only someone who can edit may open it, and
+  // only while it is a Draft (Awaiting review is locked).
+  const id = req.query.id
+  if (id && lifecycle.lookupGuide(req, id)) {
+    const draft = lifecycle.getDraft(req, id)
+    if (!canEdit(req, id) || !draft || draft.state !== 'draft') {
+      res.redirect('/playground/guide/' + encodeURIComponent(id))
+      return
+    }
+  }
+
+  const editorSections = await loadEditorSections(req, id)
   const comments = buildEditorExperimentComments(req)
   const addedCommentAnchorsJson = JSON.stringify(buildAddedCommentAnchors(req))
 
@@ -36,19 +39,15 @@ function get(req, res) {
   const restoredEditorHtml =
     preview && preview.id === (req.query.id || '') ? preview.html : null
 
-  if (!guidanceDocument) {
-    res.render('playground/editor/page.njk', {
-      documentTitle: req.query.title || null,
-      comments,
-      addedCommentAnchorsJson,
-      restoredEditorHtml
-    })
-    return
-  }
-
+  const knownGuide = id && lifecycle.lookupGuide(req, id)
   res.render('playground/editor/page.njk', {
-    documentTitle: guidanceDocument.title,
-    editorSections: buildEditorSections(guidanceDocument),
+    documentTitle: (knownGuide && knownGuide.title) || req.query.title || null,
+    editorSections,
+    metadata: knownGuide ? buildMetadata(req, id, knownGuide) : null,
+    issuesHref: knownGuide
+      ? '/playground/issues/' + encodeURIComponent(id)
+      : null,
+    ...buildPanelState(req),
     comments,
     addedCommentAnchorsJson,
     restoredEditorHtml

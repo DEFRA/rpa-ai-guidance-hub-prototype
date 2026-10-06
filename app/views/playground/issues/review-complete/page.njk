@@ -78,16 +78,16 @@
     </p>
 
     <div class="govuk-button-group">
-      {{ govukButton({ text: "Send for approval", href: "/playground/hub" }) }}
+      {{ govukButton({ text: "Send for approval", href: guideHref }) }}
       {{ govukButton({
         text: "Open the editor",
-        href: "/playground/editor",
+        href: editorHref,
         classes: "govuk-button--secondary"
       }) }}
     </div>
 
     <p class="govuk-body">
-      <a class="govuk-link" href="/playground/issues/review-reset">Clear these verdicts and start again</a>
+      <a class="govuk-link" href="{{ base }}/review-reset">Clear these verdicts and start again</a>
       — for running the prototype through again.
     </p>
 

@@ -25,11 +25,6 @@
 {% set bodyClasses = "app-full-width" %}
 {% set pageName = document.name %}
 
-{% set versionTags = {
-  "Version 1": { text: "Version 1", classes: "govuk-tag--green" },
-  "Version 2": { text: "Version 2", classes: "govuk-tag--purple" }
-} %}
-
 {% set guidePanel %}
   <form id="guide-panel-toggle-form" method="post" action="{{ panelToggleHref }}" hidden>
     <input type="hidden" name="collapsed" value="{{ 'false' if panelCollapsed else 'true' }}">
@@ -100,6 +95,12 @@
 
         {% include "playground/guide/partials/metadata-list.njk" %}
 
+        {% include "playground/guide/partials/versions.njk" %}
+
+        {% if canRequestEdit %}
+          {% include "playground/guide/partials/request-edit.njk" %}
+        {% endif %}
+
         {% if isEditor %}
           <h2 class="govuk-heading-s govuk-!-margin-top-6">Editor tools</h2>
           {% include "playground/guide/partials/editor-controls.njk" %}
@@ -120,8 +121,16 @@
     {% endcall %}
   {% endif %}
 
+  {% if isOlderVersion %}
+    {% call govukNotificationBanner({ titleText: "Earlier version" }) %}
+      <p class="govuk-notification-banner__heading">This is {{ version }}, an earlier version of this guide.</p>
+      <p class="govuk-body"><a class="govuk-notification-banner__link" href="{{ currentVersionHref }}">View the current version</a></p>
+    {% endcall %}
+  {% endif %}
+
   <div class="app-guide-byline">
-    {% if versionTags[version] %}{{ govukTag(versionTags[version]) }}{% endif %}
+    {% if versionTag %}{{ govukTag(versionTag) }}{% endif %}
+    {% if versionTag or isApiGuide %}{{ govukTag({ text: "Live", classes: "govuk-tag--turquoise" }) }}{% endif %}
     <span class="app-guide-byline__updated">Updated {{ currentVersion.lastUpdated }}</span>
   </div>
 

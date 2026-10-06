@@ -63,7 +63,7 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <span class="govuk-caption-l">{{ library.current.name }}</span>
+    <span class="govuk-caption-l">{{ guideName }}</span>
     <h1 class="govuk-heading-l">
       Quality checks found {{ document.issues.length }} issues
     </h1>
@@ -153,7 +153,7 @@
     {% endif %}
 
     <p class="govuk-body govuk-!-margin-top-8">
-      <a class="govuk-link" href="/playground/hub">Leave this for now</a>
+      <a class="govuk-link" href="{{ guideHref }}">Leave this for now</a>
     </p>
 
   </div>

@@ -1,6 +1,6 @@
 const govukPrototypeKit = require('govuk-prototype-kit')
 const { buildSideNav } = require('../../data/side-nav')
-const { getRequestApiGuides } = require('../../data/guidance-documents')
+const { getPlaygroundApiGuides } = require('../../data/playground-api-guides')
 
 // Sets `sideNav` for every playground page except sign-in (the bare prefix
 // and /sign-in), which is what makes layouts/main.html render the side
@@ -18,7 +18,7 @@ router.use((req, res, next) => {
     // Every method, not just GET: a POST that re-renders its page with
     // validation errors (e.g. document/view) still needs the nav.
     res.render = function (...args) {
-      getRequestApiGuides(req)
+      getPlaygroundApiGuides(req)
         .then(() => {
           res.locals.sideNav = buildSideNav(req, base)
           render.apply(res, args)

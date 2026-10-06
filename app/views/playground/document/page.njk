@@ -77,7 +77,7 @@
 {% set publishedCell %}<span data-version-field="published">{{ currentVersion.published }}</span>{% endset %}
 
 {% set publishingChecks = document.publishingChecks %}
-{% set issuesHref = "/playground/issues" %}
+{% set issuesHref = "/playground/issues/" + document.id | urlencode %}
 {% set checksValue %}
   {% include "partials/checks-widget.njk" %}
 {% endset %}

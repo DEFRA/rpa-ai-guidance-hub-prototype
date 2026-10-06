@@ -1,4 +1,4 @@
-const { guideViewModel } = require('./view-model')
+const { guideViewModel, findApiGuide } = require('./view-model')
 const guidanceLists = require('../../../data/guidance-lists')
 const { fetchAsset } = require('../../../lib/guidance-api-client')
 
@@ -25,7 +25,9 @@ async function get(req, res) {
 // URL — and any auth it may need in future — stays server-side, the same
 // reasoning as every other prototype call to the Prototype guides API.
 async function getAsset(req, res) {
-  const asset = await fetchAsset(req.params.id, req.params.assetId)
+  // The URL carries the guide's name slug; the API wants its own id.
+  const guide = await findApiGuide(req, req.params.id)
+  const asset = guide && (await fetchAsset(guide.apiId, req.params.assetId))
   if (!asset) {
     res.status(404).end()
     return
