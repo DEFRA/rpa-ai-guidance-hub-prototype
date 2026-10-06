@@ -1,0 +1,19 @@
+{#
+  A viewer cannot edit a guide unless a designer gives them temporary
+  delegated approval — this asks for it. Reads `editRequested`,
+  `requestEditHref` (playground/guide/view-model.js).
+#}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+<div class="govuk-!-margin-top-4">
+  {% if editRequested %}
+    <p class="govuk-body"><strong>Edit permission requested.</strong> A designer needs to approve it before you can edit this guide.</p>
+  {% else %}
+    <form method="post" action="{{ requestEditHref }}">
+      {{ govukButton({
+        text: "Request permission to edit",
+        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+      }) }}
+    </form>
+  {% endif %}
+</div>

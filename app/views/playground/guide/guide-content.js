@@ -49,7 +49,11 @@ function renderApiMarkdown(source) {
 // read, so there's no manifest lookup to do here. Returns
 // `{ isApiGuide: true, html }` — the flat fallback for a guide
 // loadApiGuideContent can't split into sections.
-async function buildMarkdownGuideContent(documentId, versionId) {
+async function buildMarkdownGuideContent(
+  documentId,
+  versionId,
+  urlId = documentId
+) {
   const markdown = await fetchGuideContent(documentId, versionId)
   if (!markdown) {
     return {
@@ -66,7 +70,7 @@ async function buildMarkdownGuideContent(documentId, versionId) {
   // real bytes server-side.
   const rewritten = markdown.replace(
     /\.\.\/assets\//g,
-    `/playground/guide/${encodeURIComponent(documentId)}/assets/`
+    `/playground/guide/${encodeURIComponent(urlId)}/assets/`
   )
 
   const first = renderApiMarkdown(rewritten)
@@ -97,13 +101,13 @@ function withoutTitleHeading(markdown) {
 // it gets the sections/parts model and the stepper. Null when the fetch
 // fails or the document has no headings to split on — the caller then falls
 // back to buildMarkdownGuideContent's flat rendering.
-async function loadApiGuideContent(documentId, versionId) {
+async function loadApiGuideContent(documentId, versionId, urlId = documentId) {
   const markdown = await fetchGuideContent(documentId, versionId)
   if (!markdown) return null
 
   const sections = splitGuideMarkdown(
     withoutTitleHeading(markdown),
-    encodeURIComponent(documentId)
+    encodeURIComponent(urlId)
   )
   return sections.length ? buildGuideContent(null, sections) : null
 }

@@ -61,15 +61,10 @@
 
 {% set pageName = "RPA Guidance hub" %}
 
-{% set versionTags = {
-  "Version 1": { text: "Version 1", classes: "govuk-tag--green" },
-  "Version 2": { text: "Version 2", classes: "govuk-tag--purple" }
-} %}
-
 {% set stateTags = {
   "Draft": { text: "Draft", classes: "govuk-tag--grey" },
   "Awaiting review": { text: "Awaiting review", classes: "govuk-tag--yellow" },
-  "Published": { text: "Published", classes: "govuk-tag--turquoise" }
+  "Live": { text: "Live", classes: "govuk-tag--turquoise" }
 } %}
 
 
@@ -198,6 +193,7 @@
           }) }}
         </div>
 
+        {% if isDesigner %}
         <div class="app-filter__field">
           {{ govukCheckboxes({
             idPrefix: "state",
@@ -209,10 +205,11 @@
             items: [
               { value: "draft", text: "Draft", checked: stateChecked.draft },
               { value: "awaiting-review", text: "Awaiting review", checked: stateChecked["awaiting-review"] },
-              { value: "published", text: "Published", checked: stateChecked.published }
+              { value: "live", text: "Live", checked: stateChecked.live }
             ]
           }) }}
         </div>
+        {% endif %}
 
         <div class="app-filter__actions">
           {{ govukButton({
@@ -254,8 +251,8 @@
 
           <div class="app-search-results__top">
             <div class="govuk-!-margin-bottom-2">
-              {% if versionTags[result.version] %}{{ govukTag(versionTags[result.version]) }}{% endif %}
-              {{ govukTag(stateTags[result.state]) }}
+              {% if result.versionTag %}{{ govukTag(result.versionTag) }}{% endif %}
+              {% for state in result.states %}{{ govukTag(stateTags[state]) }} {% endfor %}
               {% if result.pinned %}<strong class="govuk-tag govuk-tag--grey app-search-results__pinned-tag">Pinned</strong>{% endif %}
             </div>
             <form class="app-pin-toggle" method="post" action="{{ pinToggleHref }}">

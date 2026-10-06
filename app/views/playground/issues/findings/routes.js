@@ -1,10 +1,8 @@
 const govukPrototypeKit = require('govuk-prototype-kit')
 const controller = require('./controller')
 
-const router = govukPrototypeKit.requests.setupRouter(
-  '/playground/issues/findings'
-)
+const router = govukPrototypeKit.requests.setupRouter('/playground/issues')
 
-router.get('/', controller.getFindingsStart)
-router.get('/:id', controller.getFinding)
-router.post('/:id', controller.postFinding)
+router.get('/:guideId/findings', controller.getFindingsStart)
+router.get('/:guideId/findings/:id', controller.getFinding)
+router.post('/:guideId/findings/:id', controller.postFinding)

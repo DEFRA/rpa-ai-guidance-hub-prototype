@@ -139,3 +139,57 @@ API guides now get the stepper, and the Traditional/Stepper toggle. Their Markdo
 - **No per-guide grouping yet.** `getStepperPages` is keyed by local id. The manifest would need an optional `stepperPages` field to group sections for an API guide.
 - **Bookmarks are off for API guides.** The bookmark, `section/` and `position/` modules re-read content by local id, so heading bookmarks and "resume reading" are hidden for now.
 - **A guide with no headings** still renders flat, as before.
+
+---
+
+**Shaun Fitzsimons — 5 October 2026**
+
+A guide is its immutable Live versions plus at most one draft; "Awaiting review" is a locked state of that draft, never of a version.
+
+- **Viewers see Live only.** A guide with no Live version is hidden from them. They reach older versions from the Versions list (`?version=N`, read-only, with a banner back to the current one).
+- **Designers see every status** and get the review actions: Approve (the draft becomes the next Live version) and Request changes (it unlocks).
+- **Delegated edit:** a viewer can "Request permission to edit"; a designer approves it. Session-long, not time-limited, and it doesn't make non-Live guides visible.
+- **Prototype only:** older versions show the same mock content as the current one.
+
+---
+
+**Shaun Fitzsimons — 5 October 2026**
+
+API guides now use a slug of their name as the URL (`/guide/peatland-and-moorland-rules`) instead of the API's uuid.
+
+- **Playground only.** `data/playground-api-guides.js` maps the API's `id` to a slug and keeps the uuid as `apiId` for every call back to the API. Frozen snapshots still use the uuid.
+- **Uniqueness:** a repeated name gets `-2`, `-3` and so on, in manifest order. A real slug field from the API would be more stable, since renaming a guide changes its URL.
+- **Old uuid links** redirect to the hub.
+
+---
+
+**Shaun Fitzsimons — 5 October 2026**
+
+Designers can now edit any guide, API guides included: they get Editor tools, can start a draft, send it for review and approve it as the next version.
+
+- **API guides are read-only upstream**, so the draft is prototype-only state. The editor opens with the guide's name but the same sample content as any guide with no local content.
+- **An approved API guide has no version switcher yet:** the API only serves its latest content.
+
+---
+
+**Shaun Fitzsimmons — 5 October 2026**
+
+Editor tools is now one status card ("Version N is live", "You have unpublished edits") with the next action under it.
+
+- With no branching there is only ever one draft, so the Draft tag and "based on Version N" are gone.
+- "Changes requested" only shows once a reviewer has asked for some, instead of "None".
+- Publishing checks stays always visible below the card.
+
+---
+
+**Shaun Fitzsimmons — 5 October 2026**
+
+Publishing checks now sit in their own panel under the status card, with a "Last run" date and time.
+
+- The last run is remembered in the browser (localStorage) per page, since checks are simulated; the same line shows on the document page.
+
+---
+
+**Shaun Fitzsimmons — 5 October 2026**
+
+Running checks in Editor tools now always returns mock failures (8), so "View issues" has something to show; the in-panel example list is removed.

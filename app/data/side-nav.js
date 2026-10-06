@@ -20,7 +20,8 @@
 
 const { getRole, setRole } = require('./context-pane')
 const guidanceLists = require('./guidance-lists')
-const manageGuidance = require('./manage-guidance')
+const guideLifecycle = require('./guide-lifecycle')
+const { getEditRequestIds } = require('./permissions')
 
 const DEFAULT_BASE = '/playground'
 
@@ -65,7 +66,9 @@ const REFERENCE_MAX_LENGTH = 20
 function allDocuments(req) {
   return [
     ...(req.apiGuides || []),
-    ...manageGuidance.buildManageGuidanceSearchResults(req, '')
+    ...guideLifecycle.buildHubResults(req, {
+      includeNonLive: getRole(req) === 'designer'
+    })
   ]
 }
 
@@ -110,11 +113,7 @@ function setNavWidth(req, value) {
 
 function getPinned(req) {
   if (!req.session.data.pinnedGuidance) {
-    req.session.data.pinnedGuidance = [
-      { id: 'cs-ma-evidence-required-2026' },
-      { id: 'hedgerow-management-standards' },
-      { id: 'sfi-nutrient-management-actions' }
-    ]
+    req.session.data.pinnedGuidance = []
   }
   return req.session.data.pinnedGuidance
 }
@@ -134,23 +133,7 @@ function togglePin(req, id) {
 // an older session's differently shaped data is simply ignored.
 function getBookmarks(req) {
   if (!req.session.data.guideBookmarks) {
-    // The seeded examples name mock guides, which are always there now.
-    req.session.data.guideBookmarks = [
-      {
-        type: 'case',
-        ref: 'CASE-10482',
-        documentIds: [
-          'cs-ma-claim-parcel-not-under-control-of-sbi-signoff-2026',
-          'cs-ma-evidence-required-2026',
-          'cs-mid-tier-hedgerow-and-boundary-options'
-        ]
-      },
-      {
-        type: 'sbi',
-        ref: '123456789',
-        documentIds: ['sfi-soil-health-actions']
-      }
-    ]
+    req.session.data.guideBookmarks = []
   }
   // `sections` pins a bookmark to specific sections of its guides
   // ({ documentId, anchor, label }); `documentIds` still lists every guide
@@ -301,9 +284,7 @@ function getListIds(req, list, bookmarkFilter) {
       return ids
     }
     case 'awaiting-review':
-      return manageGuidance
-        .buildManageGuidanceRows(req)
-        .awaitingApprovalDocuments.map((row) => row.id)
+      return guideLifecycle.getDraftIdsByState(req, 'awaiting-review')
     default:
       return null
   }
@@ -422,6 +403,13 @@ function buildSideNav(req, base = DEFAULT_BASE) {
               href: `${base}/upload`,
               icon: 'upload',
               current: fullPath.indexOf(`${base}/upload`) === 0
+            },
+            {
+              text: 'Edit requests',
+              href: `${base}/edit-requests`,
+              icon: 'hourglass',
+              badge: getEditRequestIds(req).length,
+              current: fullPath.indexOf(`${base}/edit-requests`) === 0
             }
           ])
       : []

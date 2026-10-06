@@ -32,6 +32,7 @@
     "@tiptap/starter-kit": "3.29.2",
     "accessible-autocomplete": "3.0.1",
     "esbuild": "0.28.2",
+    "material-symbols": "0.47.5",
     "prettier": "3.9.8"
   }
 }

@@ -57,12 +57,9 @@
   _app-editor-experiment.scss and computeFloatingPositions() further down
   for how position tracking works now that both columns share one scroll.
 
-  Editable content: [data-editor-content] is still contenteditable, but
-  the toolbar above it is now styled to match Tiptap's own Simple Editor
-  template (see the comment on that markup) and is purely visual — an
-  earlier version wired Bold/Italic/Heading to document.execCommand for
-  real formatting; that's gone entirely now, not kept underneath the new
-  icon set, per the brief this was rebuilt from. The section divs and ids
+  Editable content: [data-editor-content] is contenteditable and the
+  Tiptap-styled toolbar above it drives it with document.execCommand (see
+  wireToolbar). The section divs and ids
   inside the content are unchanged, so the sidebar's plain #section-x
   anchor links and the comment highlight-and-scroll logic both still work
   exactly as before; contenteditable only affects typing and selection
@@ -78,74 +75,26 @@
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "partials/side-nav-icon.njk" import sideNavIcon %}
 
 {#
-  One shared icon macro for the whole Tiptap-styled toolbar below, rather
-  than repeating the <svg> wrapper (viewBox/stroke/etc, identical for all
-  of them) 25+ times — every icon is a plain 24x24, stroke-only line icon
-  (no fills except the two small solid dots in the bullet-list icon),
-  matching the icon style Tiptap's own toolbar uses (Lucide icons), not
-  copied from that library directly (no dependency pulled in), just drawn
-  to look the same: simple, minimal, recognisable shapes. See the
-  "GOV.UK Design System deviation" note further down for why this whole
-  toolbar looks nothing like govuk-frontend's own icon-free, text-label
-  buttons.
+  Toolbar icons are Material Symbols ligatures (the `material-symbols`
+  package, vendored as a font by scripts/update-vendor.js and styled in
+  _app-editor-experiment.scss), not inline SVG. The font has no GOV.UK
+  equivalent; flagged as a deliberate deviation for this editor chrome.
 #}
-{% macro ttIcon(name) %}
-  <svg class="tiptap-toolbar__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
-    {% if name == "undo" %}
-      <path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/>
-    {% elif name == "redo" %}
-      <path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 7"/>
-    {% elif name == "chevron-down" %}
-      <path d="M6 9l6 6 6-6"/>
-    {% elif name == "bullet-list" %}
-      <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
-      <circle cx="4" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.4" fill="currentColor" stroke="none"/>
-    {% elif name == "ordered-list" %}
-      <line x1="11" y1="6" x2="20" y2="6"/><line x1="11" y1="12" x2="20" y2="12"/><line x1="11" y1="18" x2="20" y2="18"/>
-      <path d="M4 5h2v4"/><path d="M4 9h2"/><path d="M4 14h2.5l-2.5 2.5h2.5"/>
-    {% elif name == "quote" %}
-      <path d="M7 7h4v4c0 2.2-1.3 3.4-3.5 3.6"/><path d="M15 7h4v4c0 2.2-1.3 3.4-3.5 3.6"/>
-    {% elif name == "code-block" %}
-      <rect x="2.5" y="4.5" width="19" height="15" rx="1"/><polyline points="9 10 6.5 12 9 14"/><polyline points="15 10 17.5 12 15 14"/>
-    {% elif name == "bold" %}
-      <path d="M6.5 4.5h5.5a3.3 3.3 0 0 1 0 6.6H6.5z"/><path d="M6.5 11.1h6.2a3.4 3.4 0 0 1 0 6.8H6.5z"/>
-    {% elif name == "italic" %}
-      <line x1="10.5" y1="4.5" x2="16.5" y2="4.5"/><line x1="7.5" y1="19.5" x2="13.5" y2="19.5"/><line x1="14.5" y1="4.5" x2="9.5" y2="19.5"/>
-    {% elif name == "strikethrough" %}
-      <line x1="5.5" y1="12" x2="18.5" y2="12"/><path d="M8 7c0-1.6 1.6-2.7 4-2.7s4 1.1 4 2.7"/><path d="M8 17c0 1.6 1.6 2.7 4 2.7s4-1.1 4-2.7"/>
-    {% elif name == "code" %}
-      <polyline points="9 6 4 12 9 18"/><polyline points="15 6 20 12 15 18"/>
-    {% elif name == "underline" %}
-      <path d="M6.5 4.5v6.5a5.5 5.5 0 0 0 11 0V4.5"/><line x1="5" y1="19.5" x2="19" y2="19.5"/>
-    {% elif name == "highlight" %}
-      <path d="M9.5 15.5L15 4.7l3.6 1.8-5.5 10.8z"/><path d="M5 20.5l2.7-5.4 2.8 1.8-2.7 5.4z"/>
-    {% elif name == "link" %}
-      <path d="M9.5 14.5l5-5"/><path d="M8 11.3l-2.3 2.3a3.4 3.4 0 0 0 4.8 4.8L13 16"/><path d="M16 12.7l2.3-2.3a3.4 3.4 0 0 0-4.8-4.8L11 8"/>
-    {% elif name == "superscript" %}
-      <path d="M4 7.5l8 10"/><path d="M12 7.5l-8 10"/><path d="M15 5.5h4"/><path d="M15 5.4c0-1 .8-1.6 2-1.6s2 .6 2 1.6c0 1.4-4.7 2.7-4.7 4.7h4.7"/>
-    {% elif name == "subscript" %}
-      <path d="M4 6.5l8 10"/><path d="M12 6.5l-8 10"/><path d="M15 14.5h4"/><path d="M15 14.4c0-1 .8-1.6 2-1.6s2 .6 2 1.6c0 1.4-4.7 2.7-4.7 4.7h4.7"/>
-    {% elif name == "align-left" %}
-      <line x1="4.5" y1="6" x2="19.5" y2="6"/><line x1="4.5" y1="12" x2="14.5" y2="12"/><line x1="4.5" y1="18" x2="17" y2="18"/>
-    {% elif name == "align-center" %}
-      <line x1="4.5" y1="6" x2="19.5" y2="6"/><line x1="7.5" y1="12" x2="16.5" y2="12"/><line x1="6" y1="18" x2="18" y2="18"/>
-    {% elif name == "align-right" %}
-      <line x1="4.5" y1="6" x2="19.5" y2="6"/><line x1="9.5" y1="12" x2="19.5" y2="12"/><line x1="7" y1="18" x2="19.5" y2="18"/>
-    {% elif name == "align-justify" %}
-      <line x1="4.5" y1="6" x2="19.5" y2="6"/><line x1="4.5" y1="12" x2="19.5" y2="12"/><line x1="4.5" y1="18" x2="19.5" y2="18"/>
-    {% elif name == "image" %}
-      <rect x="3" y="4.5" width="18" height="15" rx="1"/><circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15.5l-5-5-4 4-3-3-6 5.5"/>
-    {% elif name == "search" %}
-      <circle cx="10.5" cy="10.5" r="6"/><line x1="15" y1="15" x2="20" y2="20"/>
-    {% elif name == "sun" %}
-      <circle cx="12" cy="12" r="4"/><line x1="12" y1="2.5" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="21.5"/><line x1="4.2" y1="12" x2="2.5" y2="12"/><line x1="21.5" y1="12" x2="19.8" y2="12"/><line x1="5.6" y1="5.6" x2="6.9" y2="6.9"/><line x1="17.1" y1="17.1" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="6.9" y2="17.1"/><line x1="17.1" y1="6.9" x2="18.4" y2="5.6"/>
-    {% elif name == "moon" %}
-      <path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2z"/>
-    {% endif %}
-  </svg>
-{% endmacro %}
+{% macro ttIcon(name) %}{% set ttGlyphs = {
+  "undo": "undo", "redo": "redo", "chevron-down": "expand_more",
+  "bullet-list": "format_list_bulleted", "ordered-list": "format_list_numbered",
+  "quote": "format_quote", "code-block": "code_blocks", "bold": "format_bold",
+  "italic": "format_italic", "strikethrough": "format_strikethrough",
+  "code": "code", "underline": "format_underlined", "highlight": "ink_highlighter",
+  "link": "link", "superscript": "superscript", "subscript": "subscript",
+  "align-left": "format_align_left", "align-center": "format_align_center",
+  "align-right": "format_align_right", "align-justify": "format_align_justify",
+  "image": "image", "search": "search", "sun": "light_mode", "moon": "dark_mode",
+  "comment": "comment", "drag": "drag_indicator"
+} %}<span class="material-symbols-outlined" aria-hidden="true">{{ ttGlyphs[name] }}</span>{% endmacro %}
 
 {#
   documentTitle/editorSections (app/routes.js, from ?id=) replace the fixed
@@ -191,435 +140,86 @@
   "Low": { text: "Low", classes: "govuk-tag--blue" }
 } %}
 
-{% block content %}
+{% set editorPanel %}
+  <form id="guide-panel-toggle-form" method="post" action="{{ panelToggleHref }}" hidden>
+    <input type="hidden" name="collapsed" value="{{ 'false' if panelCollapsed else 'true' }}">
+    <input type="hidden" name="returnTo" value="{{ returnTo }}">
+  </form>
 
-<div class="app-experiment-page">
+  {% if not panelCollapsed %}
+    <div class="app-shell__resize app-shell__resize--aside" role="separator" aria-orientation="vertical"
+         aria-label="Resize guide details" aria-controls="guide-panel-body"
+         aria-valuemin="{{ panelWidthLimits.min }}" aria-valuemax="{{ panelWidthLimits.max }}"
+         data-guide-panel-resize data-width-href="{{ panelWidthHref }}" tabindex="0" hidden></div>
+  {% endif %}
 
-<h1 class="govuk-heading-l">{{ pageName }}</h1>
-
-<div class="govuk-grid-row">
-
-  <div class="govuk-grid-column-one-quarter app-experiment-sidebar">
-
-    <h2 class="govuk-heading-m">Content</h2>
-
-    {#
-      Each item is a draggable card — reordering is visual/list-only, see
-      wireNavDragAndDrop() in pageScripts: it moves the <li> elements
-      around within this <ul>, nothing else. It does not touch, and has
-      no way to touch, the editor content's own section-N divs or their
-      order — dragging "Land checks" above "Force Majeure" here leaves
-      the editor content showing them in exactly the order it always
-      has. data-highlight-trigger/data-target-section on each link
-      (unchanged) still work identically regardless of list position,
-      since they look section-N up by id, not by where this link happens
-      to sit in the list.
-    #}
-    <nav aria-label="Content">
-      <ul class="app-experiment-nav" data-content-nav-list>
-        {% for section in sections %}
-          <li class="app-experiment-nav__item{% if loop.first %} app-experiment-nav__item--active{% endif %}">
-            <button type="button" class="app-experiment-nav__handle" draggable="true" tabindex="-1" aria-hidden="true">
-              <svg width="10" height="16" viewBox="0 0 10 16" focusable="false" aria-hidden="true">
-                <circle cx="2" cy="2" r="1.5" fill="currentColor"/>
-                <circle cx="8" cy="2" r="1.5" fill="currentColor"/>
-                <circle cx="2" cy="8" r="1.5" fill="currentColor"/>
-                <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
-                <circle cx="2" cy="14" r="1.5" fill="currentColor"/>
-                <circle cx="8" cy="14" r="1.5" fill="currentColor"/>
-              </svg>
+  <aside class="app-guide-panel{% if panelCollapsed %} app-guide-panel--collapsed{% endif %}" aria-label="About this guide"{% if panelWidth and not panelCollapsed %} style="--app-guide-panel-width: {{ panelWidth }}px"{% endif %}>
+    {% if panelCollapsed %}
+      <nav class="app-side-nav app-side-nav--rail" aria-label="About this guide">
+        <ul class="app-side-nav__rail-list">
+          <li>
+            <button type="submit" form="guide-panel-toggle-form" class="app-side-nav__rail-item" data-side-nav-tooltip>
+              {{ sideNavIcon("collapse") }}
+              <span class="app-side-nav__rail-label">Show guide details</span>
+              <span class="app-side-nav__tooltip" aria-hidden="true">Show guide details</span>
             </button>
-            <a class="govuk-link app-experiment-nav__link" href="#{{ section.id }}" data-highlight-trigger data-target-section="{{ section.id }}">{{ section.name }}</a>
           </li>
-        {% endfor %}
-      </ul>
-    </nav>
-
-    {#
-      "Add new content": a link, not a button, matching
-      .app-experiment-hide-link's existing "looks like a link" reset —
-      clicking it hides itself and reveals the input+Add row below
-      permanently for the rest of the page's life (same reveal-and-stay
-      pattern this page already used for a threaded comment's Reply
-      control before that was made always-open — see the Comments panel
-      further down), rather than the input hiding itself again after each
-      submission, so adding several new headings in a row doesn't need
-      re-clicking "Add new content" each time.
-    #}
-    <button type="button" class="app-experiment-add-content-link" data-show-add-content>Add new content</button>
-
-    <div class="app-experiment-add-content-form" data-add-content-form hidden>
-      <div class="app-experiment-add-comment">
-        {{ govukInput({
-          id: "new-content-heading",
-          name: "newContentHeading",
-          label: { text: "New content heading", classes: "govuk-visually-hidden" },
-          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__input",
-          attributes: { "data-add-content-input": true }
-        }) }}
-        {{ govukButton({
-          text: "Add",
-          type: "button",
-          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__button",
-          attributes: { "data-add-content-button": true }
-        }) }}
-      </div>
-    </div>
-
-    {{ govukButton({
-      text: "Save",
-      classes: "govuk-button--secondary govuk-!-width-full govuk-!-margin-top-4 govuk-!-margin-bottom-0"
-    }) }}
-    {{ govukButton({
-      text: "Preview",
-      type: "button",
-      classes: "govuk-button--secondary govuk-!-width-full govuk-!-margin-top-2 govuk-!-margin-bottom-0",
-      attributes: { "data-preview-button": true }
-    }) }}
-    {#
-      Consolidation fix: on the old /v5/editor-experiment this button was
-      inert (no data attribute, no click handler, no server route) — the
-      live crawl behind the consolidation plan found no continuation after
-      "Send for approval" in any editor for exactly this reason. V6's own
-      editor-2-3-view had already solved this (a review step at
-      send-for-approval.njk, then a real Editing→Awaiting approval state
-      change) before that page was retired — ported here rather than
-      re-invented, same capture-then-navigate pattern as "Preview" below.
-    #}
-    {{ govukButton({
-      text: "Send for approval",
-      type: "button",
-      classes: "govuk-!-width-full govuk-!-margin-top-2 govuk-!-margin-bottom-0",
-      attributes: { "data-send-for-approval-button": true }
-    }) }}
-    <p class="govuk-hint govuk-!-margin-top-2">
-      Once sent for approval, you will not be able to make further changes until it's reviewed.
-    </p>
-
-  </div>
-
-  <div class="govuk-grid-column-three-quarters">
-
-    <div class="app-experiment-box" data-experiment-box>
-
-      <div class="app-experiment-editor" data-editor-pane>
-
-        {#
-          Styled to match Tiptap's own Simple Editor template
-          (template.tiptap.dev/preview/templates/simple) — grouping,
-          icon set and dropdown pattern, not their component library
-          (no dependency pulled in, every icon here is a hand-drawn SVG
-          via the ttIcon macro above). Visual/styling only, same as the
-          three-button toolbar this replaces: see wireTiptapToolbar() in
-          pageScripts for exactly what each button does (a CSS toggle at
-          most) and does not do (nothing here reads or writes the
-          contenteditable region's actual content or formatting — the
-          previous version's document.execCommand wiring is gone
-          entirely, not layered underneath this).
-
-          GOV.UK Design System deviation, flagged rather than treated as
-          compliant: this whole toolbar — icon-only buttons with no text
-          labels, rounded corners, dropdown menus, a light/dark toggle —
-          has no GDS equivalent and isn't trying to be one; it exists to
-          preview a Tiptap-styled editor chrome for a research prototype,
-          not to ship as a real service pattern. tiptap-toolbar__button
-          still keeps the standard GOV.UK yellow :focus outline (not
-          Tiptap's own) rather than compromising keyboard-focus
-          visibility for the sake of a closer visual match.
-        #}
-        <div class="tiptap-toolbar" role="toolbar" aria-label="Formatting" data-tt-toolbar>
-
-          <div class="tiptap-toolbar__group">
-            <button type="button" class="tiptap-toolbar__button" aria-label="Undo">{{ ttIcon("undo") }}</button>
-            <button type="button" class="tiptap-toolbar__button" aria-label="Redo">{{ ttIcon("redo") }}</button>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group">
-            <div class="tiptap-toolbar__dropdown" data-tt-dropdown>
-              <button type="button" class="tiptap-toolbar__button tiptap-toolbar__button--wide" data-tt-dropdown-trigger aria-haspopup="true" aria-expanded="false">
-                <span data-tt-dropdown-label>Paragraph</span>
-                {{ ttIcon("chevron-down") }}
-              </button>
-              <ul class="tiptap-toolbar__menu" data-tt-dropdown-menu hidden>
-                <li><button type="button" data-tt-dropdown-option>Paragraph</button></li>
-                <li><button type="button" data-tt-dropdown-option>Heading 1</button></li>
-                <li><button type="button" data-tt-dropdown-option>Heading 2</button></li>
-                <li><button type="button" data-tt-dropdown-option>Heading 3</button></li>
-                <li><button type="button" data-tt-dropdown-option>Heading 4</button></li>
-                <li><button type="button" data-tt-dropdown-option>Heading 5</button></li>
-                <li><button type="button" data-tt-dropdown-option>Heading 6</button></li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group">
-            <div class="tiptap-toolbar__dropdown" data-tt-dropdown>
-              <button type="button" class="tiptap-toolbar__button" aria-label="Bullet list" aria-haspopup="true" aria-expanded="false" data-tt-dropdown-trigger>
-                {{ ttIcon("bullet-list") }}
-                {{ ttIcon("chevron-down") }}
-              </button>
-              <ul class="tiptap-toolbar__menu" data-tt-dropdown-menu hidden>
-                <li><button type="button" data-tt-dropdown-option>Bullet list</button></li>
-                <li><button type="button" data-tt-dropdown-option>Task list</button></li>
-              </ul>
-            </div>
-            <div class="tiptap-toolbar__dropdown" data-tt-dropdown>
-              <button type="button" class="tiptap-toolbar__button" aria-label="Ordered list" aria-haspopup="true" aria-expanded="false" data-tt-dropdown-trigger>
-                {{ ttIcon("ordered-list") }}
-                {{ ttIcon("chevron-down") }}
-              </button>
-              <ul class="tiptap-toolbar__menu" data-tt-dropdown-menu hidden>
-                <li><button type="button" data-tt-dropdown-option>Numbered list</button></li>
-                <li><button type="button" data-tt-dropdown-option>Lettered list</button></li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group">
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Blockquote" aria-pressed="false">{{ ttIcon("quote") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Code block" aria-pressed="false">{{ ttIcon("code-block") }}</button>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group">
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Bold" aria-pressed="false">{{ ttIcon("bold") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Italic" aria-pressed="false">{{ ttIcon("italic") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Strikethrough" aria-pressed="false">{{ ttIcon("strikethrough") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Code" aria-pressed="false">{{ ttIcon("code") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Underline" aria-pressed="false">{{ ttIcon("underline") }}</button>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group">
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Highlight" aria-pressed="false">{{ ttIcon("highlight") }}</button>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group">
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Link" aria-pressed="false">{{ ttIcon("link") }}</button>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group">
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Superscript" aria-pressed="false">{{ ttIcon("superscript") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-toggle aria-label="Subscript" aria-pressed="false">{{ ttIcon("subscript") }}</button>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group" data-tt-align-group>
-            <button type="button" class="tiptap-toolbar__button" data-tt-align aria-label="Align left" aria-pressed="true">{{ ttIcon("align-left") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-align aria-label="Align center" aria-pressed="false">{{ ttIcon("align-center") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-align aria-label="Align right" aria-pressed="false">{{ ttIcon("align-right") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-align aria-label="Justify" aria-pressed="false">{{ ttIcon("align-justify") }}</button>
-          </div>
-
-          <div class="tiptap-toolbar__divider"></div>
-
-          <div class="tiptap-toolbar__group">
-            <button type="button" class="tiptap-toolbar__button tiptap-toolbar__button--wide" aria-label="Add image">
-              {{ ttIcon("image") }}
-              <span>Add</span>
-            </button>
-          </div>
-
-          <div class="tiptap-toolbar__spacer"></div>
-
-          <div class="tiptap-toolbar__group">
-            <button type="button" class="tiptap-toolbar__button" aria-label="Search">{{ ttIcon("search") }}</button>
-            <button type="button" class="tiptap-toolbar__button" data-tt-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
-              <span data-tt-theme-icon>{{ ttIcon("sun") }}</span>
-            </button>
-          </div>
-
-        </div>
-
-        <div class="app-experiment-content" contenteditable="true" data-editor-content>
-
-          {% if restoredEditorHtml %}
-            {#
-              Set by routes.js only when arriving back from "Back to editor"
-              on saved-document-view.html's preview flow, and only when the
-              stored preview's id still matches this page's own ?id= (or
-              lack of one) — see /v5/editor-experiment there. This is an
-              exact copy of [data-editor-content]'s own innerHTML captured
-              client-side just before Preview navigated away (its "html"
-              field — see the Preview button's click handler in pageScripts
-              below), so it already contains the same section-N ids,
-              app-editor-anchor spans and app-experiment-boundary markers
-              as whichever of the two branches below would otherwise have
-              rendered — every existing pageScripts selector keeps working
-              against it unchanged.
-            #}
-            {{ restoredEditorHtml | safe }}
-          {% elif editorSections %}
-            {#
-              One section per editorSections entry (app/routes.js) —
-              already flattened to whichever of the three content shapes
-              this document actually has (flat steps, nested sections>parts
-              — one per part, not per top-level section — or the generic
-              3-phase placeholder), so this loop does not need to know
-              which one it is looking at. Body rendering matches
-              saved-document-view.html's own: a string is a paragraph
-              (through renderLinkMarkers, so any {{LINK:...}} marker
-              becomes the same non-navigating placeholder link it does
-              there), an array is a bullet list, and the literal string
-              "CASE_NOTE_BLOCK" — present in exactly one flat-steps
-              document's last step — renders nothing here rather than that
-              page's fixed case-note markup, since there is nothing
-              editor-specific to show in its place. Each section gets the
-              same app-experiment-boundary marker as the fixed sample
-              content below — see the comment on that block there.
-            #}
-            {% for section in editorSections %}
-              <div class="app-experiment-boundary" data-boundary>
-                <span class="app-experiment-boundary__label">Start of {{ section.name }}</span>
-                <div class="app-experiment-boundary__line"></div>
-                <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
-              </div>
-              <div id="{{ section.id }}">
-                <h2 class="govuk-heading-m">
-                  {% if section.anchorId %}
-                    {#
-                      Real-document equivalent of the fixed sample's
-                      hand-placed app-editor-anchor spans below — see
-                      EDITOR_HEADING_ANCHORS/applyEditorHeadingAnchors in
-                      app/routes.js. Anchored to the whole heading here
-                      rather than a body sentence (unlike the fixed
-                      sample), since that is what these comments are
-                      actually reviewed against in practice.
-                    #}
-                    <span class="app-editor-anchor" data-anchor-id="{{ section.anchorId }}">{{ section.heading }}</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="{{ section.anchorId }}" aria-label="View {{ section.anchorAuthor }}'s comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button>
-                  {% else %}
-                    {{ section.heading }}
-                  {% endif %}
-                </h2>
-                {% for entry in section.body %}
-                  {% if entry == "CASE_NOTE_BLOCK" %}
-                  {% elif entry is string %}
-                    <p class="govuk-body">{{ entry | renderLinkMarkers }}</p>
-                  {% else %}
-                    <ul class="govuk-list govuk-list--bullet">
-                      {% for item in entry %}
-                        <li>{{ item | renderLinkMarkers }}</li>
-                      {% endfor %}
-                    </ul>
-                  {% endif %}
-                {% endfor %}
-              </div>
-            {% endfor %}
-          {% else %}
-
-            {#
-              app-editor-anchor spans below are the fixed sample's only
-              inline anchors — hand-placed to match
-              EDITOR_EXPERIMENT_COMMENTS' anchorId fields (app/routes.js)
-              exactly, since there is nowhere generic to derive "the text
-              a comment refers to" from for a hardcoded sample like this
-              one. A real document loaded via ?id= (the branch above) has
-              no equivalent spans — comments still show, they just have
-              nothing to scroll to on an icon click there.
-
-              app-experiment-boundary markers (one per section) are the
-              second thing hand-added here — see wireBoundaryHandle in
-              pageScripts for what dragging (or arrow-keying) its handle
-              actually does: reassigns which of the two adjacent
-              section-N divs each paragraph either side of it belongs to,
-              snapped to paragraph boundaries.
-            #}
-            <div class="app-experiment-boundary" data-boundary>
-              <span class="app-experiment-boundary__label">Start of Overview</span>
-              <div class="app-experiment-boundary__line"></div>
-              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
-            </div>
-            <div id="section-1">
-              <h2 class="govuk-heading-m">Overview</h2>
-              <p class="govuk-body"><span class="app-editor-anchor" data-anchor-id="anchor-1">This guidance explains the Sustainable Farming Incentive (SFI) 2023 offer, including who can apply, what actions are available, and how payments are calculated.</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-1" aria-label="View Jane Smith's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button></p>
-              <p class="govuk-body">It's aimed at farmers who manage land in England and want to understand how the scheme fits alongside other funding they may already receive.</p>
-            </div>
-
-            <div class="app-experiment-boundary" data-boundary>
-              <span class="app-experiment-boundary__label">Start of Eligibility criteria</span>
-              <div class="app-experiment-boundary__line"></div>
-              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
-            </div>
-            <div id="section-2">
-              <h2 class="govuk-heading-m">Eligibility criteria</h2>
-              <h3 class="govuk-heading-s">Land eligibility</h3>
-              <p class="govuk-body">You can apply if you have management control of the land and it is registered on the Rural Payments service.</p>
-              <h3 class="govuk-heading-s">Business eligibility</h3>
-              <p class="govuk-body"><span class="app-editor-anchor" data-anchor-id="anchor-2">Applicants must have a valid Single Business Identifier and be actively farming the land included in the application.</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-2" aria-label="View Tom Reeves' comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button></p>
-            </div>
-
-            <div class="app-experiment-boundary" data-boundary>
-              <span class="app-experiment-boundary__label">Start of Payment rates</span>
-              <div class="app-experiment-boundary__line"></div>
-              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
-            </div>
-            <div id="section-3">
-              <h2 class="govuk-heading-m">Payment rates</h2>
-              <p class="govuk-body">Payment rates are published annually and reviewed each scheme year. <span class="text-highlight-active">The current baseline payment is £22 per hectare for the standard soil management action.</span></p>
-              <p class="govuk-body"><span class="app-editor-anchor" data-anchor-id="anchor-3">Rates can vary depending on which actions are combined and the total area entered into the scheme.</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-3" aria-label="View Priya Shah's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button></p>
-            </div>
-
-            <div class="app-experiment-boundary" data-boundary>
-              <span class="app-experiment-boundary__label">Start of Application process</span>
-              <div class="app-experiment-boundary__line"></div>
-              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
-            </div>
-            <div id="section-4">
-              <h2 class="govuk-heading-m">Application process</h2>
-              <p class="govuk-body">Applications are submitted through the Rural Payments service and <span class="app-editor-anchor" data-anchor-id="anchor-4">assessed in the order they are received</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-4" aria-label="View Sam Whitfield's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button>.</p>
-              <p class="govuk-body">You'll need to <span class="app-editor-anchor" data-anchor-id="anchor-5">confirm your land parcels</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-5" aria-label="View Priya Shah's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button> and select the actions you want to include before submitting.</p>
-            </div>
-
-            <div class="app-experiment-boundary" data-boundary>
-              <span class="app-experiment-boundary__label">Start of Supporting evidence</span>
-              <div class="app-experiment-boundary__line"></div>
-              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
-            </div>
-            <div id="section-5">
-              <h2 class="govuk-heading-m">Supporting evidence</h2>
-              <p class="govuk-body">Keep records of any actions carried out, including <span class="app-editor-anchor" data-anchor-id="anchor-6">dates and photographs where relevant</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-6" aria-label="View Jane Smith's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button>.</p>
-              <p class="govuk-body">Evidence should be <span class="app-editor-anchor" data-anchor-id="anchor-7">retained for the duration of the agreement</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-7" aria-label="View Tom Reeves' comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button> in case it is requested during an inspection.</p>
-            </div>
-
-            <div class="app-experiment-boundary" data-boundary>
-              <span class="app-experiment-boundary__label">Start of Review dates</span>
-              <div class="app-experiment-boundary__line"></div>
-              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
-            </div>
-            <div id="section-6">
-              <h2 class="govuk-heading-m">Review dates</h2>
-              <p class="govuk-body">This guidance is reviewed annually alongside the wider scheme update.</p>
-              <p class="govuk-body">The next scheduled review is <span class="app-editor-anchor" data-anchor-id="anchor-8">due in the spring</span> <button type="button" class="app-editor-anchor__icon" data-anchor-icon="anchor-8" aria-label="View Sam Whitfield's comment"><svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg></button>, ahead of the following scheme year's application window.</p>
-            </div>
-
-          {% endif %}
-
-        </div>
-
+        </ul>
+      </nav>
+    {% else %}
+      <div class="app-guide-panel__header">
+        <h2 class="govuk-heading-s govuk-!-margin-bottom-0">About this guide</h2>
+        <button type="submit" form="guide-panel-toggle-form" class="app-side-nav__icon-button" aria-controls="guide-panel-body">
+          {{ sideNavIcon("expand") }}
+          <span class="govuk-visually-hidden">Hide guide details</span>
+        </button>
       </div>
 
-      <div class="app-experiment-changes" data-changes-pane>
+      <div class="app-guide-panel__body" id="guide-panel-body">
+        <div class="app-experiment-actions">
+          {{ govukButton({
+            text: "Save",
+            classes: "govuk-button--secondary govuk-!-width-full govuk-!-margin-bottom-0"
+          }) }}
+          {{ govukButton({
+            text: "Preview",
+            type: "button",
+            classes: "govuk-button--secondary govuk-!-width-full govuk-!-margin-top-2 govuk-!-margin-bottom-0",
+            attributes: { "data-preview-button": true }
+          }) }}
+          {#
+            Consolidation fix: on the old /v5/editor-experiment this button was
+            inert (no data attribute, no click handler, no server route) — the
+            live crawl behind the consolidation plan found no continuation after
+            "Send for approval" in any editor for exactly this reason. V6's own
+            editor-2-3-view had already solved this (a review step at
+            send-for-approval.njk, then a real Editing→Awaiting approval state
+            change) before that page was retired — ported here rather than
+            re-invented, same capture-then-navigate pattern as "Preview" below.
+          #}
+          {{ govukButton({
+            text: "Send for approval",
+            type: "button",
+            classes: "govuk-!-width-full govuk-!-margin-top-2 govuk-!-margin-bottom-0",
+            attributes: { "data-send-for-approval-button": true }
+          }) }}
+          <p class="govuk-hint govuk-!-margin-top-2">
+            Once sent for approval, you will not be able to make further changes until it's reviewed.
+          </p>
+        </div>
+
+        {% if metadata %}
+          {% include "playground/guide/partials/metadata-list.njk" %}
+        {% endif %}
+
+      <div class="app-experiment-changes app-experiment-changes--panel" data-changes-pane>
 
         <div class="app-experiment-changes__fixed">
 
-          <div class="app-experiment-changes__header">
-            <button type="button" class="govuk-link app-experiment-hide-link" data-hide-changes>Hide</button>
-          </div>
-
-          <h2 class="govuk-heading-m">Changes</h2>
+          <h2 class="govuk-heading-s">Review</h2>
+          {% if issuesHref %}
+            <p class="govuk-body-s"><a class="govuk-link" href="{{ issuesHref }}">View all issues for this guide</a></p>
+          {% endif %}
 
           {#
             Counts in parentheses — comments.length (top-level comments
@@ -720,6 +320,7 @@
                 </div>
               {% endfor %}
             </div>
+            <p class="govuk-hint app-experiment-comments-empty" data-comments-empty{% if comments.length %} hidden{% endif %}>No comments yet. Select text in the guide to add one.</p>
 
           </div>
 
@@ -739,6 +340,344 @@
         </div>
 
       </div>
+      </div>
+    {% endif %}
+  </aside>
+{% endset %}
+
+{% block content %}
+
+<div class="app-experiment-page">
+
+<h1 class="govuk-heading-l">{{ pageName }}</h1>
+
+<div class="govuk-grid-row">
+
+  <div class="govuk-grid-column-one-quarter app-experiment-sidebar">
+
+    <h2 class="govuk-heading-s" id="editor-contents-heading">Contents</h2>
+
+    {#
+      Each item is a draggable card — reordering is visual/list-only, see
+      wireNavDragAndDrop() in pageScripts: it moves the <li> elements
+      around within this <ul>, nothing else. It does not touch, and has
+      no way to touch, the editor content's own section-N divs or their
+      order — dragging "Land checks" above "Force Majeure" here leaves
+      the editor content showing them in exactly the order it always
+      has. data-highlight-trigger/data-target-section on each link
+      (unchanged) still work identically regardless of list position,
+      since they look section-N up by id, not by where this link happens
+      to sit in the list.
+    #}
+    <nav aria-labelledby="editor-contents-heading">
+      <ul class="app-experiment-nav" data-content-nav-list>
+        {% for section in sections %}
+          <li class="app-experiment-nav__item{% if section.isSubPart %} app-experiment-nav__item--part{% endif %}{% if loop.first %} app-experiment-nav__item--active{% endif %}">
+            <button type="button" class="app-experiment-nav__handle" draggable="true" tabindex="-1" aria-hidden="true">
+              {{ ttIcon("drag") }}
+            </button>
+            <a class="govuk-link app-experiment-nav__link" href="#{{ section.id }}" data-highlight-trigger data-target-section="{{ section.id }}">{{ section.name }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+
+    {#
+      "Add new content": a link, not a button, matching
+      .app-experiment-hide-link's existing "looks like a link" reset —
+      clicking it hides itself and reveals the input+Add row below
+      permanently for the rest of the page's life (same reveal-and-stay
+      pattern this page already used for a threaded comment's Reply
+      control before that was made always-open — see the Comments panel
+      further down), rather than the input hiding itself again after each
+      submission, so adding several new headings in a row doesn't need
+      re-clicking "Add new content" each time.
+    #}
+    <button type="button" class="app-experiment-add-content-link" data-show-add-content>Add new content</button>
+
+    <div class="app-experiment-add-content-form" data-add-content-form hidden>
+      <div class="app-experiment-add-comment">
+        {{ govukInput({
+          id: "new-content-heading",
+          name: "newContentHeading",
+          label: { text: "New content heading", classes: "govuk-visually-hidden" },
+          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__input",
+          attributes: { "data-add-content-input": true }
+        }) }}
+        {{ govukButton({
+          text: "Add",
+          type: "button",
+          classes: "govuk-!-margin-bottom-0 app-experiment-add-comment__button",
+          attributes: { "data-add-content-button": true }
+        }) }}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="govuk-grid-column-three-quarters">
+
+    <div class="app-experiment-box" data-experiment-box>
+
+      <div class="app-experiment-editor" data-editor-pane>
+
+        {#
+          Tiptap-Simple-Editor-styled toolbar driving the contenteditable
+          region with document.execCommand (see wireToolbar in pageScripts).
+          Task/lettered lists, code block language, image and search are
+          visual only. One tab stop with arrow-key movement (ARIA toolbar);
+          keeps the GOV.UK yellow focus ring. A GOV.UK Design System
+          deviation: no GDS equivalent exists for an icon toolbar.
+        #}
+        <div class="tiptap-toolbar" role="toolbar" aria-label="Formatting" aria-controls="editor-content" data-tt-toolbar>
+
+          <div class="tiptap-toolbar__group">
+            <button type="button" class="tiptap-toolbar__button" aria-label="Undo" title="Undo" data-tt-cmd="undo">{{ ttIcon("undo") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Redo" title="Redo" data-tt-cmd="redo">{{ ttIcon("redo") }}</button>
+          </div>
+
+          <div class="tiptap-toolbar__group">
+            <div class="tiptap-toolbar__dropdown" data-tt-dropdown>
+              <button type="button" class="tiptap-toolbar__button tiptap-toolbar__button--wide" title="Text style" aria-label="Text style" aria-haspopup="true" aria-expanded="false" data-tt-dropdown-trigger>
+                <span data-tt-dropdown-label>Paragraph</span>
+                {{ ttIcon("chevron-down") }}
+              </button>
+              <ul class="tiptap-toolbar__menu" data-tt-dropdown-menu hidden>
+                <li><button type="button" data-tt-block="p" data-tt-dropdown-option>Paragraph</button></li>
+                <li><button type="button" data-tt-block="h1" data-tt-dropdown-option>Heading 1</button></li>
+                <li><button type="button" data-tt-block="h2" data-tt-dropdown-option>Heading 2</button></li>
+                <li><button type="button" data-tt-block="h3" data-tt-dropdown-option>Heading 3</button></li>
+                <li><button type="button" data-tt-block="h4" data-tt-dropdown-option>Heading 4</button></li>
+                <li><button type="button" data-tt-block="h5" data-tt-dropdown-option>Heading 5</button></li>
+                <li><button type="button" data-tt-block="h6" data-tt-dropdown-option>Heading 6</button></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="tiptap-toolbar__group">
+            <div class="tiptap-toolbar__dropdown" data-tt-dropdown>
+              <button type="button" class="tiptap-toolbar__button" aria-label="Bullet list" title="Bullet list" aria-haspopup="true" aria-expanded="false" data-tt-dropdown-trigger>
+                {{ ttIcon("bullet-list") }}
+                {{ ttIcon("chevron-down") }}
+              </button>
+              <ul class="tiptap-toolbar__menu" data-tt-dropdown-menu hidden>
+                <li><button type="button" data-tt-cmd="insertUnorderedList" data-tt-dropdown-option>Bullet list</button></li>
+                <li><button type="button"  data-tt-dropdown-option>Task list</button></li>
+              </ul>
+            </div>
+            <div class="tiptap-toolbar__dropdown" data-tt-dropdown>
+              <button type="button" class="tiptap-toolbar__button" aria-label="Ordered list" title="Ordered list" aria-haspopup="true" aria-expanded="false" data-tt-dropdown-trigger>
+                {{ ttIcon("ordered-list") }}
+                {{ ttIcon("chevron-down") }}
+              </button>
+              <ul class="tiptap-toolbar__menu" data-tt-dropdown-menu hidden>
+                <li><button type="button" data-tt-cmd="insertOrderedList" data-tt-dropdown-option>Numbered list</button></li>
+                <li><button type="button"  data-tt-dropdown-option>Lettered list</button></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="tiptap-toolbar__group">
+            <button type="button" class="tiptap-toolbar__button" aria-label="Blockquote" title="Blockquote" data-tt-cmd="blockquote" aria-pressed="false">{{ ttIcon("quote") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Code block" title="Code block" data-tt-cmd="pre" aria-pressed="false">{{ ttIcon("code-block") }}</button>
+          </div>
+
+          <div class="tiptap-toolbar__group">
+            <button type="button" class="tiptap-toolbar__button" aria-label="Bold" title="Bold" data-tt-cmd="bold" aria-pressed="false">{{ ttIcon("bold") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Italic" title="Italic" data-tt-cmd="italic" aria-pressed="false">{{ ttIcon("italic") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Strikethrough" title="Strikethrough" data-tt-cmd="strikeThrough" aria-pressed="false">{{ ttIcon("strikethrough") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Code" title="Code" data-tt-cmd="code" aria-pressed="false">{{ ttIcon("code") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Underline" title="Underline" data-tt-cmd="underline" aria-pressed="false">{{ ttIcon("underline") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Highlight" title="Highlight" data-tt-cmd="highlight" aria-pressed="false">{{ ttIcon("highlight") }}</button>
+          </div>
+
+          <div class="tiptap-toolbar__group">
+            <button type="button" class="tiptap-toolbar__button" aria-label="Link" title="Link" data-tt-cmd="link" aria-pressed="false">{{ ttIcon("link") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Superscript" title="Superscript" data-tt-cmd="superscript" aria-pressed="false">{{ ttIcon("superscript") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Subscript" title="Subscript" data-tt-cmd="subscript" aria-pressed="false">{{ ttIcon("subscript") }}</button>
+          </div>
+
+          <div class="tiptap-toolbar__group">
+            <button type="button" class="tiptap-toolbar__button" aria-label="Align left" title="Align left" data-tt-cmd="justifyLeft" aria-pressed="false">{{ ttIcon("align-left") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Align center" title="Align center" data-tt-cmd="justifyCenter" aria-pressed="false">{{ ttIcon("align-center") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Align right" title="Align right" data-tt-cmd="justifyRight" aria-pressed="false">{{ ttIcon("align-right") }}</button>
+            <button type="button" class="tiptap-toolbar__button" aria-label="Justify" title="Justify" data-tt-cmd="justifyFull" aria-pressed="false">{{ ttIcon("align-justify") }}</button>
+          </div>
+
+          <div class="tiptap-toolbar__group">
+            <button type="button" class="tiptap-toolbar__button tiptap-toolbar__button--wide" aria-label="Add image" title="Add image">
+              {{ ttIcon("image") }}
+              <span>Add</span>
+            </button>
+          </div>
+
+          <div class="tiptap-toolbar__spacer"></div>
+
+          <div class="tiptap-toolbar__group">
+            <button type="button" class="tiptap-toolbar__button" aria-label="Search" title="Search">{{ ttIcon("search") }}</button>
+            <button type="button" class="tiptap-toolbar__button" data-tt-theme-toggle aria-label="Toggle dark mode" title="Toggle dark mode" aria-pressed="false">
+              <span data-tt-theme-icon>{{ ttIcon("sun") }}</span>
+            </button>
+          </div>
+
+        </div>
+
+        <div class="app-experiment-content" id="editor-content" contenteditable="true" data-editor-content>
+
+          {% if restoredEditorHtml %}
+            {#
+              Set by routes.js only when arriving back from "Back to editor"
+              on saved-document-view.html's preview flow, and only when the
+              stored preview's id still matches this page's own ?id= (or
+              lack of one) — see /v5/editor-experiment there. This is an
+              exact copy of [data-editor-content]'s own innerHTML captured
+              client-side just before Preview navigated away (its "html"
+              field — see the Preview button's click handler in pageScripts
+              below), so it already contains the same section-N ids,
+              app-editor-anchor spans and app-experiment-boundary markers
+              as whichever of the two branches below would otherwise have
+              rendered — every existing pageScripts selector keeps working
+              against it unchanged.
+            #}
+            {{ restoredEditorHtml | safe }}
+          {% elif editorSections %}
+            {#
+              One section per editorSections entry (app/routes.js) —
+              already flattened to whichever of the three content shapes
+              this document actually has (flat steps, nested sections>parts
+              — one per part, not per top-level section — or the generic
+              3-phase placeholder), so this loop does not need to know
+              which one it is looking at. Body rendering matches
+              saved-document-view.html's own: a string is a paragraph
+              (through renderLinkMarkers, so any {{LINK:...}} marker
+              becomes the same non-navigating placeholder link it does
+              there), an array is a bullet list, and the literal string
+              "CASE_NOTE_BLOCK" — present in exactly one flat-steps
+              document's last step — renders nothing here rather than that
+              page's fixed case-note markup, since there is nothing
+              editor-specific to show in its place. Each section gets the
+              same app-experiment-boundary marker as the fixed sample
+              content below — see the comment on that block there.
+            #}
+            {% for section in editorSections %}
+              <div class="app-experiment-boundary" data-boundary>
+                <span class="app-experiment-boundary__label">Start of {{ section.name }}</span>
+                <div class="app-experiment-boundary__line"></div>
+                <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+              </div>
+              <div id="{{ section.id }}">
+                <{{ "h3" if section.isSubPart else "h2" }} class="govuk-heading-{{ "s" if section.isSubPart else "m" }}">
+                  {{ section.heading }}
+                </{{ "h3" if section.isSubPart else "h2" }}>
+                {% if section.html %}
+                  {{ section.html | safe }}
+                {% endif %}
+                {% for entry in section.body %}
+                  {% if entry == "CASE_NOTE_BLOCK" %}
+                  {% elif entry is string %}
+                    <p class="govuk-body">{{ entry | renderLinkMarkers }}</p>
+                  {% else %}
+                    <ul class="govuk-list govuk-list--bullet">
+                      {% for item in entry %}
+                        <li>{{ item | renderLinkMarkers }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endfor %}
+          {% else %}
+
+            {#
+              app-editor-anchor spans below are the fixed sample's only
+              inline anchors — hand-placed to match
+              EDITOR_EXPERIMENT_COMMENTS' anchorId fields (app/routes.js)
+              exactly, since there is nowhere generic to derive "the text
+              a comment refers to" from for a hardcoded sample like this
+              one. A real document loaded via ?id= (the branch above) has
+              no equivalent spans — comments still show, they just have
+              nothing to scroll to on an icon click there.
+
+              app-experiment-boundary markers (one per section) are the
+              second thing hand-added here — see wireBoundaryHandle in
+              pageScripts for what dragging (or arrow-keying) its handle
+              actually does: reassigns which of the two adjacent
+              section-N divs each paragraph either side of it belongs to,
+              snapped to paragraph boundaries.
+            #}
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Overview</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-1">
+              <h2 class="govuk-heading-m">Overview</h2>
+              <p class="govuk-body">This guidance explains the Sustainable Farming Incentive (SFI) 2023 offer, including who can apply, what actions are available, and how payments are calculated.</p>
+              <p class="govuk-body">It's aimed at farmers who manage land in England and want to understand how the scheme fits alongside other funding they may already receive.</p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Eligibility criteria</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-2">
+              <h2 class="govuk-heading-m">Eligibility criteria</h2>
+              <h3 class="govuk-heading-s">Land eligibility</h3>
+              <p class="govuk-body">You can apply if you have management control of the land and it is registered on the Rural Payments service.</p>
+              <h3 class="govuk-heading-s">Business eligibility</h3>
+              <p class="govuk-body">Applicants must have a valid Single Business Identifier and be actively farming the land included in the application.</p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Payment rates</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-3">
+              <h2 class="govuk-heading-m">Payment rates</h2>
+              <p class="govuk-body">Payment rates are published annually and reviewed each scheme year. <span class="text-highlight-active">The current baseline payment is £22 per hectare for the standard soil management action.</span></p>
+              <p class="govuk-body">Rates can vary depending on which actions are combined and the total area entered into the scheme.</p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Application process</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-4">
+              <h2 class="govuk-heading-m">Application process</h2>
+              <p class="govuk-body">Applications are submitted through the Rural Payments service and assessed in the order they are received.</p>
+              <p class="govuk-body">You'll need to confirm your land parcels and select the actions you want to include before submitting.</p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Supporting evidence</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-5">
+              <h2 class="govuk-heading-m">Supporting evidence</h2>
+              <p class="govuk-body">Keep records of any actions carried out, including dates and photographs where relevant.</p>
+              <p class="govuk-body">Evidence should be retained for the duration of the agreement in case it is requested during an inspection.</p>
+            </div>
+
+            <div class="app-experiment-boundary" data-boundary>
+              <span class="app-experiment-boundary__label">Start of Review dates</span>
+              <div class="app-experiment-boundary__line"></div>
+              <button type="button" class="app-experiment-boundary__handle" data-boundary-handle aria-label="Drag, or use the up and down arrow keys, to move paragraphs between this section and the one before it" tabindex="0"></button>
+            </div>
+            <div id="section-6">
+              <h2 class="govuk-heading-m">Review dates</h2>
+              <p class="govuk-body">This guidance is reviewed annually alongside the wider scheme update.</p>
+              <p class="govuk-body">The next scheduled review is due in the spring, ahead of the following scheme year's application window.</p>
+            </div>
+
+          {% endif %}
+
+        </div>
+
+      </div>
 
     </div>
 
@@ -748,7 +687,11 @@
 
 </div>
 
+{% if not sideNav %}{{ editorPanel | safe }}{% endif %}
+
 {% endblock %}
+
+{% block shellAside %}{% if sideNav %}{{ editorPanel | safe }}{% endif %}{% endblock %}
 
 {% block pageScripts %}
   {#
@@ -767,114 +710,224 @@
     (function () {
       var editorContent = document.querySelector('[data-editor-content]')
 
-      // Tiptap-styled toolbar — purely visual, same scope as the
-      // three-button version this replaced: nothing in here reads or
-      // writes editorContent at all any more (the old version's
-      // document.execCommand wiring is gone, not kept underneath this).
-      // Three independent behaviours, each just a CSS/attribute toggle:
-      //
-      //  - data-tt-toggle buttons (Blockquote, Code block, Bold, Italic,
-      //    Strikethrough, Code, Underline, Highlight, Link, Superscript,
-      //    Subscript) simply flip their own aria-pressed on each click.
-      //
-      //  - data-tt-align buttons behave like a radio group scoped to
-      //    their shared [data-tt-align-group] parent — clicking one sets
-      //    it pressed and clears the other three, same as only one
-      //    alignment ever being active in a real editor, without this
-      //    one actually aligning anything.
-      //
-      //  - data-tt-dropdown (Paragraph/heading, Bullet list, Ordered
-      //    list) toggle a small menu open/closed; picking an option
-      //    closes it and, for the heading dropdown specifically (the
-      //    only one with a visible text label rather than just an icon),
-      //    updates that label to match — matching Tiptap's own behaviour
-      //    of showing the current block type there. A click anywhere
-      //    outside an open dropdown closes it, same as any standard
-      //    menu.
-      //
-      // data-tt-theme-toggle swaps its own sun/moon icon and
-      // aria-pressed on click — it does not actually re-theme the
-      // toolbar or the page; see the top-of-file comment on the toolbar
-      // markup for why that was scoped out.
-      function wireTiptapToolbar () {
+      // Formatting toolbar, driven by document.execCommand on the
+      // contenteditable region (prototype-grade: nothing is saved).
+      // Buttons keep the editor selection by cancelling mousedown;
+      // aria-pressed and the style dropdown label follow the caret on
+      // selectionchange. The toolbar is one tab stop (roving tabindex).
+      var BLOCK_CLASSES = {
+        P: 'govuk-body', H1: 'govuk-heading-l', H2: 'govuk-heading-m',
+        H3: 'govuk-heading-s', H4: 'govuk-heading-s', H5: 'govuk-heading-s',
+        H6: 'govuk-heading-s', BLOCKQUOTE: 'govuk-inset-text',
+        UL: 'govuk-list govuk-list--bullet', OL: 'govuk-list govuk-list--number'
+      }
+      var BLOCK_LABELS = {
+        P: 'Paragraph', H1: 'Heading 1', H2: 'Heading 2', H3: 'Heading 3',
+        H4: 'Heading 4', H5: 'Heading 5', H6: 'Heading 6'
+      }
+      var HIGHLIGHT = 'rgb(255, 221, 0)'
+
+      // Blocks created by execCommand have no GOV.UK class; add one.
+      function styleNewBlocks () {
+        var tags = Object.keys(BLOCK_CLASSES).join(',').toLowerCase()
+        editorContent.querySelectorAll(tags).forEach(function (el) {
+          if (!el.getAttribute('class')) el.className = BLOCK_CLASSES[el.tagName]
+        })
+      }
+
+      function selectionInEditor () {
+        var sel = window.getSelection()
+        return sel && sel.rangeCount && editorContent.contains(sel.anchorNode)
+      }
+
+      function closestInEditor (selector) {
+        if (!selectionInEditor()) return null
+        var node = window.getSelection().anchorNode
+        var el = node.nodeType === 1 ? node : node.parentElement
+        var found = el && el.closest(selector)
+        return found && editorContent.contains(found) ? found : null
+      }
+
+      function currentBlock () {
+        var el = closestInEditor('p,h1,h2,h3,h4,h5,h6,blockquote,pre,li')
+        return el ? el.tagName : null
+      }
+
+      function toggleBlock (tag) {
+        document.execCommand('formatBlock', false, currentBlock() === tag.toUpperCase() ? 'p' : tag)
+      }
+
+      function toggleCode () {
+        var code = closestInEditor('code')
+        var sel = window.getSelection()
+        if (code) {
+          code.replaceWith(document.createTextNode(code.textContent))
+        } else if (!sel.isCollapsed) {
+          var html = document.createElement('div')
+          html.appendChild(sel.getRangeAt(0).cloneContents())
+          document.execCommand('insertHTML', false, '<code>' + html.textContent.replace(/</g, '&lt;') + '</code>')
+        }
+      }
+
+      function toggleLink () {
+        if (closestInEditor('a')) {
+          document.execCommand('unlink')
+          return
+        }
+        var url = window.prompt('Link address', 'https://')
+        if (url && url !== 'https://') document.execCommand('createLink', false, url)
+      }
+
+      function toggleHighlight () {
+        document.execCommand('styleWithCSS', false, true)
+        var on = document.queryCommandValue('hiliteColor') === HIGHLIGHT
+        document.execCommand('hiliteColor', false, on ? 'transparent' : HIGHLIGHT)
+        document.execCommand('styleWithCSS', false, false)
+      }
+
+      function runCommand (cmd) {
+        if (!selectionInEditor()) editorContent.focus()
+        if (cmd === 'blockquote' || cmd === 'pre') toggleBlock(cmd)
+        else if (cmd === 'code') toggleCode()
+        else if (cmd === 'link') toggleLink()
+        else if (cmd === 'highlight') toggleHighlight()
+        else document.execCommand(cmd)
+        styleNewBlocks()
+      }
+
+      function commandActive (cmd) {
+        if (!selectionInEditor()) return false
+        if (cmd === 'blockquote' || cmd === 'pre') return currentBlock() === cmd.toUpperCase()
+        if (cmd === 'code') return !!closestInEditor('code')
+        if (cmd === 'link') return !!closestInEditor('a')
+        if (cmd === 'highlight') return document.queryCommandValue('hiliteColor') === HIGHLIGHT
+        try { return document.queryCommandState(cmd) } catch (e) { return false }
+      }
+
+      function wireToolbar () {
         var toolbar = document.querySelector('[data-tt-toolbar]')
-        if (!toolbar) return
-
-        toolbar.querySelectorAll('[data-tt-toggle]').forEach(function (button) {
-          button.addEventListener('click', function () {
-            var pressed = button.getAttribute('aria-pressed') === 'true'
-            button.setAttribute('aria-pressed', String(!pressed))
-          })
-        })
-
-        toolbar.querySelectorAll('[data-tt-align-group]').forEach(function (group) {
-          var alignButtons = group.querySelectorAll('[data-tt-align]')
-          alignButtons.forEach(function (button) {
-            button.addEventListener('click', function () {
-              alignButtons.forEach(function (candidate) {
-                candidate.setAttribute('aria-pressed', String(candidate === button))
-              })
-            })
-          })
-        })
+        if (!toolbar || !editorContent) return
 
         var dropdowns = toolbar.querySelectorAll('[data-tt-dropdown]')
+        var styleLabel = toolbar.querySelector('[data-tt-dropdown-label]')
+        var stateButtons = toolbar.querySelectorAll('[aria-pressed][data-tt-cmd]')
 
-        function closeAllDropdowns (exceptDropdown) {
+        // Keep the editor selection when a toolbar button is pressed.
+        toolbar.addEventListener('mousedown', function (event) {
+          if (event.target.closest('button')) event.preventDefault()
+        })
+
+        function closeAllDropdowns (except) {
           dropdowns.forEach(function (dropdown) {
-            if (dropdown === exceptDropdown) return
-            var trigger = dropdown.querySelector('[data-tt-dropdown-trigger]')
-            var menu = dropdown.querySelector('[data-tt-dropdown-menu]')
-            if (trigger) trigger.setAttribute('aria-expanded', 'false')
-            if (menu) menu.hidden = true
+            if (dropdown === except) return
+            dropdown.querySelector('[data-tt-dropdown-trigger]').setAttribute('aria-expanded', 'false')
+            dropdown.querySelector('[data-tt-dropdown-menu]').hidden = true
           })
         }
 
-        dropdowns.forEach(function (dropdown) {
-          var trigger = dropdown.querySelector('[data-tt-dropdown-trigger]')
-          var menu = dropdown.querySelector('[data-tt-dropdown-menu]')
-          var label = dropdown.querySelector('[data-tt-dropdown-label]')
-          if (!trigger || !menu) return
+        function syncState () {
+          stateButtons.forEach(function (button) {
+            button.setAttribute('aria-pressed', String(commandActive(button.getAttribute('data-tt-cmd'))))
+          })
+          if (styleLabel && selectionInEditor()) {
+            styleLabel.textContent = BLOCK_LABELS[currentBlock()] || 'Paragraph'
+          }
+        }
 
-          trigger.addEventListener('click', function (event) {
-            event.stopPropagation()
+        toolbar.addEventListener('click', function (event) {
+          var option = event.target.closest('[data-tt-dropdown-option]')
+          var button = event.target.closest('button')
+          if (!button) return
+          var cmd = button.getAttribute('data-tt-cmd')
+          var block = button.getAttribute('data-tt-block')
+
+          if (button.hasAttribute('data-tt-dropdown-trigger')) {
+            var dropdown = button.closest('[data-tt-dropdown]')
+            var menu = dropdown.querySelector('[data-tt-dropdown-menu]')
             var opening = menu.hidden
             closeAllDropdowns(dropdown)
             menu.hidden = !opening
-            trigger.setAttribute('aria-expanded', String(opening))
-          })
+            button.setAttribute('aria-expanded', String(opening))
+            if (opening) {
+              var first = menu.querySelector('button')
+              if (first) first.focus()
+            }
+            return
+          }
 
-          menu.querySelectorAll('[data-tt-dropdown-option]').forEach(function (option) {
-            option.addEventListener('click', function () {
-              if (label) label.textContent = option.textContent.trim()
-              menu.hidden = true
-              trigger.setAttribute('aria-expanded', 'false')
-            })
-          })
+          if (block) {
+            if (!selectionInEditor()) editorContent.focus()
+            document.execCommand('formatBlock', false, block)
+            styleNewBlocks()
+          } else if (cmd) {
+            runCommand(cmd)
+          }
+
+          if (option) {
+            var owner = option.closest('[data-tt-dropdown]')
+            closeAllDropdowns(null)
+            owner.querySelector('[data-tt-dropdown-trigger]').focus()
+          }
+          syncState()
         })
 
         document.addEventListener('click', function (event) {
           if (!event.target.closest('[data-tt-dropdown]')) closeAllDropdowns(null)
         })
+        document.addEventListener('selectionchange', syncState)
 
+        // Roving tabindex: one tab stop, arrows/Home/End move within the bar.
+        var items = Array.prototype.slice.call(
+          toolbar.querySelectorAll('.tiptap-toolbar__button')
+        ).filter(function (item) { return !item.closest('[data-tt-dropdown-menu]') })
+        function setActive (item) {
+          items.forEach(function (candidate) { candidate.tabIndex = candidate === item ? 0 : -1 })
+        }
+        setActive(items[0])
+        items.forEach(function (item) {
+          item.addEventListener('focus', function () { setActive(item) })
+        })
+        toolbar.addEventListener('keydown', function (event) {
+          var inMenu = event.target.closest('[data-tt-dropdown-menu]')
+          if (event.key === 'Escape') {
+            var open = event.target.closest('[data-tt-dropdown]')
+            closeAllDropdowns(null)
+            if (open) open.querySelector('[data-tt-dropdown-trigger]').focus()
+            return
+          }
+          if (inMenu) {
+            var options = Array.prototype.slice.call(inMenu.querySelectorAll('button'))
+            var at = options.indexOf(event.target)
+            if (event.key === 'ArrowDown') options[(at + 1) % options.length].focus()
+            else if (event.key === 'ArrowUp') options[(at - 1 + options.length) % options.length].focus()
+            else return
+            event.preventDefault()
+            return
+          }
+          var index = items.indexOf(event.target)
+          if (index === -1) return
+          var next
+          if (event.key === 'ArrowRight') next = items[(index + 1) % items.length]
+          else if (event.key === 'ArrowLeft') next = items[(index - 1 + items.length) % items.length]
+          else if (event.key === 'Home') next = items[0]
+          else if (event.key === 'End') next = items[items.length - 1]
+          else return
+          event.preventDefault()
+          next.focus()
+        })
+
+        // Visual only: the dark-mode toggle swaps its own icon and state.
         var themeToggle = toolbar.querySelector('[data-tt-theme-toggle]')
-        var themeIcon = toolbar.querySelector('[data-tt-theme-icon]')
-        if (themeToggle && themeIcon) {
-          var sunIconHtml = themeIcon.innerHTML
-          var moonIconHtml =
-            '<svg class="tiptap-toolbar__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">' +
-              '<path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2z"/>' +
-            '</svg>'
-
+        if (themeToggle) {
           themeToggle.addEventListener('click', function () {
             var pressed = themeToggle.getAttribute('aria-pressed') === 'true'
             themeToggle.setAttribute('aria-pressed', String(!pressed))
-            themeIcon.innerHTML = pressed ? sunIconHtml : moonIconHtml
+            themeToggle.querySelector('.material-symbols-outlined').textContent = pressed ? 'light_mode' : 'dark_mode'
           })
         }
       }
 
-      wireTiptapToolbar()
+      wireToolbar()
 
       // Comments / Checks tabs.
       var tabButtons = document.querySelectorAll('[data-tab-button]')
@@ -915,6 +968,10 @@
             function (card) { return !card.querySelector('[data-draft-input]') }
           ).length
           commentsTabButton.textContent = 'Comments (' + commentCount + ')'
+          var emptyHint = document.querySelector('[data-comments-empty]')
+          if (emptyHint) {
+            emptyHint.hidden = document.querySelectorAll('.app-experiment-comment').length > 0
+          }
         }
         if (checksTabButton) {
           checksTabButton.textContent = 'Checks (' + document.querySelectorAll('.app-experiment-check').length + ')'
@@ -1007,7 +1064,7 @@
       // written into the fixed sample's own markup, or (both cases
       // below) built here in JS — identical either way, so a comment
       // created live looks no different from one that was always there.
-      var ANCHOR_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M1.5 2.5h13v8h-8l-3 3v-3h-2v-8z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>'
+      var ANCHOR_ICON_SVG = '{{ ttIcon("comment") }}'
 
       function buildAnchorIconHTML (anchorId, author) {
         return '<button type="button" class="app-editor-anchor__icon" data-anchor-icon="' + anchorId + '" aria-label="View ' + escapeHtml(author) + '’s comment">' + ANCHOR_ICON_SVG + '</button>'
@@ -1477,6 +1534,9 @@
       })
 
       function computeFloatingPositions () {
+        // Comments now sit in the right-hand panel, which scrolls separately
+        // from the editor, so cards stack rather than lining up with anchors.
+        return
         if (!floatingCards.length || !editorContent) return
 
         var editorRect = editorContent.getBoundingClientRect()
@@ -1607,14 +1667,7 @@
           li.className = 'app-experiment-nav__item'
           li.innerHTML =
             '<button type="button" class="app-experiment-nav__handle" draggable="true" tabindex="-1" aria-hidden="true">' +
-              '<svg width="10" height="16" viewBox="0 0 10 16" focusable="false" aria-hidden="true">' +
-                '<circle cx="2" cy="2" r="1.5" fill="currentColor"/>' +
-                '<circle cx="8" cy="2" r="1.5" fill="currentColor"/>' +
-                '<circle cx="2" cy="8" r="1.5" fill="currentColor"/>' +
-                '<circle cx="8" cy="8" r="1.5" fill="currentColor"/>' +
-                '<circle cx="2" cy="14" r="1.5" fill="currentColor"/>' +
-                '<circle cx="8" cy="14" r="1.5" fill="currentColor"/>' +
-              '</svg>' +
+              '{{ ttIcon("drag") }}' +
             '</button>' +
             '<a class="govuk-link app-experiment-nav__link" href="#' + id + '" data-highlight-trigger data-target-section="' + id + '">' + escapeHtml(label) + '</a>'
           contentNavList.appendChild(li)
@@ -1895,21 +1948,6 @@
       }
 
       document.querySelectorAll('[data-boundary-handle]').forEach(wireBoundaryHandle)
-
-      // "Hide" collapses the Changes pane and gives the editor pane the
-      // freed width — see .app-experiment-editor's flex-grow in
-      // _app-editor-experiment.scss for why no extra class is needed on it.
-      // The "Show changes" button that used to bring it back has been
-      // removed entirely (it had no function); Hide itself is otherwise
-      // unchanged.
-      var changesPane = document.querySelector('[data-changes-pane]')
-      var hideLink = document.querySelector('[data-hide-changes]')
-
-      if (changesPane && hideLink) {
-        hideLink.addEventListener('click', function () {
-          changesPane.hidden = true
-        })
-      }
 
       // "Preview" — posts the editor's current live content (including any
       // unsaved edits and reordering, since nothing here is persisted until

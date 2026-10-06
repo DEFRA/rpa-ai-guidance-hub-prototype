@@ -1,23 +1,29 @@
+const { issuesViewModel } = require('../view-model')
+
 const VERDICTS = ['fixed', 'wont_fix', 'false_positive']
 
-function findingOr404(req, res) {
-  const issue = res.locals.document.issues.find(
+function findingOr404(req, res, model) {
+  const issue = model.document.issues.find(
     (candidate) => String(candidate.id) === req.params.id
   )
   if (!issue) {
-    res.status(404).render('playground/issues/findings/finding-not-found.njk')
+    res
+      .status(404)
+      .render('playground/issues/findings/finding-not-found.njk', model)
   }
   return issue
 }
 
 function getFinding(req, res) {
-  const issue = findingOr404(req, res)
+  const model = issuesViewModel(req, req.params.guideId)
+  const issue = findingOr404(req, res, model)
   if (!issue) return
 
-  const { issues } = res.locals.document
+  const { issues } = model.document
   const position = issues.indexOf(issue)
 
   res.render('playground/issues/findings/page.njk', {
+    ...model,
     finding: issue,
     position: position + 1,
     total: issues.length,
@@ -27,11 +33,12 @@ function getFinding(req, res) {
 }
 
 function postFinding(req, res) {
-  const issue = findingOr404(req, res)
+  const model = issuesViewModel(req, req.params.guideId)
+  const issue = findingOr404(req, res, model)
   if (!issue) return
 
   if (VERDICTS.indexOf(req.body.verdict) === -1) {
-    return res.redirect(`/playground/issues/findings/${issue.id}`)
+    return res.redirect(`${model.base}/findings/${issue.id}`)
   }
 
   req.session.data.verdicts = req.session.data.verdicts || {}
@@ -40,24 +47,21 @@ function postFinding(req, res) {
     comment: (req.body.comment || '').trim()
   }
 
-  const next = res.locals.document.issues.find(
+  const next = model.document.issues.find(
     (candidate) => candidate.id !== issue.id && !candidate.verdict
   )
 
   res.redirect(
-    next
-      ? `/playground/issues/findings/${next.id}`
-      : '/playground/issues/review-complete'
+    next ? `${model.base}/findings/${next.id}` : `${model.base}/review-complete`
   )
 }
 
 // Start the sub-journey at the first finding with no verdict yet.
 function getFindingsStart(req, res) {
-  const next = res.locals.document.outstanding[0]
+  const model = issuesViewModel(req, req.params.guideId)
+  const next = model.document.outstanding[0]
   res.redirect(
-    next
-      ? `/playground/issues/findings/${next.id}`
-      : '/playground/issues/review-complete'
+    next ? `${model.base}/findings/${next.id}` : `${model.base}/review-complete`
   )
 }
 

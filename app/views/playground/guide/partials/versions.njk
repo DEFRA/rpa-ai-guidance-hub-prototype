@@ -1,0 +1,24 @@
+{#
+  Every version of the guide, newest first — versions are immutable and
+  always Live, so anyone can open an earlier one (?version=N, read-only).
+  Reads `versionList` (playground/guide/view-model.js); empty with one version.
+#}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+
+{% if versionList.length %}
+  {% set versionsHtml %}
+    <ul class="govuk-list">
+      {% for item in versionList %}
+        <li>
+          {% if item.isSelected %}
+            <strong>{{ item.label }}</strong>{% if item.isCurrent %} (current){% else %} (viewing){% endif %}
+          {% else %}
+            <a class="govuk-link" href="{{ item.href }}">{{ item.label }}</a>{% if item.isCurrent %} (current){% endif %}
+          {% endif %}
+          <br><span class="govuk-hint govuk-!-margin-bottom-0">{{ item.versionNotes }}{% if item.versionNotes %} — {% endif %}{{ item.lastUpdated }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endset %}
+  {{ govukDetails({ summaryText: "Versions", html: versionsHtml, classes: "govuk-!-margin-top-4" }) }}
+{% endif %}

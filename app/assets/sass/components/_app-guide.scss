@@ -253,6 +253,7 @@ $app-guide-toc-width: 340px;
     }
 
     > .app-guide-contents {
+      box-sizing: border-box;
       grid-column: 1;
       grid-row: 1 / span 99;
       align-self: start;
@@ -612,4 +613,12 @@ $app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3
   .app-guide-reading--track-images img[loading='lazy']:not(.is-loaded) {
     background-image: url($app-guide-image-spinner-static);
   }
+}
+
+// Editor tools cards (status, publishing checks).
+.app-editor-panel {
+  padding: govuk-spacing(3);
+  border: 1px solid $govuk-border-colour;
+  border-left: govuk-spacing(1) solid $govuk-brand-colour;
+  background: govuk-colour('white');
 }

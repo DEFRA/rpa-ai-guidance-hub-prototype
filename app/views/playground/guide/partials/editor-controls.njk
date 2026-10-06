@@ -1,56 +1,54 @@
 {#
-  Editor-only controls — status, publishing checks, change history,
-  edit/continue editing — folded inline here instead of gating them
-  behind the old separate document overview page. Only ever included when
-  `isEditor` is true (each direction checks that before including this).
-  Reads `editorActions` (playground/guide/view-model.js).
+  Editor tools — one status card (what is live, whether there are unpublished
+  edits) with the next action under it, then publishing checks in their own panel. Only included
+  when `isEditor` is true. Reads `editorActions` (playground/guide/view-model.js).
+  There is no branching, so the draft is just "unpublished edits" on the live
+  version, not a status to label.
 #}
-{% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
-{% from "govuk/components/details/macro.njk" import govukDetails %}
 
-{% set statusTags = {
-  "Published": { text: "Published", classes: "govuk-tag--green" },
-  "Draft": { text: "Draft", classes: "govuk-tag--grey" },
-  "Awaiting approval": { text: "Awaiting approval", classes: "govuk-tag--yellow" }
-} %}
+<div class="app-editor-panel">
+  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">{{ editorActions.liveText }}</p>
+  {% if editorActions.draft %}
+    <p class="govuk-body govuk-!-margin-bottom-1">{{ editorActions.draft.statusText }}</p>
+    {% if editorActions.draft.changesRequestedText %}
+      <p class="govuk-body-s govuk-!-margin-bottom-1">{{ editorActions.draft.changesRequestedText }}</p>
+    {% endif %}
+  {% endif %}
 
-{{ govukTag(statusTags[editorActions.status]) }}
+  <div class="govuk-button-group govuk-!-margin-top-3 govuk-!-margin-bottom-0">
+    {% if editorActions.continueEditingHref %}
+      {{ govukButton({
+        text: "Continue editing",
+        href: editorActions.continueEditingHref,
+        classes: "govuk-!-margin-bottom-0"
+      }) }}
+    {% endif %}
+    {% if editorActions.startEditingHref %}
+      <form method="post" action="{{ editorActions.startEditingHref }}">
+        {{ govukButton({ text: "Edit this guide", classes: "govuk-!-margin-bottom-0" }) }}
+      </form>
+    {% endif %}
+    {% if editorActions.approveHref %}
+      <form method="post" action="{{ editorActions.approveHref }}">
+        {{ govukButton({
+          text: "Approve as " + editorActions.nextVersionLabel,
+          classes: "govuk-!-margin-bottom-0"
+        }) }}
+      </form>
+      <form method="post" action="{{ editorActions.requestChangesHref }}">
+        {{ govukButton({
+          text: "Request changes",
+          classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+        }) }}
+      </form>
+    {% endif %}
+  </div>
+</div>
 
-{% if editorActions.status != "Published" %}
-  <h3 class="govuk-heading-s govuk-!-margin-top-4 govuk-!-margin-bottom-1">Publishing checks</h3>
+<div class="app-editor-panel govuk-!-margin-top-4">
+  <h3 class="govuk-heading-s govuk-!-margin-bottom-2">Publishing checks</h3>
   {% set publishingChecks = editorActions.publishingChecks %}
   {% set issuesHref = editorActions.issuesHref %}
   {% include "partials/checks-widget.njk" %}
-
-  <p class="govuk-body govuk-!-margin-top-4 govuk-!-margin-bottom-0">
-    <strong>Changes requested:</strong>
-    {{ editorActions.changesRequested if editorActions.changesRequested else "None" }}
-  </p>
-{% endif %}
-
-{% call govukDetails({ summaryText: "Change history", classes: "govuk-!-margin-top-4" }) %}
-  <ul class="govuk-list">
-    {% for version in editorActions.changeHistory %}
-      <li><strong>{{ version.label }}:</strong> {{ version.versionNotes }} — {{ version.lastUpdated }}</li>
-    {% endfor %}
-  </ul>
-{% endcall %}
-
-<div class="govuk-button-group govuk-!-margin-top-2">
-  {% if editorActions.continueEditingHref %}
-    {{ govukButton({
-      text: "Continue editing",
-      href: editorActions.continueEditingHref,
-      classes: "govuk-button--secondary govuk-!-margin-bottom-0"
-    }) }}
-  {% endif %}
-  {% if editorActions.startEditingHref %}
-    <form method="post" action="{{ editorActions.startEditingHref }}">
-      {{ govukButton({
-        text: "Edit",
-        classes: "govuk-button--secondary govuk-!-margin-bottom-0"
-      }) }}
-    </form>
-  {% endif %}
 </div>

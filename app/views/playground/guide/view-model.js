@@ -1,4 +1,6 @@
-const { getRequestApiGuides } = require('../../../data/guidance-documents')
+const {
+  getPlaygroundApiGuides
+} = require('../../../data/playground-api-guides')
 const {
   buildMarkdownGuideContent,
   loadApiGuideContent,
@@ -10,7 +12,13 @@ const { resolveHashLinks } = require('../../../lib/heading-links')
 const { getGuideMetadata, getStepperPages } = require('./guide-metadata')
 const { getGuidePosition } = require('../../../data/guide-positions')
 const { documentOverviewViewModel } = require('../document/view-model')
-const { getRole } = require('../../../data/context-pane')
+const {
+  canEdit,
+  isDesigner,
+  hasRequestedEdit
+} = require('../../../data/permissions')
+const lifecycle = require('../../../data/guide-lifecycle')
+const { issuesBase, mockIssueCount } = require('../issues/view-model')
 const {
   getBookmarks,
   sectionHref,
@@ -231,29 +239,46 @@ function buildBookmarkSuccess(req, id, base = '/playground') {
   }
 }
 
-// Editor-only controls — version switch, publishing checks, change
-// history, continue editing — built from the same status/document shape
-// document/view-model.js's documentOverviewViewModel already assembles
-// (document/page.njk renders the same fields today, just as a separate
-// page everyone had to click through rather than gated inline here).
-function buildEditorActions(id, status, document) {
+// Editor tools — Live version, the one draft and what can be done to it.
+// Built for anyone who can edit the guide (a designer, or someone given
+// delegated edit approval); only designers get the review actions.
+function buildEditorActions(req, id, overview) {
+  const { draft, current } = overview
+  const designer = isDesigner(req)
+  const encodedId = encodeURIComponent(id)
+  const guideHref = `/playground/guide/${encodedId}`
+
   return {
-    status,
-    versions: document.versions,
-    changeHistory: Object.keys(document.versions || {}).map(
-      (key) => document.versions[key]
-    ),
-    publishingChecks: document.publishingChecks,
-    changesRequested: document.changesRequested,
+    liveText: current ? `${current.label} is live` : 'Not yet published',
+    draft: draft && {
+      state: draft.state,
+      statusText:
+        draft.state === 'awaiting-review'
+          ? 'Waiting for approval. Editing is locked until it is reviewed.'
+          : 'You have unpublished edits',
+      changesRequestedText: draft.changesRequested
+        ? `${draft.changesRequested} ${draft.changesRequested === 1 ? 'round' : 'rounds'} of changes requested`
+        : null
+    },
+    // Only a draft in the Draft state is mutable; Awaiting review is locked.
     continueEditingHref:
-      status !== 'Published'
-        ? '/playground/editor?id=' + encodeURIComponent(id)
+      draft && draft.state === 'draft'
+        ? `/playground/editor?id=${encodedId}`
         : null,
-    startEditingHref:
-      status === 'Published'
-        ? '/playground/document/' + encodeURIComponent(id) + '/start-editing'
+    startEditingHref: draft
+      ? null
+      : `/playground/document/${encodedId}/start-editing`,
+    approveHref:
+      designer && draft && draft.state === 'awaiting-review'
+        ? `${guideHref}/approve`
         : null,
-    issuesHref: '/playground/issues'
+    requestChangesHref:
+      designer && draft && draft.state === 'awaiting-review'
+        ? `${guideHref}/reject`
+        : null,
+    publishingChecks: mockIssueCount(),
+    nextVersionLabel: `Version ${current ? current.number + 1 : 1}`,
+    issuesHref: issuesBase(id)
   }
 }
 
@@ -432,18 +457,35 @@ function buildFormatModel(req, id, content, stepperGroups) {
 // an API guide (pin, case bookmarks, reader metadata, the side panel
 // itself) is built the same way either path.
 async function buildMarkdownGuideViewModel(req, document) {
-  const split = await loadApiGuideContent(document.id, document.latestVersionId)
+  const split = await loadApiGuideContent(
+    document.apiId,
+    document.latestVersionId,
+    document.id
+  )
   const format = split ? buildFormatModel(req, document.id, split, null) : null
   const content = format
     ? { sections: format.sections }
-    : await buildMarkdownGuideContent(document.id, document.latestVersionId)
+    : await buildMarkdownGuideContent(
+        document.apiId,
+        document.latestVersionId,
+        document.id
+      )
   const defaultVersionKey =
     document.version === 'Version 1' ? 'version1' : 'version2'
+  const isEditor = canEdit(req, document.id)
 
   return {
     id: document.id,
     isApiGuide: true,
     version: document.version,
+    versionTag: lifecycle.versionTag(
+      parseInt(document.version.replace(/\D/g, ''), 10) || 1
+    ),
+    versionList: [],
+    isOlderVersion: false,
+    canRequestEdit: !canEdit(req, document.id),
+    editRequested: hasRequestedEdit(req, document.id),
+    requestEditHref: `/playground/guide/${encodeURIComponent(document.id)}/request-edit`,
     document: {
       id: document.id,
       name: document.title,
@@ -465,8 +507,15 @@ async function buildMarkdownGuideViewModel(req, document) {
     // Prototype guides API is read-only — docs/prototype-guides-api.md's
     // "What this feature deliberately does not do") — so there is nothing
     // for editor tools to act on, designer or not.
-    isEditor: false,
-    editorActions: null,
+    isEditor,
+    editorActions: isEditor
+      ? buildEditorActions(req, document.id, {
+          draft: canEdit(req, document.id)
+            ? lifecycle.getDraft(req, document.id)
+            : null,
+          current: lifecycle.getLiveVersion(req, document.id)
+        })
+      : null,
     content,
     ...(format && {
       isMarkdown: true,
@@ -492,7 +541,7 @@ async function guideViewModel(req, id) {
   const apiDocument = await findApiGuide(req, id)
   if (apiDocument) return buildMarkdownGuideViewModel(req, apiDocument)
 
-  const overview = documentOverviewViewModel(req, id)
+  const overview = documentOverviewViewModel(req, id, req.query.version)
   if (!overview) return null
 
   const { guidanceDocument, content } = loadGuideContent(id)
@@ -506,8 +555,12 @@ async function guideViewModel(req, id) {
     formatHrefs
   } = buildFormatModel(req, id, content, getStepperPages(id))
 
-  const isEditor = getRole(req) === 'designer'
+  const isEditor = canEdit(req, id) && !overview.isOlderVersion
   const isGenuineEntry = !req.query.page && !req.query.step
+  const selectedHref = (version) =>
+    version === overview.current
+      ? `/playground/guide/${encodeURIComponent(id)}`
+      : `/playground/guide/${encodeURIComponent(id)}?version=${version.number}`
 
   return {
     formatHrefs,
@@ -515,8 +568,23 @@ async function guideViewModel(req, id) {
     id,
     trackRecentlyOpened: Boolean(guidanceDocument) && isGenuineEntry,
     version: overview.document.version,
+    versionTag: overview.selected.tag,
     document: overview.document,
-    currentVersion: overview.document.versions[overview.defaultVersionKey],
+    currentVersion: overview.selected,
+    versionList:
+      overview.versions.length > 1
+        ? overview.versions.map((version) => ({
+            ...version,
+            isCurrent: version === overview.current,
+            isSelected: version === overview.selected,
+            href: selectedHref(version)
+          }))
+        : [],
+    isOlderVersion: overview.isOlderVersion,
+    currentVersionHref: `/playground/guide/${encodeURIComponent(id)}`,
+    canRequestEdit: !canEdit(req, id) && overview.versions.length > 0,
+    editRequested: hasRequestedEdit(req, id),
+    requestEditHref: `/playground/guide/${encodeURIComponent(id)}/request-edit`,
     status: overview.status,
     pin: overview.pin,
     caseBookmarks: buildCaseBookmarks(req, id),
@@ -525,9 +593,7 @@ async function guideViewModel(req, id) {
     positionHref: `/playground/guide/${encodeURIComponent(id)}/position`,
     metadata: buildMetadata(req, id, overview.document),
     isEditor,
-    editorActions: isEditor
-      ? buildEditorActions(id, overview.status, overview.document)
-      : null,
+    editorActions: isEditor ? buildEditorActions(req, id, overview) : null,
     content: { sections },
     isMarkdown: Boolean(content.isMarkdown),
     isApiGuide: false,
@@ -546,10 +612,23 @@ async function guideViewModel(req, id) {
   }
 }
 
+// The right-hand panel's session state, for any page that renders it (the
+// guide page's own view model spells the same fields out inline).
+function buildPanelState(req) {
+  return {
+    panelCollapsed: getPanelCollapsed(req),
+    panelToggleHref: '/playground/guide/panel-toggle',
+    panelWidth: getPanelWidth(req),
+    panelWidthLimits: PANEL_WIDTH,
+    panelWidthHref: '/playground/guide/panel-width',
+    returnTo: req.originalUrl
+  }
+}
+
 // The API guide with this id, or null (always null when the API isn't
 // configured or has no guides).
 async function findApiGuide(req, id) {
-  const apiGuides = await getRequestApiGuides(req)
+  const apiGuides = await getPlaygroundApiGuides(req)
   return apiGuides.find((candidate) => candidate.id === id) || null
 }
 
@@ -558,7 +637,7 @@ async function findApiGuide(req, id) {
 async function locateAnchor(req, id, anchor) {
   const apiGuide = await findApiGuide(req, id)
   const content = apiGuide
-    ? await loadApiGuideContent(id, apiGuide.latestVersionId)
+    ? await loadApiGuideContent(apiGuide.apiId, apiGuide.latestVersionId, id)
     : loadGuideContent(id).content
   if (!content) return null
   return findAnchor(groupPages(content, getStepperPages(id)), anchor)
@@ -568,6 +647,8 @@ module.exports = {
   guideViewModel,
   findApiGuide,
   locateAnchor,
+  buildMetadata,
+  buildPanelState,
   readFormat,
   buildHref,
   getPanelCollapsed,

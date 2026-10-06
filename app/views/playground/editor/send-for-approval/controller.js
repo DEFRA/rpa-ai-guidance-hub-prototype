@@ -1,7 +1,8 @@
 const {
-  getAddedAwaitingApprovalIds,
-  lookupAnyManageGuidanceDocument
-} = require('../../../../data/manage-guidance')
+  getPlaygroundApiGuides
+} = require('../../../../data/playground-api-guides')
+const { canEdit } = require('../../../../data/permissions')
+const lifecycle = require('../../../../data/guide-lifecycle')
 
 // "Send for approval" (sidebar button) — captures the editor's current live
 // content first (same fetch, same payload shape, as Preview — see
@@ -18,9 +19,7 @@ function get(req, res) {
     return
   }
 
-  const document = preview.id
-    ? lookupAnyManageGuidanceDocument(preview.id)
-    : null
+  const document = preview.id ? lifecycle.lookupGuide(req, preview.id) : null
 
   res.locals.backHref =
     '/playground/editor' +
@@ -38,13 +37,11 @@ function get(req, res) {
 }
 
 // The confirmation page's own "Send for approval" button — the real state
-// change: adds the id to req.session.data.manageGuidanceAwaitingApprovalAddedIds,
-// so buildManageGuidanceRows moves this row out of Editing and into
-// Awaiting approval for the rest of the session — visible immediately on
-// its document overview page and the hub's own Awaiting approval tab. A
+// change: the guide's draft moves to Awaiting review (locked). A
 // fixed-sample draft (no real id) has nothing to move, so this just returns
 // to the editor for that case.
-function post(req, res) {
+async function post(req, res) {
+  await getPlaygroundApiGuides(req)
   const preview = req.session.data.editorExperimentPreview
   const id = (preview && preview.id) || ''
 
@@ -53,10 +50,10 @@ function post(req, res) {
     return
   }
 
-  const addedIds = getAddedAwaitingApprovalIds(req)
-  if (addedIds.indexOf(id) === -1) addedIds.push(id)
+  // Locks the guide's one draft for review; versions are never touched.
+  if (canEdit(req, id)) lifecycle.sendForReview(req, id)
 
-  res.redirect('/playground/document/' + encodeURIComponent(id))
+  res.redirect('/playground/guide/' + encodeURIComponent(id))
 }
 
 module.exports = { get, post }

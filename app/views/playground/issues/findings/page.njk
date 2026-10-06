@@ -40,7 +40,7 @@
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-two-thirds">
 
-    <span class="govuk-caption-l">{{ library.current.name }}</span>
+    <span class="govuk-caption-l">{{ guideName }}</span>
     <h1 class="govuk-heading-l">Finding {{ position }} of {{ total }}</h1>
 
     <p class="govuk-body-l">{{ finding.title }}</p>
@@ -53,7 +53,7 @@
     {% endif %}
 
     <p class="govuk-body">
-      <a class="govuk-link" href="/playground/editor?line={{ finding.line }}">
+      <a class="govuk-link" href="{{ editorHref }}&line={{ finding.line }}">
         Open the editor at this line
       </a>
     </p>
@@ -71,7 +71,7 @@
       {% endif %}
 
       <p class="govuk-body">
-        <a class="govuk-link" href="/playground/issues/findings">Go to the next finding without a verdict</a>
+        <a class="govuk-link" href="{{ base }}/findings">Go to the next finding without a verdict</a>
       </p>
 
     {% else %}
@@ -104,12 +104,12 @@
       </details>
 
       {# Marking something fixed needs no justification, so it is one click. #}
-      <form method="post" action="/playground/issues/findings/{{ finding.id }}">
+      <form method="post" action="{{ base }}/findings/{{ finding.id }}">
         {{ govukButton({ text: "Fixed", name: "verdict", value: "fixed" }) }}
       </form>
 
       {# The other two benefit from an explanation, so they share a comment. #}
-      <form method="post" action="/playground/issues/findings/{{ finding.id }}">
+      <form method="post" action="{{ base }}/findings/{{ finding.id }}">
         {{ govukCharacterCount({
           name: "comment",
           id: "comment",
@@ -139,15 +139,15 @@
 
     <nav class="app-finding-nav" aria-label="Findings">
       {% if previousFinding %}
-        <a class="govuk-link" href="/playground/issues/findings/{{ previousFinding.id }}">Previous finding</a>
+        <a class="govuk-link" href="{{ base }}/findings/{{ previousFinding.id }}">Previous finding</a>
       {% endif %}
       {% if nextFinding %}
-        <a class="govuk-link app-finding-nav__next" href="/playground/issues/findings/{{ nextFinding.id }}">Next finding</a>
+        <a class="govuk-link app-finding-nav__next" href="{{ base }}/findings/{{ nextFinding.id }}">Next finding</a>
       {% endif %}
     </nav>
 
     <p class="govuk-body">
-      <a class="govuk-link" href="/playground/issues">Back to all findings</a>
+      <a class="govuk-link" href="{{ base }}">Back to all findings</a>
     </p>
 
   </div>

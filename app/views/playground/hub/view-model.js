@@ -1,7 +1,8 @@
+const lifecycle = require('../../../data/guide-lifecycle')
+const { isDesigner } = require('../../../data/permissions')
 const {
-  buildManageGuidanceSearchResults
-} = require('../../../data/manage-guidance')
-const { getRequestApiGuides } = require('../../../data/guidance-documents')
+  getPlaygroundApiGuides
+} = require('../../../data/playground-api-guides')
 const {
   getListIds,
   getQuickFilters,
@@ -25,10 +26,12 @@ const SCHEME_LABELS = {
   'countryside-stewardship': 'Countryside Stewardship',
   'sustainable-farming-incentive': 'Sustainable Farming Incentive'
 }
+// 'published' is the old slug for Live, kept so old links still filter.
 const STATE_LABELS = {
-  draft: 'Draft',
-  'awaiting-review': 'Awaiting review',
-  published: 'Published'
+  draft: lifecycle.DRAFT_LABELS.draft,
+  'awaiting-review': lifecycle.DRAFT_LABELS['awaiting-review'],
+  live: lifecycle.LIVE_LABEL,
+  published: lifecycle.LIVE_LABEL
 }
 
 // Checkboxes with the same name submit as a single string (one checked) or
@@ -78,14 +81,20 @@ function buildHref({
   return path + RESULTS_ANCHOR
 }
 
-// The API-mode equivalent of buildManageGuidanceSearchResults — an
+// The API-mode equivalent of lifecycle.buildHubResults — an
 // API-sourced guide (app/lib/guidance-api-loader.js) has no
 // editing/awaiting-approval/published session state to branch on, so this
 // is a plain map rather than that function's three-way merge. Produces
 // the same row shape (id/title/description/version/lastUpdated/published/
 // category/scheme/year/state/overviewHref) so every filter/sort/pin step
 // below works unchanged regardless of which source built allResults.
-function buildApiSearchResults(documents, overviewHrefBase) {
+// A designer's draft on an API guide, as a state label (viewers never see one).
+function apiDraftLabels(req, document, designer) {
+  const draft = designer ? lifecycle.getDraft(req, document.id) : null
+  return draft ? [lifecycle.DRAFT_LABELS[draft.state]] : []
+}
+
+function buildApiSearchResults(req, documents, overviewHrefBase, designer) {
   return documents.map((document) => ({
     id: document.id,
     title: document.title,
@@ -96,7 +105,12 @@ function buildApiSearchResults(documents, overviewHrefBase) {
     category: document.category,
     scheme: document.scheme,
     year: document.year,
-    state: 'Published',
+    versionTag: lifecycle.versionTag(
+      parseInt(document.version.replace(/\D/g, ''), 10) || 1
+    ),
+    states: [lifecycle.LIVE_LABEL].concat(
+      apiDraftLabels(req, document, designer)
+    ),
     overviewHref: `${overviewHrefBase}/${encodeURIComponent(document.id)}`
   }))
 }
@@ -122,13 +136,17 @@ function buildApiSearchResults(documents, overviewHrefBase) {
 // JavaScript off — see page.notes.md for why that changed.
 async function fromSession(req) {
   // First, so req.apiGuides is set before anything reads the guide list.
-  const apiGuides = await getRequestApiGuides(req)
+  const apiGuides = await getPlaygroundApiGuides(req)
   const q = (req.query.q || '').trim()
 
   const category = readSlug(req.query.category, 'all')
   const scheme = readSlug(req.query.scheme, 'all')
   const year = readSlug(req.query.year, 'all')
-  const states = toArray(req.query.state)
+  // Only designers can see (and so filter by) non-Live guides.
+  const designer = isDesigner(req)
+  const states = designer
+    ? toArray(req.query.state).filter((value) => STATE_LABELS[value])
+    : []
   const sort = readSlug(req.query.sort, 'most-relevant')
 
   const bookmark = readBookmarkFilter(req.query)
@@ -148,20 +166,13 @@ async function fromSession(req) {
   // keep working whether or not the API has any guides. Their ids are the
   // API's uuids, so they never collide with a mock guide's.
   const baseResults = [
-    ...buildApiSearchResults(apiGuides, '/playground/guide'),
-    ...buildManageGuidanceSearchResults(req, '/playground/document').map(
-      (document) => ({
+    ...buildApiSearchResults(req, apiGuides, '/playground/guide', designer),
+    ...lifecycle
+      .buildHubResults(req, { includeNonLive: designer })
+      .map((document) => ({
         ...document,
-        // buildManageGuidanceSearchResults() always joins its
-        // overviewHrefBase with a ?id= query string — the v6
-        // manage-guidance/document-overview convention. The hub links
-        // straight to the merged guide page (playground/guide/**)
-        // instead — one click from here to the guide itself, rather
-        // than through the old document overview/format-choice pages
-        // first.
         overviewHref: `/playground/guide/${document.id}`
-      })
-    )
+      }))
   ]
   const allResults = baseResults.map((document) => {
     // In the Recently opened list, a guide the reader has scrolled through
@@ -192,7 +203,10 @@ async function fromSession(req) {
     if (year !== 'all' && String(document.year) !== year) {
       return false
     }
-    if (stateLabels.length && stateLabels.indexOf(document.state) === -1) {
+    if (
+      stateLabels.length &&
+      !document.states.some((state) => stateLabels.indexOf(state) !== -1)
+    ) {
       return false
     }
     if (searchText) {
@@ -295,10 +309,11 @@ async function fromSession(req) {
     selectedCategory: category,
     selectedScheme: scheme,
     selectedYear: year,
+    isDesigner: designer,
     stateChecked: {
       draft: states.indexOf('draft') !== -1,
       'awaiting-review': states.indexOf('awaiting-review') !== -1,
-      published: states.indexOf('published') !== -1
+      live: states.some((value) => STATE_LABELS[value] === lifecycle.LIVE_LABEL)
     },
     selectedSort: sort,
     selectedFilters,

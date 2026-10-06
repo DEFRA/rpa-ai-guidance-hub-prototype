@@ -68,17 +68,7 @@ function getRecentlyOpened(req) {
 
 function getPinnedGuidance(req) {
   if (!req.session.data.pinnedGuidance) {
-    req.session.data.pinnedGuidance = [
-      {
-        id: 'countryside-stewardship-capital-grants',
-        lastModified: '20 July 2025'
-      },
-      {
-        id: 'basic-payment-scheme-closing-rules',
-        lastModified: '12 June 2025'
-      },
-      { id: 'sfi-soil-health-actions', lastModified: '3 May 2025' }
-    ]
+    req.session.data.pinnedGuidance = []
   }
   return req.session.data.pinnedGuidance
 }

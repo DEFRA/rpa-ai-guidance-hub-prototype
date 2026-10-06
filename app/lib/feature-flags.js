@@ -25,7 +25,12 @@ const GUIDANCE_API_BASE_URL =
 const GUIDANCE_API_CONFIGURED =
   GUIDANCE_API_ENABLED || Boolean(process.env.GUIDANCE_API_BASE_URL)
 
+// Set MOCK_GUIDES_ENABLED=false to hide the mock guides from the playground's
+// hub and side nav, leaving only the API's guides. On unless turned off.
+const MOCK_GUIDES_ENABLED = process.env.MOCK_GUIDES_ENABLED !== 'false'
+
 module.exports = {
+  MOCK_GUIDES_ENABLED,
   GUIDANCE_API_ENABLED,
   GUIDANCE_API_CONFIGURED,
   GUIDANCE_API_BASE_URL

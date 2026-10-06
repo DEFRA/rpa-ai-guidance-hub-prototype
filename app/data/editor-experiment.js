@@ -26,30 +26,6 @@ const {
 // document with no content this route knows how to render at all — the
 // route falls back to the fixed sample content for that, not this
 // function.
-const EDITOR_HEADING_ANCHORS = {
-  'cs-ma-land-user-or-land-cover-not-compatible-signoff-2026': {
-    'section-1': { anchorId: 'anchor-1', anchorAuthor: 'Jane Smith' },
-    'section-2': { anchorId: 'anchor-2', anchorAuthor: 'Tom Reeves' },
-    'section-3': { anchorId: 'anchor-3', anchorAuthor: 'Priya Shah' }
-  }
-}
-
-function applyEditorHeadingAnchors(documentId, sections) {
-  const anchors = EDITOR_HEADING_ANCHORS[documentId]
-  if (!anchors) return sections
-
-  return sections.map((section) => {
-    const anchor = anchors[section.id]
-    return anchor
-      ? {
-          ...section,
-          anchorId: anchor.anchorId,
-          anchorAuthor: anchor.anchorAuthor
-        }
-      : section
-  })
-}
-
 function buildEditorSections(guidanceDocument) {
   if (guidanceDocument.steps && guidanceDocument.steps.length) {
     const isNestedSteps = Array.isArray(guidanceDocument.steps[0].parts)
@@ -66,18 +42,15 @@ function buildEditorSections(guidanceDocument) {
           })
         })
       })
-      return applyEditorHeadingAnchors(guidanceDocument.id, sections)
+      return sections
     }
 
-    return applyEditorHeadingAnchors(
-      guidanceDocument.id,
-      guidanceDocument.steps.map((step, index) => ({
-        id: `section-${index + 1}`,
-        name: step.sectionName,
-        heading: step.heading,
-        body: step.body
-      }))
-    )
+    return guidanceDocument.steps.map((step, index) => ({
+      id: `section-${index + 1}`,
+      name: step.sectionName,
+      heading: step.heading,
+      body: step.body
+    }))
   }
 
   // The generic 3-phase placeholder flow — genericGuidanceContent falls
@@ -97,108 +70,12 @@ function buildEditorSections(guidanceDocument) {
       })
     })
   })
-  return applyEditorHeadingAnchors(guidanceDocument.id, sections)
+  return sections
 }
 
-// Sample Comments data for editor-experiment.html's Changes panel — not
-// document-specific (the same set show regardless of which document, if
-// any, ?id= names). A comment with one or more replies renders as a
-// threaded/accordion card on the page rather than a single flat one.
-//
-// anchorId links a comment to a specific span of editor text — a
-// data-anchor-id="anchor-N" element sharing that value. Two sources
-// produce one, depending on what is actually being viewed: a <span>
-// hand-added to editor-experiment.html's own fixed "SFI 23" sample content
-// (used when there is no ?id=, or one that matches nothing), or — for the
-// one real document these comments are actually reviewed against,
-// cs-ma-land-user-or-land-cover-not-compatible-signoff-2026 — the section
-// heading itself, via EDITOR_HEADING_ANCHORS/applyEditorHeadingAnchors
-// above.
-const EDITOR_EXPERIMENT_COMMENTS = [
-  {
-    id: 'comment-1',
-    author: 'Jane Smith',
-    timestamp: '2 days ago',
-    text: 'This paragraph needs updating to reflect the new payment threshold.',
-    section: 'section-1',
-    anchorId: 'anchor-1',
-    replies: [
-      {
-        author: 'Tom Reeves',
-        timestamp: '1 day ago',
-        text: "Agreed — I'll update the figure once the new threshold is confirmed."
-      },
-      {
-        author: 'Jane Smith',
-        timestamp: '20 hours ago',
-        text: "Thanks, let me know once it's in and I'll close this out."
-      }
-    ]
-  },
-  {
-    id: 'comment-2',
-    author: 'Tom Reeves',
-    timestamp: '5 days ago',
-    text: 'Can we double check this is still accurate after the scheme review?',
-    section: 'section-2',
-    anchorId: 'anchor-2'
-  },
-  {
-    id: 'comment-3',
-    author: 'Priya Shah',
-    timestamp: '1 week ago',
-    text: 'Worth adding a worked example here for first-time applicants.',
-    section: 'section-3',
-    anchorId: 'anchor-3'
-  },
-  {
-    id: 'comment-4',
-    author: 'Sam Whitfield',
-    timestamp: '3 hours ago',
-    text: 'Worth double-checking this still holds once the new online portal goes live — did the SLA change?',
-    section: 'section-4',
-    anchorId: 'anchor-4'
-  },
-  {
-    id: 'comment-5',
-    author: 'Priya Shah',
-    timestamp: '6 days ago',
-    text: 'Should we link to the parcel mapping tool here, or is that covered elsewhere?',
-    section: 'section-4',
-    anchorId: 'anchor-5'
-  },
-  {
-    id: 'comment-6',
-    author: 'Jane Smith',
-    timestamp: '1 day ago',
-    text: 'Can we specify acceptable photo file types and sizes here? Had a few queries about this.',
-    section: 'section-5',
-    anchorId: 'anchor-6'
-  },
-  {
-    id: 'comment-7',
-    author: 'Tom Reeves',
-    timestamp: '4 days ago',
-    text: 'Good to confirm this covers the full agreement term, not just the current scheme year.',
-    section: 'section-5',
-    anchorId: 'anchor-7'
-  },
-  {
-    id: 'comment-8',
-    author: 'Sam Whitfield',
-    timestamp: '6 days ago',
-    text: "Can we get an exact month once the review calendar is published? 'Spring' is a bit vague for internal planning.",
-    section: 'section-6',
-    anchorId: 'anchor-8',
-    replies: [
-      {
-        author: 'Priya Shah',
-        timestamp: '5 days ago',
-        text: "I'll flag it to the policy team and update this once we have a firm date."
-      }
-    ]
-  }
-]
+// The editor starts with no comments: everything on the Comments tab is added
+// (or replied to) during the session. Kept as a seed hook for future samples.
+const EDITOR_EXPERIMENT_COMMENTS = []
 
 // Replies added through a thread's "Reply" control on editor-experiment.html
 // — keyed by comment id (EDITOR_EXPERIMENT_COMMENTS above), so they can be

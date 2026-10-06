@@ -124,3 +124,13 @@ API guides now sit alongside the mock guides instead of replacing them, so the m
 - No manifest yet (404), an unreachable API or a slow one (3s timeout) leaves just the mock guides, with nothing logged for a 404
 - Side nav lists and seeded bookmarks keep the mock guides too
 - Open question: should an API guide replace a mock guide it duplicates, e.g. by matching manifest name to mock id?
+
+---
+
+**Shaun Fitzsimons — 5 October 2026**
+
+Viewers now only see Live guides. The State filter and status tags are designer-only.
+
+- **"Published" is now "Live"** everywhere (old `state=published` links still work).
+- **One row per guide.** A designer sees a Live tag and a Draft or Awaiting review tag on the same row when a guide has both.
+- **Every seeded guide is Live**, with no seeded drafts. A draft exists only once a designer starts one. A guide with no Live version (e.g. just added) would be visible to designers only.
