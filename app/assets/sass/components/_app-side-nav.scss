@@ -246,9 +246,41 @@ $app-side-nav-muted: #505a5f;
   min-width: 0;
 }
 
+// Stands in for the Defra header, which side-nav pages don't have.
+.app-side-nav__logo-link {
+  display: inline-block;
+  margin-bottom: govuk-spacing(2);
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+.app-side-nav__logo {
+  display: block;
+  height: 48px;
+  width: auto;
+}
+
 .app-side-nav__service {
   @include govuk-font($size: 19, $weight: bold);
   margin: 0;
+}
+
+.app-side-nav__service-link {
+  &:link,
+  &:visited {
+    color: $govuk-text-colour;
+    text-decoration: none;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
 }
 
 .app-side-nav__switcher {

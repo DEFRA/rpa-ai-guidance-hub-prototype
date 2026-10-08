@@ -25,7 +25,14 @@
 
   <div class="app-side-nav__header">
     <div class="app-side-nav__identity">
-      <p class="app-side-nav__service">Guidance hub</p>
+      {# The logo goes to the prototype's versions index (/), a convenience for the prototype only. #}
+      <a href="/" class="app-side-nav__logo-link">
+        <img src="/public/images/defra-logo.svg" alt="" role="presentation" class="app-side-nav__logo" />
+        <span class="govuk-visually-hidden">Department for Environment, Food and Rural Affairs: prototype versions</span>
+      </a>
+      <p class="app-side-nav__service">
+        <a href="{{ sideNav.hubHref }}" class="app-side-nav__service-link">{{ serviceName }}</a>
+      </p>
       <details class="app-side-nav__switcher" data-side-nav-disclosure>
         <summary class="app-side-nav__switcher-summary">
           <span class="govuk-visually-hidden">Signed in as </span>{{ sideNav.roleLabel }}
