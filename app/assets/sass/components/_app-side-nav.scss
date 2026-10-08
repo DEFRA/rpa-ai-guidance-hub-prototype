@@ -27,15 +27,22 @@ $app-side-nav-muted: #505a5f;
 
 // Full width for everything on a nav page — header, footer and main column —
 // so the Defra logo lines up with the nav rather than a centred 960px column.
+// The 20px margins and 15px vertical padding match the nav's own spacing.
 .app-has-side-nav .govuk-width-container {
   max-width: none;
   margin-right: govuk-spacing(4);
   margin-left: govuk-spacing(4);
+}
 
-  @include govuk-media-query($from: tablet) {
-    margin-right: govuk-spacing(6);
-    margin-left: govuk-spacing(6);
-  }
+// It is a width container inside the column's own, so would get the margins twice.
+.app-has-side-nav .govuk-phase-banner {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.app-has-side-nav .govuk-main-wrapper {
+  padding-top: govuk-spacing(3);
+  padding-bottom: govuk-spacing(3);
 }
 
 .app-shell {
@@ -158,6 +165,12 @@ $app-side-nav-muted: #505a5f;
 
   @include govuk-media-query($from: tablet) {
     padding: 0 govuk-spacing(5);
+  }
+
+  // Only narrow screens need it, to open the drawer: wider ones collapse and
+  // expand from the nav's own button and the rail's "Expand navigation".
+  @include govuk-media-query($from: desktop) {
+    display: none;
   }
 }
 
