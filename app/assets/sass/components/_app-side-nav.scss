@@ -25,13 +25,18 @@ $app-side-nav-muted: #505a5f;
   text-decoration: none;
 }
 
-// Full width for everything on a nav page — header, footer and main column —
-// so the Defra logo lines up with the nav rather than a centred 960px column.
-// The 20px margins and 15px vertical padding match the nav's own spacing.
+// Full width for everything on a nav page (footer, main column and the
+// containers inside it) rather than a centred 960px column.
 .app-has-side-nav .govuk-width-container {
   max-width: none;
   margin-right: govuk-spacing(4);
   margin-left: govuk-spacing(4);
+}
+
+// The main column's own edge: 10px, like the nav's search box.
+.app-has-side-nav .app-shell__main > .govuk-width-container {
+  margin-right: govuk-spacing(2);
+  margin-left: govuk-spacing(2);
 }
 
 // It is a width container inside the column's own, so would get the margins twice.
