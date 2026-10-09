@@ -33,10 +33,22 @@ $app-side-nav-muted: #505a5f;
   margin-left: govuk-spacing(4);
 }
 
-// The main column's own edge: 10px, like the nav's search box.
+// Everything in the main column starts the same distance from its edge, as
+// the nav's text does. The hub's hero and the filters box run the full width
+// of the column instead, with their content inset by that same distance.
+$app-content-gutter: govuk-spacing(4);
+
 .app-has-side-nav .app-shell__main > .govuk-width-container {
-  margin-right: govuk-spacing(2);
-  margin-left: govuk-spacing(2);
+  margin-right: 0;
+  margin-left: 0;
+  padding-right: $app-content-gutter;
+  padding-left: $app-content-gutter;
+}
+
+.app-has-side-nav .defra-home-header,
+.app-has-side-nav .app-filter {
+  margin-right: -$app-content-gutter;
+  margin-left: -$app-content-gutter;
 }
 
 // It is a width container inside the column's own, so would get the margins twice.
@@ -223,11 +235,10 @@ $app-side-nav-muted: #505a5f;
   padding-left: 0;
 }
 
-// The hub's green hero, now inside the main column: a rounded panel rather
-// than full-bleed, sitting beside the nav.
+// The hub's green hero, inside the main column and the full width of it
+// (see $app-content-gutter above).
 .app-has-side-nav .defra-home-header {
   margin-bottom: govuk-spacing(6);
-  border-radius: 8px;
 }
 
 // ---------------------------------------------------------------------------
