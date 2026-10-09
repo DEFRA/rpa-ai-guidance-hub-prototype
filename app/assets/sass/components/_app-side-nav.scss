@@ -25,17 +25,41 @@ $app-side-nav-muted: #505a5f;
   text-decoration: none;
 }
 
-// Full width for everything on a nav page — header, footer and main column —
-// so the Defra logo lines up with the nav rather than a centred 960px column.
+// Full width for everything on a nav page (footer, main column and the
+// containers inside it) rather than a centred 960px column.
 .app-has-side-nav .govuk-width-container {
   max-width: none;
   margin-right: govuk-spacing(4);
   margin-left: govuk-spacing(4);
+}
 
-  @include govuk-media-query($from: tablet) {
-    margin-right: govuk-spacing(6);
-    margin-left: govuk-spacing(6);
-  }
+// Everything in the main column starts the same distance from its edge, as
+// the nav's text does. The hub's hero and the filters box run the full width
+// of the column instead, with their content inset by that same distance.
+$app-content-gutter: govuk-spacing(4);
+
+.app-has-side-nav .app-shell__main > .govuk-width-container {
+  margin-right: 0;
+  margin-left: 0;
+  padding-right: $app-content-gutter;
+  padding-left: $app-content-gutter;
+}
+
+.app-has-side-nav .defra-home-header,
+.app-has-side-nav .app-filter {
+  margin-right: -$app-content-gutter;
+  margin-left: -$app-content-gutter;
+}
+
+// It is a width container inside the column's own, so would get the margins twice.
+.app-has-side-nav .govuk-phase-banner {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.app-has-side-nav .govuk-main-wrapper {
+  padding-top: govuk-spacing(3);
+  padding-bottom: govuk-spacing(3);
 }
 
 .app-shell {
@@ -159,6 +183,12 @@ $app-side-nav-muted: #505a5f;
   @include govuk-media-query($from: tablet) {
     padding: 0 govuk-spacing(5);
   }
+
+  // Only narrow screens need it, to open the drawer: wider ones collapse and
+  // expand from the nav's own button and the rail's "Expand navigation".
+  @include govuk-media-query($from: desktop) {
+    display: none;
+  }
 }
 
 .app-shell__toolbar-toggle {
@@ -205,11 +235,10 @@ $app-side-nav-muted: #505a5f;
   padding-left: 0;
 }
 
-// The hub's green hero, now inside the main column: a rounded panel rather
-// than full-bleed, sitting beside the nav.
+// The hub's green hero, inside the main column and the full width of it
+// (see $app-content-gutter above).
 .app-has-side-nav .defra-home-header {
   margin-bottom: govuk-spacing(6);
-  border-radius: 8px;
 }
 
 // ---------------------------------------------------------------------------
@@ -246,9 +275,41 @@ $app-side-nav-muted: #505a5f;
   min-width: 0;
 }
 
+// Stands in for the Defra header, which side-nav pages don't have.
+.app-side-nav__logo-link {
+  display: inline-block;
+  margin-bottom: govuk-spacing(2);
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
+}
+
+.app-side-nav__logo {
+  display: block;
+  height: 48px;
+  width: auto;
+}
+
 .app-side-nav__service {
   @include govuk-font($size: 19, $weight: bold);
   margin: 0;
+}
+
+.app-side-nav__service-link {
+  &:link,
+  &:visited {
+    color: $govuk-text-colour;
+    text-decoration: none;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus {
+    @include app-side-nav-focus;
+  }
 }
 
 .app-side-nav__switcher {

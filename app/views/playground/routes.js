@@ -11,6 +11,8 @@ const { getPlaygroundApiGuides } = require('../../data/playground-api-guides')
 const router = govukPrototypeKit.requests.setupRouter('/playground')
 
 router.use((req, res, next) => {
+  // The header shows the Defra logo only, with no service name.
+  res.locals.hideServiceName = true
   const isSignIn = req.path === '/' || /^\/sign-in(\/|$)/.test(req.path)
   if (!isSignIn) {
     const base = req.baseUrl

@@ -461,6 +461,7 @@ function buildSideNav(req, base = DEFAULT_BASE) {
     roleLabel: labels.role,
     teamLabel: labels.team,
     otherRole: role === 'designer' ? 'viewer' : 'designer',
+    hubHref: hub,
     switchRoleHref: `${base}/switch-role`,
     collapsed: getNavCollapsed(req),
     autoCollapse: getNavAutoCollapse(req),

@@ -1,5 +1,5 @@
 {
-  "serviceName": "RPA Guidance Hub",
+  "serviceName": "RPA Guidance hub",
   "plugins": {
     "govuk-frontend": {
       "rebrand": false
