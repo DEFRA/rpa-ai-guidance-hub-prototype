@@ -134,3 +134,15 @@ Viewers now only see Live guides. The State filter and status tags are designer-
 - **"Published" is now "Live"** everywhere (old `state=published` links still work).
 - **One row per guide.** A designer sees a Live tag and a Draft or Awaiting review tag on the same row when a guide has both.
 - **Every seeded guide is Live**, with no seeded drafts. A draft exists only once a designer starts one. A guide with no Live version (e.g. just added) would be visible to designers only.
+
+---
+
+**Tim Gordon — 10 October 2026**
+
+Search hub now also runs the guides API's AI search over every indexed guide, and shows its summary and results above the guide list.
+
+- Runs only when something is typed and the API is configured; with no search endpoint (404) or a failed search, the page is as before
+- Ctrl-F (Cmd-F on a Mac) goes to Search hub, not the browser's find, which would only search this page
+- A result opens the prototype's own copy of its guide at that section, via `guide/search-section/`; a section deeper than the stepper's parts opens at the part that holds it
+- A search takes several seconds or more, so the box says it is searching once submitted
+- Open question: should the guide list still filter on the same words? A question in plain English usually matches no guide titles

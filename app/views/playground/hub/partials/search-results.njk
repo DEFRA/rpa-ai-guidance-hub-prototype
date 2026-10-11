@@ -1,0 +1,49 @@
+{# The guides API's AI search of every guide, for a page that sets aiSearch. #}
+{% macro aiSearchLink(link) %}
+  {%- if link.href %}<a class="govuk-link" href="{{ link.href }}">{{ link.text }}</a>{% else %}{{ link.text }}{% endif -%}
+{% endmacro %}
+
+<section id="ai-search-results" aria-labelledby="ai-search-results-heading">
+  <h2 class="govuk-heading-l" id="ai-search-results-heading">Search all guidance</h2>
+
+  {% if aiSearch.answer %}
+    <div class="govuk-inset-text">
+      <h3 class="govuk-heading-m govuk-!-margin-bottom-2">AI summary</h3>
+      <p class="govuk-body">{{ aiSearch.answer.text }}</p>
+
+      {% if aiSearch.answer.cited | length %}
+        <p class="govuk-body-s govuk-!-margin-bottom-0">
+          Taken from:
+          {%- for link in aiSearch.answer.cited %}
+            {{ aiSearchLink(link) }}{% if link.documentTitle %} ({{ link.documentTitle }}){% endif %}{{ "," if not loop.last }}
+          {%- endfor %}
+        </p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if aiSearch.results | length %}
+    <h3 class="govuk-heading-m">
+      {{ aiSearch.results | length }} result{{ "" if aiSearch.results | length == 1 else "s" }}
+    </h3>
+
+    <ul class="govuk-list">
+      {% for link in aiSearch.results %}
+        <li class="govuk-!-margin-bottom-6">
+          <h4 class="govuk-heading-s govuk-!-margin-bottom-1">{{ aiSearchLink(link) }}</h4>
+          {% if link.documentTitle %}
+            <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-1">{{ link.documentTitle }}</p>
+          {% endif %}
+          <p class="govuk-body">{{ link.reason }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <h3 class="govuk-heading-m">No results</h3>
+    <p class="govuk-body">
+      Nothing in the indexed guidance answers “{{ aiSearch.query }}”. Try the
+      words the guidance itself would use, such as a case type, an option code
+      or the name of the check.
+    </p>
+  {% endif %}
+</section>
