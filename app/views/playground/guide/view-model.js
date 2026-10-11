@@ -632,13 +632,18 @@ async function findApiGuide(req, id) {
   return apiGuides.find((candidate) => candidate.id === id) || null
 }
 
+// A guide's sections and parts, from the API or its local content, or null.
+async function loadContent(req, id) {
+  const apiGuide = await findApiGuide(req, id)
+  return apiGuide
+    ? loadApiGuideContent(apiGuide.apiId, apiGuide.latestVersionId, id)
+    : loadGuideContent(id).content
+}
+
 // The section/ and position/ modules' shared lookup: where an anchor
 // lives in a guide (its stepper page and label), or null.
 async function locateAnchor(req, id, anchor) {
-  const apiGuide = await findApiGuide(req, id)
-  const content = apiGuide
-    ? await loadApiGuideContent(apiGuide.apiId, apiGuide.latestVersionId, id)
-    : loadGuideContent(id).content
+  const content = await loadContent(req, id)
   if (!content) return null
   return findAnchor(groupPages(content, getStepperPages(id)), anchor)
 }
@@ -646,6 +651,7 @@ async function locateAnchor(req, id, anchor) {
 module.exports = {
   guideViewModel,
   findApiGuide,
+  loadContent,
   locateAnchor,
   buildMetadata,
   buildPanelState,

@@ -18,6 +18,10 @@ const { GUIDANCE_API_BASE_URL } = require('./feature-flags')
 // page that can fall back to the mock guides.
 const TIMEOUT_MS = 3000
 
+// A search makes several model calls over the whole index, so it takes tens
+// of seconds; this only stops a hung one holding the page for ever.
+const SEARCH_TIMEOUT_MS = 120000
+
 function buildUrl(pathname, versionId) {
   const url = new URL(pathname, GUIDANCE_API_BASE_URL)
   if (versionId) url.searchParams.set('version_id', versionId)
@@ -106,4 +110,32 @@ async function fetchAsset(documentId, assetId, versionId) {
   }
 }
 
-module.exports = { fetchManifest, fetchGuideContent, fetchAsset }
+// An AI search of every indexed guide: { query, answer, results, ... }, or
+// null. A 404 means this API has no search endpoint, so nothing is logged.
+async function searchGuidance(query) {
+  const url = buildUrl('/guidance/search/')
+  url.searchParams.set('q', query)
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS)
+    })
+    if (response.status === 404) return null
+    if (!response.ok) {
+      console.error(
+        `[guidance-api-client] search failed: ${response.status} ${response.statusText}`
+      )
+      return null
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('[guidance-api-client] search failed:', error.message)
+    return null
+  }
+}
+
+module.exports = {
+  fetchManifest,
+  fetchGuideContent,
+  fetchAsset,
+  searchGuidance
+}

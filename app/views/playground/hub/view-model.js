@@ -14,6 +14,9 @@ const {
   BOOKMARK_TYPES
 } = require('../../../data/side-nav')
 const { getGuidePosition } = require('../../../data/guide-positions')
+const { searchGuidance } = require('../../../lib/guidance-api-client')
+const { GUIDANCE_API_CONFIGURED } = require('../../../lib/feature-flags')
+const { isDottedNumber } = require('../../../lib/section-numbers')
 
 // Slug (querystring/form value) -> full label (the value buildManageGuidance
 // SearchResults' documents actually carry) for each single-choice facet.
@@ -115,6 +118,51 @@ function buildApiSearchResults(req, documents, overviewHrefBase, designer) {
   }))
 }
 
+// One AI search result as a link into the prototype's own copy of its guide.
+// The API names guides by uuid; the playground by slug (apiId keeps the uuid).
+function aiSearchLink(result, apiGuides) {
+  const guide = apiGuides.find(
+    (candidate) => candidate.apiId === result.documentId
+  )
+  const number = result.sectionNumber
+  const guideHref = guide
+    ? `/playground/guide/${encodeURIComponent(guide.id)}`
+    : null
+
+  return {
+    text: number
+      ? isDottedNumber(number)
+        ? `${number} ${result.heading}`
+        : result.heading
+      : result.documentTitle,
+    href:
+      guideHref && number
+        ? `${guideHref}/search-section/${encodeURIComponent(number)}`
+        : guideHref,
+    documentTitle: number ? result.documentTitle : null,
+    reason: result.reason
+  }
+}
+
+// The API's AI search, shaped for the page: its summary with the results it
+// was drawn from, then every result. Null when nothing was searched or the
+// API has no search to offer, so the page shows only the guide list.
+function buildAiSearch(search, apiGuides) {
+  if (!search) return null
+  return {
+    query: search.query,
+    answer: search.answer
+      ? {
+          text: search.answer.answer,
+          cited: search.answer.cited.map((result) =>
+            aiSearchLink(result, apiGuides)
+          )
+        }
+      : null,
+    results: search.results.map((result) => aiSearchLink(result, apiGuides))
+  }
+}
+
 // The hub is now the single all-guidance list: what used to be the
 // separate /playground/hub/search page (its own Category/State/Scheme/
 // Year/Version filters and results — buildManageGuidanceSearchResults(),
@@ -135,9 +183,14 @@ function buildApiSearchResults(req, documents, overviewHrefBase, designer) {
 // year/state/sort/q), not client-side JS, so the page works with
 // JavaScript off — see page.notes.md for why that changed.
 async function fromSession(req) {
-  // First, so req.apiGuides is set before anything reads the guide list.
-  const apiGuides = await getPlaygroundApiGuides(req)
   const q = (req.query.q || '').trim()
+  // The guide list first, so req.apiGuides is set before anything reads it.
+  // A search reads every guide with AI, so it runs only when something was
+  // typed and the API is configured, alongside the list rather than after it.
+  const [apiGuides, search] = await Promise.all([
+    getPlaygroundApiGuides(req),
+    q && GUIDANCE_API_CONFIGURED ? searchGuidance(q) : null
+  ])
 
   const category = readSlug(req.query.category, 'all')
   const scheme = readSlug(req.query.scheme, 'all')
@@ -289,6 +342,8 @@ async function fromSession(req) {
 
   return {
     initialSearchQuery: q,
+    aiSearch: buildAiSearch(search, apiGuides),
+    aiSearchAvailable: GUIDANCE_API_CONFIGURED,
     selectedList: list,
     selectedBookmark: bookmark
       ? { param: BOOKMARK_TYPES[bookmark.type].param, ref: bookmark.ref }
