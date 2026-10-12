@@ -17,6 +17,8 @@ const { getGuidePosition } = require('../../../data/guide-positions')
 const { searchGuidance } = require('../../../lib/guidance-api-client')
 const { GUIDANCE_API_CONFIGURED } = require('../../../lib/feature-flags')
 const { isDottedNumber } = require('../../../lib/section-numbers')
+const { isQuestion } = require('../../../assets/javascripts/query-kind')
+const { searchEveryGuide } = require('./keyword-search')
 
 // Slug (querystring/form value) -> full label (the value buildManageGuidance
 // SearchResults' documents actually carry) for each single-choice facet.
@@ -184,13 +186,17 @@ function buildAiSearch(search, apiGuides) {
 // JavaScript off — see page.notes.md for why that changed.
 async function fromSession(req) {
   const q = (req.query.q || '').trim()
-  // The guide list first, so req.apiGuides is set before anything reads it.
-  // A search reads every guide with AI, so it runs only when something was
-  // typed and the API is configured, alongside the list rather than after it.
+  // A question goes to the AI search, alongside the guide list rather than
+  // after it; other words are counted in every API guide, which needs the list.
+  const question = q && GUIDANCE_API_CONFIGURED && isQuestion(q)
   const [apiGuides, search] = await Promise.all([
     getPlaygroundApiGuides(req),
-    q && GUIDANCE_API_CONFIGURED ? searchGuidance(q) : null
+    question ? searchGuidance(q) : null
   ])
+  const keywordSearch =
+    q && GUIDANCE_API_CONFIGURED && !question
+      ? await searchEveryGuide(q, apiGuides)
+      : null
 
   const category = readSlug(req.query.category, 'all')
   const scheme = readSlug(req.query.scheme, 'all')
@@ -343,6 +349,7 @@ async function fromSession(req) {
   return {
     initialSearchQuery: q,
     aiSearch: buildAiSearch(search, apiGuides),
+    keywordSearch,
     aiSearchAvailable: GUIDANCE_API_CONFIGURED,
     selectedList: list,
     selectedBookmark: bookmark

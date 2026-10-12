@@ -279,7 +279,9 @@ $app-guide-toc-width: 340px;
 // The heading a jump link lands on isn't flush with the top of the window,
 // nor under the keyword search that stays there.
 .app-guide-reading [id] {
-  scroll-margin-top: calc(var(--app-guide-keyword-search-height, 0px) + #{govuk-spacing(4)});
+  scroll-margin-top: calc(
+    var(--app-guide-keyword-search-height, 0px) + #{govuk-spacing(4)}
+  );
 }
 
 // Keyword search in a guide (guide-keyword-search.js): stuck to the top of
@@ -319,6 +321,13 @@ $app-guide-toc-width: 340px;
 
 // Each match, and the current one set apart in the GOV.UK focus style.
 ::highlight(guide-keyword-match) {
+  background-color: $govuk-focus-colour;
+  color: $govuk-text-colour;
+}
+
+// A hub keyword result's matches (hub/partials/keyword-results.njk), as the
+// guide page paints them.
+.app-keyword-match {
   background-color: $govuk-focus-colour;
   color: $govuk-text-colour;
 }

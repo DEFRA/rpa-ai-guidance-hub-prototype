@@ -1,19 +1,24 @@
 //
-// Search for keywords in the guide on the page (guide/page.njk). Ctrl+F
-// (Cmd+F) comes to the box. Enter highlights every match and, in the
-// contents, every section and part with one, and brings the first into
-// view; Enter again goes to the next, Shift+Enter to the one before, round
-// at either end.
+// Search for keywords in the guide on the page (guide/page.njk): one word as a
+// whole word, several as that whole phrase, in any case (keyword-matches.js,
+// shared with the hub's search of every guide). Ctrl+F (Cmd+F) comes to the
+// box. Enter highlights every match and, in the contents, every section and
+// part with one, and brings the first into view; Enter again goes to the next,
+// Shift+Enter to the one before, round at either end.
 //
 // Matches are painted with the CSS Custom Highlight API rather than <mark>
 // elements, so the TipTap viewer's DOM is never touched. In the stepper
 // every page is in the HTML (reading-content.njk), so a match on another
 // page shows that page, as the browser's find does (guide-pages.js).
 //
+// A page opened with words in the box (?keywords=, from a hub result) searches
+// for them at once, from the first match in the section or part it opened at.
+//
 ;(function () {
   const form = document.querySelector('[data-guide-keyword-search]')
   if (!form) return
 
+  const { searchTermOf, matchesIn } = window.appKeywordMatches
   const input = form.querySelector('input')
   const status = form.querySelector('[data-guide-keyword-search-status]')
   const toc = document.querySelector('[data-guide-toc]')
@@ -28,10 +33,17 @@
   const SKIP =
     'script, style, .app-guide-section-bookmark, .app-guide-section-bookmarked, .govuk-visually-hidden, [aria-hidden="true"]'
 
+  // Elements that start a new line: a phrase runs across bold or a link, but
+  // not from one of these into the next. The break is neither space nor word.
+  const BLOCKS =
+    'p, li, h1, h2, h3, h4, h5, h6, td, th, dt, dd, caption, figcaption, blockquote, pre, section, div, ul, ol, table, tr'
+  const BLOCK_BREAK = '\u0000'
+
   let searched = ''
-  let keywords = []
   let matches = []
   let current = -1
+  // Where a page opened with a search starts, until the reader moves on.
+  let startAt = null
 
   // Ctrl+F (Cmd+F on a Mac) searches this guide, not just the page shown.
   input.setAttribute('aria-keyshortcuts', 'Control+F Meta+F')
@@ -42,10 +54,6 @@
     input.focus()
     input.select()
   })
-
-  function keywordsOf(text) {
-    return [...new Set(text.toLowerCase().split(/\s+/).filter(Boolean))]
-  }
 
   // The guide's text: every section (every stepper page's too), or a guide
   // without sections as one block.
@@ -70,26 +78,31 @@
     return texts
   }
 
-  // Where the keywords come in a text, merged where they overlap.
-  function rangesOf(text) {
-    const lower = text.toLowerCase()
-    const found = []
-    for (const keyword of keywords) {
-      for (
-        let at = lower.indexOf(keyword);
-        at !== -1;
-        at = lower.indexOf(keyword, at + 1)
-      ) {
-        found.push([at, at + keyword.length])
-      }
+  // A root's text as one string, a break between blocks, with where each
+  // text node starts in it, so a match can cross bold or a link.
+  function textOf(root) {
+    const pieces = []
+    let text = ''
+    let lastBlock = null
+
+    for (const node of textsIn(root)) {
+      const block = node.parentElement.closest(BLOCKS)
+      if (text && block !== lastBlock) text += BLOCK_BREAK
+      pieces.push({ node, start: text.length })
+      text += node.data
+      lastBlock = block
     }
-    found.sort((a, b) => a[0] - b[0])
-    return found.reduce((merged, range) => {
-      const last = merged[merged.length - 1]
-      if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1])
-      else merged.push(range)
-      return merged
-    }, [])
+
+    return { text, pieces }
+  }
+
+  // The text node and offset at a place in textOf's string. An end place
+  // belongs to the node it ends in, not the one starting there.
+  function pointAt(pieces, place, isEnd) {
+    const piece = pieces.findLast((candidate) =>
+      isEnd ? candidate.start < place : candidate.start <= place
+    )
+    return { node: piece.node, offset: place - piece.start }
   }
 
   // The contents' targets (section wrappers and headings), in page order.
@@ -106,13 +119,13 @@
   }
 
   // The contents links for a match: its section's, and the heading's it
-  // comes under (a section's lead part, or a part).
+  // comes under: the last target before it or holding it, so a match in a
+  // section's opening text comes under that section, not the one before.
   function linksFor(node, all) {
     const section = node.parentElement.closest('.app-guide-section')
     let heading = null
     for (const target of all) {
       const position = target.element.compareDocumentPosition(node)
-      if (position & Node.DOCUMENT_POSITION_CONTAINED_BY) continue
       if (position & Node.DOCUMENT_POSITION_FOLLOWING) heading = target
       else break
     }
@@ -125,13 +138,14 @@
     const all = targets()
     const found = []
     for (const root of roots()) {
-      for (const text of textsIn(root)) {
-        for (const [start, end] of rangesOf(text.data)) {
-          const range = document.createRange()
-          range.setStart(text, start)
-          range.setEnd(text, end)
-          found.push({ range, ...linksFor(text, all) })
-        }
+      const { text, pieces } = textOf(root)
+      for (const [start, end] of matchesIn(text, searched)) {
+        const from = pointAt(pieces, start, false)
+        const to = pointAt(pieces, end, true)
+        const range = document.createRange()
+        range.setStart(from.node, from.offset)
+        range.setEnd(to.node, to.offset)
+        found.push({ range, ...linksFor(from.node, all) })
       }
     }
     return found
@@ -172,7 +186,7 @@
   }
 
   function describe() {
-    if (!keywords.length) return ''
+    if (!searched) return ''
     if (!matches.length) return 'No matches for ' + input.value.trim()
     const sections = sectionCount()
     return (
@@ -243,15 +257,31 @@
     )
   }
 
+  // On a page opened with a search, the first match at or after the anchor it
+  // opened at (a part's heading, or its section); otherwise the first match,
+  // or, going back, the last.
+  function startingMatch(back) {
+    const anchor = startAt && document.getElementById(startAt)
+    const after =
+      Node.DOCUMENT_POSITION_FOLLOWING | Node.DOCUMENT_POSITION_CONTAINED_BY
+    const index = anchor
+      ? matches.findIndex(
+          (match) =>
+            anchor.compareDocumentPosition(match.range.startContainer) & after
+        )
+      : -1
+    if (index !== -1) return index
+    return back ? matches.length - 1 : 0
+  }
+
   function search(back) {
-    keywords = keywordsOf(input.value)
-    searched = keywords.join(' ')
-    matches = keywords.length ? find() : []
+    searched = searchTermOf(input.value)
+    matches = searched ? find() : []
     current = -1
     markContents()
     paint()
     status.textContent = describe()
-    if (matches.length) show(back ? matches.length - 1 : 0)
+    if (matches.length) show(startingMatch(back))
     else
       document.dispatchEvent(
         new CustomEvent('guide-keyword-search:match', { detail: {} })
@@ -265,7 +295,9 @@
   }
 
   function go(back) {
-    if (keywordsOf(input.value).join(' ') === searched && searched) move(back)
+    startAt = null
+    const term = searchTermOf(input.value)
+    if (term && term === searched) move(back)
     else search(back)
   }
 
@@ -282,17 +314,22 @@
   })
 
   // The TipTap viewer replaces a part's text once it loads, leaving the
-  // ranges pointing at nothing: find the matches again, keeping the place.
+  // ranges pointing at nothing: find the matches again, keeping the place,
+  // or, on a page opened with a search, starting again where it opened.
   let refinding = false
   const observer = new MutationObserver(() => {
-    if (!keywords.length || refinding) return
+    if (!searched || refinding) return
     refinding = true
     window.requestAnimationFrame(() => {
       refinding = false
       const place = current
       matches = find()
-      current = Math.min(place, matches.length - 1)
       markContents()
+      if (startAt && matches.length) {
+        show(startingMatch(false))
+        return
+      }
+      current = Math.min(place, matches.length - 1)
       paint()
       status.textContent = describe()
     })
@@ -314,5 +351,39 @@
         form.offsetHeight + 'px'
       )
     }).observe(form)
+  }
+
+  // Opened with a search. Until the page loads, the browser keeps jumping to
+  // the address's #anchor, and the jump takes focus from the box (a section
+  // can't take it), so refocus once it's done. Lazy images then change the
+  // page's height, so keep the match in view until the reader moves on.
+  if (input.value.trim()) {
+    startAt = decodeURIComponent(location.hash.slice(1)) || null
+    input.focus({ preventScroll: true })
+    search(false)
+
+    const keepInView = () => {
+      if (startAt && matches[current]) bringIntoView(matches[current])
+    }
+    const movedOn = () => {
+      startAt = null
+    }
+    for (const type of ['wheel', 'touchstart', 'mousedown', 'keydown']) {
+      window.addEventListener(type, movedOn, { once: true, capture: true })
+    }
+    if (window.ResizeObserver) {
+      new ResizeObserver(keepInView).observe(document.body)
+    }
+    if (document.readyState !== 'complete') {
+      window.addEventListener(
+        'load',
+        () =>
+          setTimeout(() => {
+            input.focus({ preventScroll: true })
+            keepInView()
+          }, 0),
+        { once: true }
+      )
+    }
   }
 })()
