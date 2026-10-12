@@ -18,6 +18,8 @@
 #}
 {% extends "common/layouts/base.njk" %}
 
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
 {% from "partials/side-nav-icon.njk" import sideNavIcon %}
@@ -143,6 +145,31 @@
   </div>
 
   {#
+    Keyword search in this guide (guide-keyword-search.js): Ctrl+F comes
+    here, and the box stays at the top of the window as the reader scrolls.
+  #}
+  <form class="app-guide-keyword-search" role="search" data-guide-keyword-search>
+    <div class="app-guide-keyword-search__bar">
+      {{ govukInput({
+        id: "guide-keywords",
+        name: "keywords",
+        type: "search",
+        label: {
+          text: "Search for keywords in this document",
+          classes: "govuk-visually-hidden"
+        },
+        attributes: {
+          placeholder: "Search for keywords in this document",
+          autocomplete: "off"
+        },
+        formGroup: { classes: "app-guide-keyword-search__field" }
+      }) }}
+      {{ govukButton({ text: "Search", classes: "app-guide-keyword-search__button" }) }}
+    </div>
+    <p class="govuk-body-s app-guide-keyword-search__status" role="status" data-guide-keyword-search-status></p>
+  </form>
+
+  {#
     Resume reading: where this reader last was (saved as they scroll by
     guide-position.js), offered on a fresh visit rather than jumped to, so
     opening a guide stays predictable. The script hides it when the URL
@@ -192,6 +219,7 @@
   {% if isMarkdown %}<script src="/public/javascripts/vendor/tiptap-viewer.js"></script>{% endif %}
   <script src="/public/javascripts/guide-images.js"></script>
   {% if stepperPages %}<script src="/public/javascripts/guide-pages.js"></script>{% endif %}
+  <script src="/public/javascripts/guide-keyword-search.js"></script>
   {% if content.contents %}<script src="/public/javascripts/guide-toc.js"></script>{% endif %}
   {% if positionHref %}<script src="/public/javascripts/guide-position.js"></script>{% endif %}
 {% endblock %}

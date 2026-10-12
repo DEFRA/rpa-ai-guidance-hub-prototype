@@ -14,6 +14,10 @@
 // Browsers without until-found treat the pages as plain [hidden], so find
 // just covers the current page, as it did before.
 //
+// The guide's own keyword search (guide-keyword-search.js) asks for a page
+// the same way, with a `guide-pages:show` event on it; each change of page
+// is announced with `guide-pages:shown` on the document.
+//
 ;(function () {
   const pages = Array.from(document.querySelectorAll('[data-guide-page]'))
   if (pages.length < 2) return
@@ -40,9 +44,12 @@
       if (current) link.setAttribute('aria-current', 'true')
       else link.removeAttribute('aria-current')
     })
+
+    document.dispatchEvent(new CustomEvent('guide-pages:shown'))
   }
 
   pages.forEach((page) => {
     page.addEventListener('beforematch', () => showPage(page))
+    page.addEventListener('guide-pages:show', () => showPage(page))
   })
 })()

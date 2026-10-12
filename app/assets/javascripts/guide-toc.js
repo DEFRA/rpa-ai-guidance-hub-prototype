@@ -2,21 +2,26 @@
 // last heading scrolled past stays marked (aria-current="location") until
 // the next heading arrives, and its parent section is marked as the group
 // it sits in. Only headings on the page shown are tracked, so a hidden
-// stepper page never claims the mark.
+// stepper page never claims the mark; they're found again when the page
+// changes. While the keyword search's current match is in sight
+// (guide-keyword-search.js), the entry it comes under is marked instead.
 ;(function () {
   const toc = document.querySelector('[data-guide-toc]')
   if (!toc) return
 
-  const entries = []
-  toc.querySelectorAll('[data-guide-toc-target]').forEach((link) => {
-    const heading = document.getElementById(
-      link.getAttribute('data-guide-toc-target')
-    )
-    if (heading && heading.getClientRects().length) {
-      entries.push({ heading, link, parent: parentLink(link) })
-    }
-  })
-  if (!entries.length) return
+  let entries = []
+  function collect() {
+    entries = []
+    toc.querySelectorAll('[data-guide-toc-target]').forEach((link) => {
+      const heading = document.getElementById(
+        link.getAttribute('data-guide-toc-target')
+      )
+      if (heading && heading.getClientRects().length) {
+        entries.push({ heading, link, parent: parentLink(link) })
+      }
+    })
+  }
+  collect()
 
   // A part's section link: the section paragraph before its list, or the
   // nearest earlier top-level item in the flat (API guide) list.
@@ -40,9 +45,19 @@
 
   let active = null
   let ticking = false
+  let match = {}
 
-  function update() {
-    ticking = false
+  // The entry the keyword search's current match comes under, while the
+  // match is in sight.
+  function holdingMatch() {
+    if (!match.range || !match.link) return null
+    const box = match.range.getBoundingClientRect()
+    const inSight =
+      box.height > 0 && box.top >= 0 && box.bottom <= window.innerHeight
+    return inSight ? entries.find((entry) => entry.link === match.link) : null
+  }
+
+  function atReadingLine() {
     // The last heading above the top quarter of the viewport is current.
     const line = window.innerHeight * 0.25
     let current = entries[0]
@@ -50,6 +65,13 @@
       if (entry.heading.getBoundingClientRect().top <= line) current = entry
       else break
     }
+    return current
+  }
+
+  function update() {
+    ticking = false
+    if (!entries.length) return
+    const current = holdingMatch() || atReadingLine()
     if (current === active) return
 
     if (active) {
@@ -80,5 +102,13 @@
 
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onScroll)
+  document.addEventListener('guide-pages:shown', () => {
+    collect()
+    onScroll()
+  })
+  document.addEventListener('guide-keyword-search:match', (event) => {
+    match = event.detail || {}
+    onScroll()
+  })
   update()
 })()
