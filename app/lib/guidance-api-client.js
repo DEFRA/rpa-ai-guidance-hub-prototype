@@ -18,6 +18,10 @@ const { GUIDANCE_API_BASE_URL } = require('./feature-flags')
 // page that can fall back to the mock guides.
 const TIMEOUT_MS = 3000
 
+// A whole guide's Markdown, read for the guide page and for every guide on a
+// keyword search, so one slow guide mustn't hold up the hub.
+const CONTENT_TIMEOUT_MS = 10000
+
 // A search makes several model calls over the whole index, so it takes tens
 // of seconds; this only stops a hung one holding the page for ever.
 const SEARCH_TIMEOUT_MS = 120000
@@ -62,7 +66,9 @@ async function fetchGuideContent(documentId, versionId) {
     versionId
   )
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(CONTENT_TIMEOUT_MS)
+    })
     if (!response.ok) {
       console.error(
         `[guidance-api-client] content fetch failed for ${documentId}: ${response.status} ${response.statusText}`

@@ -205,3 +205,13 @@ Added keyword search in the guide, brought over from the proof of concept's guid
 - In the stepper a match on another page shows that page, the way the browser's find already did
 - Matches are painted with the CSS Custom Highlight API so the TipTap viewer's content is never changed; a browser without it gets the counts and moves but no highlight
 - Open: the search isn't kept across Previous/Next or a format switch
+
+---
+
+**Tim Gordon — 12 October 2026**
+
+Keyword search matches whole words and whole phrases, and a page opened with `?keywords=` (from a Search hub result) searches at once. The format is now one choice for every guide.
+
+- One word matches as a whole word ("pay" no longer matches "payment"); several match as the whole phrase, across bold and links but not from one paragraph into the next
+- Opened with a search, the page starts at the first match in the part it opened at, keeps it in view while images load, and keeps the box focused so Enter goes on
+- Stepper or traditional is kept in a cookie for a year, for every guide, not per guide in the session: a reader who prefers one format shouldn't have to choose it on each guide

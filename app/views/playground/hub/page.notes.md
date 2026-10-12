@@ -146,3 +146,15 @@ Search hub now also runs the guides API's AI search over every indexed guide, an
 - A result opens the prototype's own copy of its guide at that section, via `guide/search-section/`; a section deeper than the stepper's parts opens at the part that holds it
 - A search takes several seconds or more, so the box says it is searching once submitted
 - Open question: should the guide list still filter on the same words? A question in plain English usually matches no guide titles
+
+---
+
+**Tim Gordon — 12 October 2026**
+
+Search hub now sends only a question to the AI search; other words are counted in every API guide.
+
+- A question ends in "?", or starts with a question word (how, what, can, is…) and has more words (`query-kind.js`, shared with the browser)
+- Words match as a whole word, or as the whole phrase, in any case: the same rule as a guide's own search (`keyword-matches.js`)
+- Results are a guide's sections and parts, most matches first, each with its first sentence holding a match, marked; a result opens the guide with the search done, at that part's first match
+- Mock guides are left out: their content is placeholder
+- The guide list still filters on the same words, as a mock only

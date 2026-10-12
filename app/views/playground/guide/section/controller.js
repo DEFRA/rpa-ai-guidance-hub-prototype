@@ -15,12 +15,12 @@ async function get(req, res) {
     return
   }
 
-  const format = readFormat(req, id)
-  res.redirect(
-    buildHref(id, format, format === 'stepper' ? found.pageNumber : null) +
-      '#' +
-      found.anchor
-  )
+  // A hub keyword result passes its search on, for the page to run at once.
+  const keywords =
+    typeof req.query.keywords === 'string' ? req.query.keywords.trim() : ''
+  const format = readFormat(req)
+  const page = format === 'stepper' ? found.pageNumber : null
+  res.redirect(buildHref(id, format, page, null, keywords) + '#' + found.anchor)
 }
 
 module.exports = { get }

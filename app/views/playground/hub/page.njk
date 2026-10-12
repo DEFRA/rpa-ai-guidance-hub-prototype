@@ -94,12 +94,15 @@
   </div>
 
 {#
-  AI search (partials/search-results.njk): the guides API's search of every indexed
-  guide, shown when a search was submitted and the API offers one. The guide
-  list below still filters on the same words.
+  A question (query-kind.js) gets the guides API's AI search of every indexed
+  guide (partials/search-results.njk); other words are counted in every API
+  guide (partials/keyword-results.njk). The guide list below still filters on
+  the same words, as a mock.
 #}
 {% if aiSearch %}
   {% include "playground/hub/partials/search-results.njk" %}
+{% elif keywordSearch %}
+  {% include "playground/hub/partials/keyword-results.njk" %}
 {% endif %}
 
 <div class="app-quick-filters">
@@ -299,6 +302,7 @@
 
 {% block pageScripts %}
   {# accessible-autocomplete is loaded by layouts/main.html on side-nav pages. #}
+  <script src="/public/javascripts/query-kind.js"></script>
   <script>
     (function () {
       // Filtering itself is a real GET round-trip now (view-model.js), not
@@ -358,7 +362,7 @@
       var searchStatus = document.querySelector('[data-search-status]')
       if (searchInput && searchStatus) {
         searchInput.form.addEventListener('submit', function () {
-          if (!searchInput.value.trim()) return
+          if (!window.appQueryKind.isQuestion(searchInput.value)) return
           searchStatus.textContent =
             'Searching all guidance. This can take up to a minute.'
         })

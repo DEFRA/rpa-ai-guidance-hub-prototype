@@ -42,17 +42,27 @@ const {
 const FORMATS = ['stepper', 'traditional']
 const DEFAULT_FORMAT = 'stepper'
 
-// Format is per-guide, not global — switching a stepper/traditional
-// preference on one guide shouldn't silently change how a different guide
-// opens.
-function readFormat(req, id) {
-  req.session.data.guideFormat = req.session.data.guideFormat || {}
-  if (FORMATS.indexOf(req.query.format) !== -1) {
-    req.session.data.guideFormat[id] = req.query.format
-  }
-  return FORMATS.indexOf(req.session.data.guideFormat[id]) !== -1
-    ? req.session.data.guideFormat[id]
-    : DEFAULT_FORMAT
+// One format for every guide, kept in a cookie for a year: the reader's
+// choice on one guide is how the next opens too (see page.notes.md).
+const FORMAT_COOKIE = 'guideFormat'
+const FORMAT_COOKIE_OPTIONS = {
+  maxAge: 365 * 24 * 60 * 60 * 1000,
+  httpOnly: true,
+  sameSite: 'lax'
+}
+
+// The format the address asks for, or null: the guide page's controller keeps
+// it in the cookie.
+function chosenFormat(req) {
+  return FORMATS.indexOf(req.query.format) !== -1 ? req.query.format : null
+}
+
+function readFormat(req) {
+  const remembered = req.cookies && req.cookies[FORMAT_COOKIE]
+  return (
+    chosenFormat(req) ||
+    (FORMATS.indexOf(remembered) !== -1 ? remembered : DEFAULT_FORMAT)
+  )
 }
 
 // Collapsed vs expanded — a single session flag, the same convention as
@@ -112,9 +122,10 @@ function setReadingWidth(req, value) {
   }
 }
 
-function buildHref(id, format, page, anchor) {
+function buildHref(id, format, page, anchor, keywords) {
   const params = new URLSearchParams({ format })
   if (page) params.set('page', page)
+  if (keywords) params.set('keywords', keywords)
   return (
     '/playground/guide/' +
     encodeURIComponent(id) +
@@ -286,7 +297,7 @@ function buildEditorActions(req, id, overview) {
 // Previous/Next — shared by local and API guides (the bookmark/section
 // modules re-read content by id through locateAnchor).
 function buildFormatModel(req, id, content, stepperGroups) {
-  const format = readFormat(req, id)
+  const format = readFormat(req)
 
   // The stepper steps through pages — groups of whole sections from the
   // guide's metadata, or one section per page (guide-content.js's
@@ -656,6 +667,9 @@ module.exports = {
   buildMetadata,
   buildPanelState,
   readFormat,
+  chosenFormat,
+  FORMAT_COOKIE,
+  FORMAT_COOKIE_OPTIONS,
   buildHref,
   getPanelCollapsed,
   setPanelCollapsed,

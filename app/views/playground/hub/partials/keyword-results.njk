@@ -1,0 +1,34 @@
+{# The search of every guide for words, not a question (hub/keyword-search.js):
+   each section or part holding them, most matches first, with the first
+   sentence holding one, its matches marked. #}
+<section id="keyword-search-results" aria-labelledby="keyword-search-results-heading">
+  <h2 class="govuk-heading-l" id="keyword-search-results-heading">Search all guidance</h2>
+
+  {% if keywordSearch.results | length %}
+    <h3 class="govuk-heading-m">
+      {{ keywordSearch.results | length }} result{{ "" if keywordSearch.results | length == 1 else "s" }}
+    </h3>
+
+    <ul class="govuk-list">
+      {% for result in keywordSearch.results %}
+        <li class="govuk-!-margin-bottom-6">
+          <h4 class="govuk-heading-s govuk-!-margin-bottom-1"><a class="govuk-link" href="{{ result.href }}">{{ result.text }}</a></h4>
+          <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-1">
+            {{ result.documentTitle }} · {{ result.matches }} match{{ "" if result.matches == 1 else "es" }}
+          </p>
+          <p class="govuk-body">
+            {%- for part in result.snippet -%}
+              {%- if part.match %}<mark class="app-keyword-match">{{ part.text }}</mark>{% else %}{{ part.text }}{% endif -%}
+            {%- endfor -%}
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <h3 class="govuk-heading-m">No results</h3>
+    <p class="govuk-body">
+      No guide has the words “{{ keywordSearch.query }}”. Check the spelling,
+      try fewer words, or ask a question to search with AI.
+    </p>
+  {% endif %}
+</section>

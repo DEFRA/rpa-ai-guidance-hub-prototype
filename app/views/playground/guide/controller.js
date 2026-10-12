@@ -1,4 +1,10 @@
-const { guideViewModel, findApiGuide } = require('./view-model')
+const {
+  guideViewModel,
+  findApiGuide,
+  chosenFormat,
+  FORMAT_COOKIE,
+  FORMAT_COOKIE_OPTIONS
+} = require('./view-model')
 const guidanceLists = require('../../../data/guidance-lists')
 const { fetchAsset } = require('../../../lib/guidance-api-client')
 
@@ -16,8 +22,14 @@ async function get(req, res) {
     guidanceLists.addRecentlyOpened(req, viewModel.id, viewModel.version)
   }
 
+  const format = chosenFormat(req)
+  if (format) res.cookie(FORMAT_COOKIE, format, FORMAT_COOKIE_OPTIONS)
+
   res.locals.backHref = '/playground/hub'
-  res.render('playground/guide/page.njk', viewModel)
+  res.render('playground/guide/page.njk', {
+    ...viewModel,
+    keywords: typeof req.query.keywords === 'string' ? req.query.keywords : ''
+  })
 }
 
 // Proxies an API guide's image bytes through this server (rather than

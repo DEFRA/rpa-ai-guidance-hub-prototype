@@ -147,6 +147,7 @@
   {#
     Keyword search in this guide (guide-keyword-search.js): Ctrl+F comes
     here, and the box stays at the top of the window as the reader scrolls.
+    Opened with ?keywords= (a hub result), it searches for them at once.
   #}
   <form class="app-guide-keyword-search" role="search" data-guide-keyword-search>
     <div class="app-guide-keyword-search__bar">
@@ -154,6 +155,7 @@
         id: "guide-keywords",
         name: "keywords",
         type: "search",
+        value: keywords,
         label: {
           text: "Search for keywords in this document",
           classes: "govuk-visually-hidden"
@@ -219,6 +221,7 @@
   {% if isMarkdown %}<script src="/public/javascripts/vendor/tiptap-viewer.js"></script>{% endif %}
   <script src="/public/javascripts/guide-images.js"></script>
   {% if stepperPages %}<script src="/public/javascripts/guide-pages.js"></script>{% endif %}
+  <script src="/public/javascripts/keyword-matches.js"></script>
   <script src="/public/javascripts/guide-keyword-search.js"></script>
   {% if content.contents %}<script src="/public/javascripts/guide-toc.js"></script>{% endif %}
   {% if positionHref %}<script src="/public/javascripts/guide-position.js"></script>{% endif %}
