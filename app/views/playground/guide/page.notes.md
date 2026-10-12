@@ -193,3 +193,15 @@ Publishing checks now sit in their own panel under the status card, with a "Last
 **Shaun Fitzsimmons — 5 October 2026**
 
 Running checks in Editor tools now always returns mock failures (8), so "View issues" has something to show; the in-panel example list is removed.
+
+---
+
+**Tim Gordon — 12 October 2026**
+
+Added keyword search in the guide, brought over from the proof of concept's guide page, so a reader can find words in a long guide in either format.
+
+- Ctrl+F (Cmd+F) goes to a sticky "Search for keywords in this document" box rather than the browser's find; Enter goes to the next match, Shift+Enter to the one before
+- Matches, and the contents entries holding them, are highlighted in GOV.UK focus yellow; the current match is underlined, and its section or part is bold in the contents while it's in sight
+- In the stepper a match on another page shows that page, the way the browser's find already did
+- Matches are painted with the CSS Custom Highlight API so the TipTap viewer's content is never changed; a browser without it gets the counts and moves but no highlight
+- Open: the search isn't kept across Previous/Next or a format switch
