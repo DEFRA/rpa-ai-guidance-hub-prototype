@@ -210,11 +210,11 @@
 
 </div>
 
-{% if not sideNav %}{{ guidePanel | safe }}{% endif %}
+{# A PWA document window (docWindow) has the shell too, just without the nav. #}{% if not (sideNav or docWindow) %}{{ guidePanel | safe }}{% endif %}
 
 {% endblock %}
 
-{% block shellAside %}{% if sideNav %}{{ guidePanel | safe }}{% endif %}{% endblock %}
+{% block shellAside %}{% if sideNav or docWindow %}{{ guidePanel | safe }}{% endif %}{% endblock %}
 
 {% block pageScripts %}
   {% include "partials/checks-widget-script.njk" %}

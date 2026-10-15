@@ -123,45 +123,48 @@
     if (returnFocus) toolbarToggle.focus()
   }
 
-  toolbarToggle.addEventListener('click', (event) => {
-    if (!narrow.matches) return
-    event.preventDefault()
-    if (drawerOpen) closeDrawer(true)
-    else openDrawer()
-  })
-
-  // In the drawer the nav's own "Collapse navigation" just closes it.
-  const collapseButton = shell.querySelector('[data-side-nav-collapse]')
-  if (collapseButton) {
-    collapseButton.addEventListener('click', (event) => {
+  // A PWA document window has the shell (for the guide panel) but no nav.
+  if (nav && toolbarToggle) {
+    toolbarToggle.addEventListener('click', (event) => {
       if (!narrow.matches) return
       event.preventDefault()
-      closeDrawer(true)
+      if (drawerOpen) closeDrawer(true)
+      else openDrawer()
     })
-  }
 
-  nav.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && drawerOpen && !event.defaultPrevented) {
-      closeDrawer(true)
+    // In the drawer the nav's own "Collapse navigation" just closes it.
+    const collapseButton = shell.querySelector('[data-side-nav-collapse]')
+    if (collapseButton) {
+      collapseButton.addEventListener('click', (event) => {
+        if (!narrow.matches) return
+        event.preventDefault()
+        closeDrawer(true)
+      })
     }
-  })
 
-  // Not modal: tabbing out of the drawer closes it rather than trapping focus.
-  nav.addEventListener('focusout', (event) => {
-    if (
-      drawerOpen &&
-      event.relatedTarget &&
-      !nav.contains(event.relatedTarget)
-    ) {
+    nav.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && drawerOpen && !event.defaultPrevented) {
+        closeDrawer(true)
+      }
+    })
+
+    // Not modal: tabbing out of the drawer closes it rather than trapping focus.
+    nav.addEventListener('focusout', (event) => {
+      if (
+        drawerOpen &&
+        event.relatedTarget &&
+        !nav.contains(event.relatedTarget)
+      ) {
+        closeDrawer(false)
+      }
+    })
+
+    narrow.addEventListener('change', () => {
       closeDrawer(false)
-    }
-  })
-
-  narrow.addEventListener('change', () => {
-    closeDrawer(false)
+      setToolbarState()
+    })
     setToolbarState()
-  })
-  setToolbarState()
+  }
 
   // --- Search shortcut ------------------------------------------------------
 
@@ -181,6 +184,7 @@
   document.addEventListener('keydown', (event) => {
     const modifier = isMac ? event.metaKey : event.ctrlKey
     if (!modifier || event.altKey || event.key.toLowerCase() !== 'k') return
+    if (!nav) return
     event.preventDefault()
 
     // Auto-collapsed on a mid-width window: the full nav (and its search box)
@@ -340,7 +344,7 @@
 
   function syncNavHeight() {
     frame = null
-    const visible = rail && rail.offsetParent ? rail : nav
+    const visible = rail && rail.offsetParent ? rail : nav || shell
     const top = Math.max(0, visible.getBoundingClientRect().top)
     shell.style.setProperty('--app-side-nav-top', `${top}px`)
   }

@@ -257,7 +257,23 @@
     </div>
   </div>
 
-  {% if results.length == 0 %}
+  {#
+    One install prompt for the whole list (replacing a panel per result),
+    revealed by pwa.js only when the app can't open guides from here yet.
+  #}{% if showInstallPanel %}
+    <div class="app-install-panel" id="install-panel" tabindex="-1" hidden data-pwa-install-panel>
+      <h2 class="govuk-heading-s">Install RPA Guidance Hub to open guides in their own windows</h2>
+      <p class="govuk-body" data-pwa-install-status></p>
+      <button type="button" class="govuk-button govuk-!-margin-bottom-4" data-module="govuk-button" data-pwa-install hidden>Install RPA Guidance Hub</button>
+      <p class="govuk-body">Or install it from the browser menu:</p>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>Edge: select <strong>Settings and more (…)</strong>, then <strong>Apps</strong>, then <strong>Install this site as an app</strong></li>
+        <li>Chrome: select <strong>More (⋮)</strong>, then <strong>Cast, save and share</strong>, then <strong>Install page as app</strong></li>
+      </ul>
+      <p class="govuk-body">To read guides in this browser instead, <a class="govuk-link" href="/playground/sign-in">change how guides open</a>.</p>
+    </div>
+
+  {% endif %}{% if results.length == 0 %}
     <p class="govuk-body">No guides match your search or filters. Try removing some filters or using different search terms.</p>
   {% else %}
     <ul class="app-search-results">
@@ -282,7 +298,8 @@
           </div>
 
           <h3 class="govuk-heading-s app-search-results__name">
-            <a class="govuk-link" href="{{ result.overviewHref }}?from=search&q={{ initialSearchQuery | urlencode }}">{{ result.title }}</a>
+            {# The app launch link, or in the browser the designer's own link unchanged. #}{% if result.link.app %}<a class="govuk-link" href="{{ result.link.href }}"{% if result.link.target %} target="{{ result.link.target }}"{% endif %} data-pwa-open-app data-doc-id="{{ result.link.app.id }}" data-app-href="{{ result.link.app.href }}" data-window-name="{{ result.link.app.windowName }}">{{ result.title }}<span class="govuk-visually-hidden"> (opens in a new window)</span></a>
+            {%- else %}<a class="govuk-link" href="{{ result.overviewHref }}?from=search&q={{ initialSearchQuery | urlencode }}">{{ result.title }}</a>{% endif %}
           </h3>
 
           {% if result.resumeLabel %}

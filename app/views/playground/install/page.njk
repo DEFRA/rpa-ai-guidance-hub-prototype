@@ -1,0 +1,26 @@
+{#
+  The PWA install screen: where a browser tab lands instead of the hub when
+  guides open in the app (option A), since the hub only runs in the app
+  (layouts/main.html's requireApp redirect). pwa.js fills the status line,
+  reveals the install button and sends the installed app on to the hub.
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% set title = "Install RPA Guidance Hub" %}
+
+{% block columns %}
+  <h1 class="govuk-heading-l">Install RPA Guidance Hub</h1>
+  <p class="govuk-body-l">The {{ serviceName }} runs as an app on your computer, with each guide in its own window.</p>
+
+  <p class="govuk-body" data-pwa-install-status>Checking whether the app is installed…</p>
+  <button type="button" class="govuk-button" data-module="govuk-button" data-pwa-install hidden>Install RPA Guidance Hub</button>
+  <a href="{{ pwa.hubHref }}" role="button" draggable="false" class="govuk-button" data-module="govuk-button" data-pwa-standalone-only hidden>Go to the hub</a>
+
+  <h2 class="govuk-heading-m">If there is no install button</h2>
+  <p class="govuk-body">Install it from the browser menu:</p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>Edge: select <strong>Settings and more (…)</strong>, then <strong>Apps</strong>, then <strong>Install this site as an app</strong></li>
+    <li>Chrome: select <strong>More (⋮)</strong>, then <strong>Cast, save and share</strong>, then <strong>Install page as app</strong></li>
+  </ul>
+  <p class="govuk-body">If it's already installed, open <strong>RPA Guidance Hub</strong> from the Start menu.</p>
+{% endblock %}

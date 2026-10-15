@@ -14,6 +14,7 @@ const {
   BOOKMARK_TYPES
 } = require('../../../data/side-nav')
 const { getGuidePosition } = require('../../../data/guide-positions')
+const { buildGuideLink, getOpenIn, getMode } = require('../../../data/pwa')
 const { searchGuidance } = require('../../../lib/guidance-api-client')
 const { GUIDANCE_API_CONFIGURED } = require('../../../lib/feature-flags')
 const { isDottedNumber } = require('../../../lib/section-numbers')
@@ -238,11 +239,19 @@ async function fromSession(req) {
     // opens where they left off (guide-positions.js, via guide/section/).
     const position =
       list === 'recently-opened' ? getGuidePosition(req, document.id) : null
+    const overviewHref = position
+      ? sectionHref('/playground', document.id, position.anchor)
+      : document.overviewHref
     return {
       ...document,
-      overviewHref: position
-        ? sectionHref('/playground', document.id, position.anchor)
-        : document.overviewHref,
+      overviewHref,
+      // The title link: an app window or this tab, per the sign-in choice.
+      link: buildGuideLink(
+        req,
+        '/playground',
+        document.id,
+        `${overviewHref}?from=search&q=${encodeURIComponent(q)}`
+      ),
       resumeLabel: position ? position.label : null,
       pinned: isPinned(req, document.id)
     }
@@ -381,6 +390,9 @@ async function fromSession(req) {
     selectedFilters,
     clearFiltersHref: '/playground/hub' + RESULTS_ANCHOR,
     results,
+    // Option B only (option A's hub is replaced by install/ in a tab);
+    // pwa.js reveals it while the browser still offers to install.
+    showInstallPanel: getOpenIn(req) === 'app' && getMode(req) === 'b',
     pinToggleHref: '/playground/pin-toggle'
   }
 }

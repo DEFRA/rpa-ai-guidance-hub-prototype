@@ -1,0 +1,17 @@
+{#
+  Option B's app home: what the installed app shows when it's launched on
+  its own (or lands on a hub page) in option B, where the hub belongs in the
+  browser. pwa.js sends a standalone hub window here. Slim header, no nav
+  (`docWindow`, set by ../middleware.js).
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% block pageTitle %}{{ serviceName }}{% endblock %}
+
+{% block columns %}
+  <h1 class="govuk-heading-l">Find guidance in the hub</h1>
+  <p class="govuk-body">Search and browse guidance in the hub in your browser. Each guide you open there opens in its own window here.</p>
+  <a href="{{ pwa.hubDoorHref }}" target="_blank" role="button" draggable="false" class="govuk-button" data-module="govuk-button">
+    Open the hub in your browser<span class="govuk-visually-hidden"> (opens in new tab)</span>
+  </a>
+{% endblock %}

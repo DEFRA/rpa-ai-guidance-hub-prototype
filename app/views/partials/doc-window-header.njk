@@ -1,0 +1,38 @@
+{#
+  The PWA document window's slim header, in place of the Defra header
+  (layouts/main.html, when `docWindow` is set — app/views/playground/window/).
+  Holds only the service name, the document title, a status line and (in
+  option A) a Hub link, per the PWA brief. Reads `docWindow` ({ title, statusLine }),
+  `serviceName`, `hideServiceName` (playground shows the logo alone) and `pwa`.
+#}
+<header class="app-doc-header" role="banner">
+  <div class="app-doc-header__inner">
+    <div class="app-doc-header__top">
+      {# Same as partials/defra-header.njk: with no service name, the logo carries the accessible name. #}
+      {% if hideServiceName %}
+        <img src="/public/images/defra-logo.svg" alt="Department for Environment, Food and Rural Affairs" class="app-doc-header__logo">
+      {% else %}
+        <img src="/public/images/defra-logo.svg" alt="" role="presentation" class="app-doc-header__logo">
+        <span class="app-doc-header__service">{{ serviceName }}</span>
+      {% endif %}
+      {% if docWindow.title %}
+        <span class="app-doc-header__divider" aria-hidden="true"></span>
+        <span class="app-doc-header__title">{{ docWindow.title }}</span>
+      {% endif %}
+      {#
+        Option A only. In option B the hub is a browser tab the app can't
+        bring forward, so a link would just open a duplicate hub each time.
+      #}
+      {% if pwa.mode != 'b' %}
+        <a class="app-doc-header__hub" href="{{ pwa.hubHref }}" data-pwa-hub-link>
+          Hub<span class="govuk-visually-hidden">: go back to the {{ serviceName }}</span>
+        </a>
+      {% endif %}
+    </div>
+    {% if docWindow.statusLine and docWindow.statusLine.length %}
+      <p class="app-doc-header__status">
+        {% for item in docWindow.statusLine %}{{ item }}{% if not loop.last %}<span class="app-doc-header__dot" aria-hidden="true"> · </span><span class="govuk-visually-hidden">, </span>{% endif %}{% endfor %}
+      </p>
+    {% endif %}
+  </div>
+</header>
