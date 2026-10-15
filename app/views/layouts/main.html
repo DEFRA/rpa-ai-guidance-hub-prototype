@@ -18,23 +18,56 @@
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 
-{# Full-width header/footer/main on side-nav pages (_app-side-nav.scss). #}
-{% if sideNav %}
+{#
+  Full-width header/footer/main on side-nav pages (_app-side-nav.scss).
+  A PWA document window (`docWindow`, playground/window/) gets the same
+  layout and shell, minus the nav, under a slim header.
+#}
+{% if sideNav or docWindow %}
   {% set bodyClasses = (bodyClasses + " " if bodyClasses else "") + "app-has-side-nav" %}
 {% endif %}
 
+{#
+  The GOV.UK template's own <meta name="theme-color"> (GOV.UK blue by
+  default), which an installed PWA uses for its window's title bar. White
+  matches the Defra header and the document window's slim header.
+#}
+{% if pwa %}
+  {% set themeColor = "#ffffff" %}
+{% endif %}
+
+{#
+  A document window (only ever opened as an app window) is titled with the
+  guide name alone: the installed app already puts its own name in front,
+  and the guide name is what tells six windows apart.
+#}
 {% block pageTitle %}
-  {% if pageName %}{{ pageName }} - {% endif %}{{ serviceName }}
+  {% if docWindow and docWindow.title %}{{ docWindow.title }}{% else %}{% if pageName %}{{ pageName }} - {% endif %}{{ serviceName }}{% endif %}
 {% endblock %}
 
-{# The GOV.UK template's default icons are Crown-branded, so replace them. #}
+{#
+  The GOV.UK template's default icons are Crown-branded, so replace them.
+  Playground pages (res.locals.pwa, app/views/playground/routes.js) also get
+  the PWA manifest (use-credentials so it gets past the kit's password gate)
+  and, when hub pages only run in the installed app (option A), a script
+  sending a browser tab to the install screen before paint.
+#}
 {% block headIcons %}
   <link rel="icon" href="/public/images/defra-logo.svg" type="image/svg+xml">
+  {%- if pwa %}
+    <link rel="manifest" href="{{ pwa.manifestHref }}" crossorigin="use-credentials">
+  {%- endif %}
+  {%- if pwa and pwa.requireApp %}
+    <script>if (!window.matchMedia('(display-mode: standalone)').matches) window.location.replace({{ pwa.installHref | dump | safe }})</script>
+  {%- endif %}
 {% endblock %}
 
+{# A PWA document window has the slim header instead of the Defra header. #}
 {% block header %}
   {# Side-nav pages have no header: the Defra logo sits in the nav (partials/side-nav.njk). #}
-  {% if not sideNav %}
+  {% if docWindow %}
+    {% include "partials/doc-window-header.njk" %}
+  {%- elif not sideNav %}
     {% include "partials/defra-header.njk" %}
   {% endif %}
   {% include "partials/notes-panel.njk" %}
@@ -52,8 +85,9 @@
   if/else with super().
 #}
 {% block container %}
-{% if sideNav %}
+{% if sideNav or docWindow %}
   <div class="app-shell{% if sideNav.collapsed %} app-shell--collapsed{% endif %}{% if sideNav.autoCollapse %} app-shell--auto{% endif %}" data-module="app-side-nav"{% if sideNav.width and not sideNav.collapsed %} style="--app-side-nav-width: {{ sideNav.width }}px"{% endif %}>
+  {%- if sideNav %}
     <form id="side-nav-toggle-form" method="post" action="{{ sideNav.toggleHref }}" hidden>
       <input type="hidden" name="collapsed" value="{{ 'false' if sideNav.collapsed else 'true' }}">
       <input type="hidden" name="returnTo" value="{{ sideNav.returnTo }}">
@@ -90,7 +124,9 @@
            aria-valuemin="{{ sideNav.widthLimits.min }}" aria-valuemax="{{ sideNav.widthLimits.max }}"
            data-side-nav-resize data-width-href="{{ sideNav.widthHref }}" tabindex="0" hidden></div>
     {% endif %}
+  {%- endif %}
     <div class="app-shell__main">
+    {%- if sideNav %}
       <div class="app-shell__toolbar">
         {% from "partials/side-nav-icon.njk" import sideNavIcon %}
         <button type="submit" form="side-nav-toggle-form" class="app-shell__toolbar-toggle app-shell__toolbar-toggle--wide" aria-controls="app-shell-nav" data-side-nav-toolbar-toggle>
@@ -108,6 +144,7 @@
         {# Visual echo of the page <title>/<h1>, so hidden from assistive tech. #}
         <span class="app-shell__toolbar-title" aria-hidden="true">{{ pageName or serviceName }}</span>
       </div>
+    {%- endif %}
 {% endif %}
   <div class="govuk-width-container{% if containerClasses %} {{ containerClasses }}{% endif %}">
     {#
@@ -143,8 +180,9 @@
     drives step-to-step navigation within the page. Every other page leaves
     these unset and gets backHref and "Back" exactly as before.
   #}
+  {#- A document window's slim header has its own Hub link instead. #}
   {% set resolvedBackHref = backLinkHref if backLinkHref else backHref %}
-  {% if resolvedBackHref %}
+  {% if resolvedBackHref and not docWindow %}
     {{ govukBackLink({ text: backLinkText | default("Back"), href: resolvedBackHref }) }}
   {% endif %}
     {% endblock %}
@@ -152,7 +190,7 @@
       {% block content %}{% endblock %}
     </main>
   </div>
-{% if sideNav %}
+{% if sideNav or docWindow %}
     </div>
     {# A page can add its own right-hand column here, styled to match .app-shell__nav — see app/views/playground/guide/page.njk. #}
     {% block shellAside %}{% endblock %}
@@ -176,10 +214,14 @@
   <script src="/public/javascripts/quality-checks.js"></script>
   <script src="/public/javascripts/notes-panel.js"></script>
   <script src="/public/javascripts/context-pane-resize.js"></script>
-  {% if sideNav %}
+  {% if sideNav or docWindow %}
     <script src="/public/javascripts/vendor/accessible-autocomplete.min.js"></script>
     <script src="/public/javascripts/side-nav.js"></script>
   {% endif %}
+  {%- if pwa %}
+    <script id="app-pwa-config" type="application/json">{{ pwa | jsonScript }}</script>
+    <script src="/public/javascripts/pwa.js"></script>
+  {%- endif %}
   {% include "govuk-prototype-kit/includes/scripts.njk" %}
   {% block pageScripts %}{% endblock %}
 {% endblock %}

@@ -1,0 +1,112 @@
+// The PWA prototype (app/data/pwa.js): the document window's slim header,
+// the hub's open buttons and install panel, and the researcher-only
+// prototype controls.
+
+// --- Document window slim header -------------------------------------------
+
+.app-doc-header {
+  border-bottom: 5px solid $defra-green;
+  background-color: $govuk-white;
+}
+
+.app-doc-header__inner {
+  padding: 8px 16px;
+}
+
+.app-doc-header__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.app-doc-header__logo {
+  height: 28px;
+  width: auto;
+}
+
+.app-doc-header__service {
+  @include govuk-font($size: 16, $weight: bold);
+  color: $defra-green;
+}
+
+.app-doc-header__divider {
+  align-self: stretch;
+  width: 1px;
+  background-color: $govuk-mid-grey;
+}
+
+.app-doc-header__title {
+  @include govuk-font($size: 19, $weight: bold);
+  flex: 1 1 12em;
+  min-width: 0;
+  color: $govuk-black;
+}
+
+.app-doc-header__hub {
+  @include govuk-font($size: 16, $weight: bold);
+  @include govuk-link-common;
+  @include govuk-link-style-default;
+  margin-left: auto;
+}
+
+.app-doc-header__status {
+  @include govuk-font($size: 16);
+  margin: 4px 0 0;
+  color: $govuk-secondary-text-colour;
+}
+
+// --- Install panel (above the hub results) ---------------------------------
+
+.app-install-panel {
+  margin-bottom: 20px;
+  padding: 15px;
+  border-left: 5px solid $defra-green;
+  background-color: $defra-light-green;
+
+  &:focus {
+    outline: 3px solid $govuk-focus-colour;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+// --- Prototype controls (researcher-only) ----------------------------------
+
+.app-prototype-control {
+  padding: 20px;
+  border: 3px dashed $govuk-mid-grey;
+  background-color: $govuk-light-grey;
+}
+
+.app-prototype-control__label {
+  @include govuk-font($size: 16, $weight: bold);
+  display: inline-block;
+  margin: 0 0 15px;
+  padding: 2px 8px;
+  color: $govuk-white;
+  background-color: $govuk-black;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.app-pwa-diagnostics .govuk-button {
+  margin-bottom: 5px;
+}
+
+.app-pwa-log {
+  min-height: 6em;
+  max-height: 20em;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid $govuk-mid-grey;
+  background-color: $govuk-white;
+  white-space: pre-wrap;
+  font-size: 14px;
+
+  &:focus {
+    outline: 3px solid $govuk-focus-colour;
+  }
+}

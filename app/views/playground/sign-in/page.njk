@@ -97,6 +97,15 @@
     ]
   }) }}
 
+  {{ govukRadios({
+    idPrefix: "pwaOpenIn",
+    name: "pwaOpenIn",
+    fieldset: {
+      legend: { text: "Open guides", classes: "govuk-fieldset__legend--m" }
+    },
+    items: openInItems
+  }) }}
+
   {{ govukInsetText({
     text: "This prototype does not sign you in. Selecting the button takes you to the guidance hub."
   }) }}

@@ -1,0 +1,77 @@
+{#
+  Researcher-only controls for the PWA prototype — not part of the service
+  being prototyped, so everything sits in a dashed "prototype control" box.
+  Reached by URL only (/playground/prototype-settings, or ?pwaMode=a|b on
+  any playground page).
+#}
+{% extends "common/layouts/content.njk" %}
+
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+
+{% block columns %}
+  <div class="app-prototype-control">
+    <p class="app-prototype-control__label">Prototype control – not part of the service</p>
+
+    <h1 class="govuk-heading-l">Prototype settings</h1>
+
+    {% if saved %}
+      {{ govukNotificationBanner({ type: "success", text: "Settings saved" }) }}
+    {% endif %}
+
+    <form method="post" action="{{ action }}" novalidate>
+      {{ govukRadios({
+        name: "pwaMode",
+        fieldset: { legend: { text: "Which option are you testing?", classes: "govuk-fieldset__legend--m" } },
+        hint: { text: "You can also add ?pwaMode=a or ?pwaMode=b to any playground address." },
+        items: modeItems
+      }) }}
+
+      {{ govukRadios({
+        name: "pwaBLaunch",
+        fieldset: { legend: { text: "How should option B open the app?", classes: "govuk-fieldset__legend--s" } },
+        items: bLaunchItems
+      }) }}
+
+      {{ govukButton({ text: "Save settings" }) }}
+    </form>
+
+    <h2 class="govuk-heading-m">Install the app</h2>
+    <p class="govuk-body" data-pwa-install-status>Checking whether the app is installed…</p>
+    <button type="button" class="govuk-button govuk-button--secondary" data-pwa-install hidden>Install RPA Guidance Hub</button>
+    <p class="govuk-body">If there's no install button, use the browser menu:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>Edge: select <strong>Settings and more (…)</strong>, then <strong>Apps</strong>, then <strong>Install this site as an app</strong></li>
+      <li>Chrome: select <strong>More (⋮)</strong>, then <strong>Cast, save and share</strong>, then <strong>Install page as app</strong></li>
+    </ul>
+
+    <h3 class="govuk-heading-s">For option B with link capturing</h3>
+    <p class="govuk-body">After installing, switch on opening supported links in the app:</p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>Edge: go to <code>edge://apps</code>, select <strong>Details</strong> on RPA Guidance Hub and switch on <strong>Open supported links</strong></li>
+      <li>Chrome: go to <code>chrome://apps</code>, right-click RPA Guidance Hub, select <strong>App settings</strong> and switch on <strong>Open supported links</strong></li>
+    </ul>
+
+    <h2 class="govuk-heading-m">Diagnostics</h2>
+    <p class="govuk-body">Run each test from the installed app and from a browser tab, then write down what opens. Results for scripted tests appear in the log.</p>
+
+    {% for doc in diagnostics %}
+      <h3 class="govuk-heading-s">{{ doc.title }}</h3>
+      <ul class="govuk-list app-pwa-diagnostics">
+        <li><button type="button" class="govuk-button govuk-button--secondary" data-diag="open-named" data-href="{{ doc.appHref }}" data-name="{{ doc.windowName }}">1 and 2. Open in app window (window.open, named)</button></li>
+        <li><a class="govuk-link" href="{{ doc.appHref }}" target="{{ doc.windowName }}">1 and 2 (no JS). Open with a named link target</a></li>
+        <li><button type="button" class="govuk-button govuk-button--secondary" data-diag="open-reuse" data-href="{{ doc.appHref }}" data-name="{{ doc.windowName }}">2. Reuse or focus if already open</button></li>
+        <li><a class="govuk-link" href="{{ doc.doorHref }}" target="_blank">3. Open guide in browser tab (out-of-scope door)</a></li>
+        <li><a class="govuk-link" href="{{ doc.appHref }}" target="_blank">4. Open with link capture (target="_blank")</a></li>
+        <li><a class="govuk-link" href="{{ doc.protocolHref }}">5. Open with protocol link ({{ doc.protocolHref }})</a></li>
+      </ul>
+    {% endfor %}
+
+    <p class="govuk-body">6. To test "Focus hub" (option A only), open a document window from the hub in the app and select <strong>Hub</strong> in its header.</p>
+
+    <h3 class="govuk-heading-s">7. This window</h3>
+    <button type="button" class="govuk-button govuk-button--secondary" data-diag="report">Report this window's state</button>
+    <pre class="app-pwa-log" data-pwa-log aria-live="polite" tabindex="0" aria-label="Diagnostics log"></pre>
+  </div>
+{% endblock %}

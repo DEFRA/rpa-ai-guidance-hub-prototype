@@ -62,6 +62,9 @@ body {
 // Notes — the designer/dev annotation panel, shown on every version
 @import 'components/app-notes-panel';
 
+// PWA prototype — open buttons, document window slim header, prototype controls
+@import 'components/app-pwa';
+
 // The last components still shipping GOV.UK green (#00703c), re-pointed at
 // Defra green so every green on the service matches — buttons are already
 // recoloured via $govuk-button-background-colour in settings.scss, and the
