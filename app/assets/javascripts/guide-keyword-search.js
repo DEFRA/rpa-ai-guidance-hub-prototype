@@ -62,7 +62,7 @@
     return sections.length
       ? Array.from(sections)
       : Array.from(
-          document.querySelectorAll('.app-guide-reading > .app-guide-markdown')
+          document.querySelectorAll('.app-guide-columns > .app-guide-markdown')
         )
   }
 

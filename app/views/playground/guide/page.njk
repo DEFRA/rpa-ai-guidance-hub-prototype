@@ -148,6 +148,8 @@
     Keyword search in this guide (guide-keyword-search.js): Ctrl+F comes
     here, and the box stays at the top of the window as the reader scrolls.
     Opened with ?keywords= (a hub result), it searches for them at once.
+    Above the contents and the text, and outside their columns: a sticky
+    box only sticks within its parent, and a grid cell is only one row.
   #}
   <form class="app-guide-keyword-search" role="search" data-guide-keyword-search>
     <div class="app-guide-keyword-search__bar">
@@ -170,6 +172,8 @@
     </div>
     <p class="govuk-body-s app-guide-keyword-search__status" role="status" data-guide-keyword-search-status></p>
   </form>
+
+  <div class="app-guide-columns">
 
   {#
     Resume reading: where this reader last was (saved as they scroll by
@@ -208,6 +212,8 @@
     {% include "playground/guide/partials/reading-content.njk" %}
   {% endif %}
 
+  </div>
+
 </div>
 
 {% if not sideNav %}{{ guidePanel | safe }}{% endif %}
@@ -219,6 +225,7 @@
 {% block pageScripts %}
   {% include "partials/checks-widget-script.njk" %}
   {% if isMarkdown %}<script src="/public/javascripts/vendor/tiptap-viewer.js"></script>{% endif %}
+  {% if isMarkdown %}<script src="/public/javascripts/guide-links.js"></script>{% endif %}
   <script src="/public/javascripts/guide-images.js"></script>
   {% if stepperPages %}<script src="/public/javascripts/guide-pages.js"></script>{% endif %}
   <script src="/public/javascripts/keyword-matches.js"></script>
