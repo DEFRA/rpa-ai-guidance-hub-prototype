@@ -225,6 +225,7 @@
 {% block pageScripts %}
   {% include "partials/checks-widget-script.njk" %}
   {% if isMarkdown %}<script src="/public/javascripts/vendor/tiptap-viewer.js"></script>{% endif %}
+  {% if isMarkdown %}<script src="/public/javascripts/guide-links.js"></script>{% endif %}
   <script src="/public/javascripts/guide-images.js"></script>
   {% if stepperPages %}<script src="/public/javascripts/guide-pages.js"></script>{% endif %}
   <script src="/public/javascripts/keyword-matches.js"></script>
