@@ -54,9 +54,9 @@
   </div>
 
   <form class="app-side-nav__search" method="get" action="{{ sideNav.searchAction }}" role="search">
-    <label class="govuk-visually-hidden" for="side-nav-search">Search hub</label>
+    <label class="govuk-visually-hidden" for="side-nav-search">Search all guidance</label>
     {{ sideNavIcon("search", "app-side-nav__search-icon") }}
-    <input class="app-side-nav__search-input" id="side-nav-search" name="q" type="search" autocomplete="off" placeholder="Search hub" value="{{ sideNav.searchQuery }}" data-side-nav-search>
+    <input class="app-side-nav__search-input" id="side-nav-search" name="q" type="search" autocomplete="off" placeholder="Search all guidance" value="{{ sideNav.searchQuery }}" data-side-nav-search>
     <kbd class="app-side-nav__kbd" data-side-nav-kbd hidden></kbd>
     <button type="submit" class="govuk-visually-hidden-focusable app-side-nav__search-submit">Search</button>
   </form>
