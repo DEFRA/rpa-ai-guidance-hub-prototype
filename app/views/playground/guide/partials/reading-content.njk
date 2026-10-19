@@ -198,10 +198,12 @@
   is on the one page, so nothing is current.
 #}
 <nav class="app-guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
+  {# The format toggle and keyword search (page.njk's guideTools), when given. #}
+  {{ guideTools | safe if guideTools }}
   <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
   {% for section in content.sections %}
     <p class="app-guide-contents__section{{ ' app-guide-contents__section--current' if section.isCurrent }}"{% if format != "traditional" %} data-guide-contents-page="{{ section.pageNumber }}"{% endif %}>
-      <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}" data-guide-toc-target="{{ section.id }}"{% if section.isCurrent %} aria-current="true"{% endif %}>{{ section.sectionName }}</a>
+      <a class="govuk-link app-guide-contents__section-link" href="{{ section.href }}" data-guide-toc-target="{{ section.id }}">{{ section.sectionName }}</a>
     </p>
     {% if section.contentsParts.length %}
       <ol class="govuk-list app-guide-contents__list">

@@ -1,4 +1,5 @@
 const lifecycle = require('../../../data/guide-lifecycle')
+const guideAliases = require('../../../data/guide-aliases')
 const { isDesigner } = require('../../../data/permissions')
 const {
   getPlaygroundApiGuides
@@ -14,6 +15,8 @@ const {
   BOOKMARK_TYPES
 } = require('../../../data/side-nav')
 const { getGuidePosition } = require('../../../data/guide-positions')
+const { audiencesOf } = require('../../../data/guide-audiences')
+const { systemsOf } = require('../../../data/guide-systems')
 const { searchGuidance } = require('../../../lib/guidance-api-client')
 const { GUIDANCE_API_CONFIGURED } = require('../../../lib/feature-flags')
 const { isDottedNumber } = require('../../../lib/section-numbers')
@@ -37,6 +40,47 @@ const STATE_LABELS = {
   'awaiting-review': lifecycle.DRAFT_LABELS['awaiting-review'],
   live: lifecycle.LIVE_LABEL,
   published: lifecycle.LIVE_LABEL
+}
+
+// The checkbox facets of the hub's Filter results column. Who it's for and
+// System used filter on each guide's audiences and systems
+// (data/guide-audiences.js, data/guide-systems.js), and Scheme year on each
+// guide's year, and count them across every guide. D365 has no guides yet,
+// so its count is made up and it narrows nothing.
+const AUDIENCES = [
+  { value: 'processors', text: 'Processors', count: 28 },
+  { value: 'team-leaders', text: 'Team leaders', count: 4 },
+  { value: 'editors', text: 'Editors', count: 2 }
+]
+const SYSTEMS = [
+  { value: 'crm', text: 'CRM', count: 19 },
+  { value: 'siti-agri', text: 'SITI Agri', count: 12 },
+  { value: 'd365', text: 'D365', count: 3 }
+]
+const YEARS = [
+  { value: '2026', text: '2026', count: 21 },
+  { value: '2025', text: '2025', count: 13 }
+]
+
+// The values of a checkbox facet that are among its options.
+function readChecked(value, options) {
+  return toArray(value).filter((checked) =>
+    options.some((option) => option.value === checked)
+  )
+}
+
+// A facet's checkboxes, ticked as the query asks.
+function checkboxItems(options, checked) {
+  return options.map((option) => ({
+    value: option.value,
+    html: `${option.text} <span class="app-hub-filters__count">(${option.count})</span>`,
+    checked: checked.indexOf(option.value) !== -1
+  }))
+}
+
+// Until something is searched for there is no relevance to sort by.
+function defaultSort(q) {
+  return q ? 'most-relevant' : 'updated-newest'
 }
 
 // Checkboxes with the same name submit as a single string (one checked) or
@@ -67,7 +111,9 @@ function buildHref({
   bookmark,
   category,
   scheme,
-  year,
+  years,
+  audiences,
+  systems,
   states,
   sort
 }) {
@@ -77,9 +123,11 @@ function buildHref({
   if (bookmark) params.set(BOOKMARK_TYPES[bookmark.type].param, bookmark.ref)
   if (category !== 'all') params.set('category', category)
   if (scheme !== 'all') params.set('scheme', scheme)
-  if (year !== 'all') params.set('year', year)
+  audiences.forEach((audience) => params.append('audience', audience))
+  systems.forEach((system) => params.append('system', system))
+  years.forEach((year) => params.append('year', year))
   states.forEach((state) => params.append('state', state))
-  if (sort !== 'most-relevant') params.set('sort', sort)
+  if (sort !== defaultSort(q)) params.set('sort', sort)
 
   const query = params.toString()
   const path = query ? `/playground/hub?${query}` : '/playground/hub'
@@ -93,9 +141,13 @@ function buildHref({
 // the same row shape (id/title/description/version/lastUpdated/published/
 // category/scheme/year/state/overviewHref) so every filter/sort/pin step
 // below works unchanged regardless of which source built allResults.
-// A designer's draft on an API guide, as a state label (viewers never see one).
+// A designer's draft on an API guide, as a state label (viewers never see
+// one): its own, or one started on a mock copy of it (guide-aliases.js).
 function apiDraftLabels(req, document, designer) {
-  const draft = designer ? lifecycle.getDraft(req, document.id) : null
+  if (!designer) return []
+  const draft = [document.id, ...guideAliases.mockIdsOf(document.id)]
+    .map((id) => lifecycle.getDraft(req, id))
+    .find(Boolean)
   return draft ? [lifecycle.DRAFT_LABELS[draft.state]] : []
 }
 
@@ -177,7 +229,7 @@ function buildAiSearch(search, apiGuides) {
 //
 // The side nav's lists are filters of this one list: ?list= (Recently
 // opened, Saved, Bookmarked guides, Awaiting my review) or ?case=/?sbi= (one
-// case bookmark), mirrored by the quick-filter row above Filters. Pinned guides
+// case bookmark). Pinned guides
 // have no filter of their own — they carry a star and sit at the top of the
 // list whenever nothing narrows it.
 //
@@ -200,18 +252,21 @@ async function fromSession(req) {
 
   const category = readSlug(req.query.category, 'all')
   const scheme = readSlug(req.query.scheme, 'all')
-  const year = readSlug(req.query.year, 'all')
+  const years = readChecked(req.query.year, YEARS)
+  const audiences = readChecked(req.query.audience, AUDIENCES)
+  const systems = readChecked(req.query.system, SYSTEMS)
   // Only designers can see (and so filter by) non-Live guides.
   const designer = isDesigner(req)
   const states = designer
     ? toArray(req.query.state).filter((value) => STATE_LABELS[value])
     : []
-  const sort = readSlug(req.query.sort, 'most-relevant')
+  const sort = readSlug(req.query.sort, defaultSort(q))
 
   const bookmark = readBookmarkFilter(req.query)
   const knownBookmark = Boolean(
     bookmark && findBookmark(req, bookmark.type, bookmark.ref)
   )
+  // The lists ?list= can name: the side nav's own.
   const quickFilters = getQuickFilters(req, '/playground')
   const requestedList = readSlug(req.query.list, '')
   const list =
@@ -228,6 +283,8 @@ async function fromSession(req) {
     ...buildApiSearchResults(req, apiGuides, '/playground/guide', designer),
     ...lifecycle
       .buildHubResults(req, { includeNonLive: designer })
+      // A mock copy of a real guide is listed as the real guide only.
+      .filter((document) => !guideAliases.isReplacedMock(req, document.id))
       .map((document) => ({
         ...document,
         overviewHref: `/playground/guide/${document.id}`
@@ -244,7 +301,9 @@ async function fromSession(req) {
         ? sectionHref('/playground', document.id, position.anchor)
         : document.overviewHref,
       resumeLabel: position ? position.label : null,
-      pinned: isPinned(req, document.id)
+      pinned: isPinned(req, document.id),
+      audiences: audiencesOf(document.id),
+      systems: systemsOf(document.id)
     }
   })
 
@@ -259,7 +318,20 @@ async function fromSession(req) {
     if (scheme !== 'all' && document.scheme !== SCHEME_LABELS[scheme]) {
       return false
     }
-    if (year !== 'all' && String(document.year) !== year) {
+    if (
+      audiences.length &&
+      !document.audiences.some((audience) => audiences.indexOf(audience) !== -1)
+    ) {
+      return false
+    }
+    const knownSystems = systems.filter((system) => system !== 'd365')
+    if (
+      knownSystems.length &&
+      !document.systems.some((system) => knownSystems.indexOf(system) !== -1)
+    ) {
+      return false
+    }
+    if (years.length && years.indexOf(String(document.year)) === -1) {
       return false
     }
     if (
@@ -292,7 +364,9 @@ async function fromSession(req) {
     !listIds &&
     category === 'all' &&
     scheme === 'all' &&
-    year === 'all' &&
+    !years.length &&
+    !audiences.length &&
+    !systems.length &&
     !states.length
   if (unfiltered) {
     results = results
@@ -300,7 +374,18 @@ async function fromSession(req) {
       .concat(results.filter((document) => !document.pinned))
   }
 
-  const current = { q, list, bookmark, category, scheme, year, states, sort }
+  const current = {
+    q,
+    list,
+    bookmark,
+    category,
+    scheme,
+    years,
+    audiences,
+    systems,
+    states,
+    sort
+  }
   const selectedFilters = []
 
   if (list) {
@@ -330,12 +415,22 @@ async function fromSession(req) {
       href: buildHref({ ...current, scheme: 'all' })
     })
   }
-  if (year !== 'all') {
-    selectedFilters.push({
-      label: year,
-      href: buildHref({ ...current, year: 'all' })
+  const facets = [
+    { key: 'audiences', values: audiences, options: AUDIENCES },
+    { key: 'systems', values: systems, options: SYSTEMS },
+    { key: 'years', values: years, options: YEARS }
+  ]
+  facets.forEach(({ key, values, options }) => {
+    values.forEach((value) => {
+      selectedFilters.push({
+        label: options.find((option) => option.value === value).text,
+        href: buildHref({
+          ...current,
+          [key]: values.filter((other) => other !== value)
+        })
+      })
     })
-  }
+  })
   states.forEach((value) => {
     selectedFilters.push({
       label: STATE_LABELS[value],
@@ -355,22 +450,40 @@ async function fromSession(req) {
     selectedBookmark: bookmark
       ? { param: BOOKMARK_TYPES[bookmark.type].param, ref: bookmark.ref }
       : null,
-    quickFilters: quickFilters.map((filter) => {
-      const selected = filter.id === list
-      return {
-        ...filter,
-        selected,
-        href: buildHref({
-          ...current,
-          list: selected ? '' : filter.id,
-          bookmark: null
-        })
-      }
-    }),
     currentHref: buildHref(current),
     selectedCategory: category,
     selectedScheme: scheme,
-    selectedYear: year,
+    audienceItems: checkboxItems(
+      AUDIENCES.map((option) => ({
+        ...option,
+        count: allResults.filter(
+          (document) => document.audiences.indexOf(option.value) !== -1
+        ).length
+      })),
+      audiences
+    ),
+    systemItems: checkboxItems(
+      SYSTEMS.map((option) =>
+        option.value === 'd365'
+          ? option
+          : {
+              ...option,
+              count: allResults.filter(
+                (document) => document.systems.indexOf(option.value) !== -1
+              ).length
+            }
+      ),
+      systems
+    ),
+    yearItems: checkboxItems(
+      YEARS.map((option) => ({
+        ...option,
+        count: allResults.filter(
+          (document) => String(document.year) === option.value
+        ).length
+      })),
+      years
+    ),
     isDesigner: designer,
     stateChecked: {
       draft: states.indexOf('draft') !== -1,

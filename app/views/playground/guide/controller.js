@@ -6,10 +6,28 @@ const {
   FORMAT_COOKIE_OPTIONS
 } = require('./view-model')
 const guidanceLists = require('../../../data/guidance-lists')
+const guideAliases = require('../../../data/guide-aliases')
+const {
+  getPlaygroundApiGuides
+} = require('../../../data/playground-api-guides')
 const {
   fetchAsset,
   fetchLatestQualityCheck
 } = require('../../../lib/guidance-api-client')
+
+// A mock copy of a real guide (guide-aliases.js) goes to the real guide,
+// keeping the rest of the address, so old links and saved lists land there.
+async function redirectMockCopy(req, res, next) {
+  await getPlaygroundApiGuides(req)
+  const live = guideAliases.resolveGuideId(req, req.params.id)
+  if (live === req.params.id) {
+    next()
+    return
+  }
+  const prefix = `/playground/guide/${encodeURIComponent(req.params.id)}`
+  const rest = req.originalUrl.slice(prefix.length)
+  res.redirect(`/playground/guide/${encodeURIComponent(live)}${rest}`)
+}
 
 async function get(req, res) {
   const viewModel = await guideViewModel(req, req.params.id)
@@ -28,7 +46,6 @@ async function get(req, res) {
   const format = chosenFormat(req)
   if (format) res.cookie(FORMAT_COOKIE, format, FORMAT_COOKIE_OPTIONS)
 
-  res.locals.backHref = '/playground/hub'
   res.render('playground/guide/page.njk', {
     ...viewModel,
     keywords: typeof req.query.keywords === 'string' ? req.query.keywords : ''
@@ -73,4 +90,4 @@ async function getQualityCheck(req, res) {
   })
 }
 
-module.exports = { get, getAsset, getQualityCheck }
+module.exports = { get, getAsset, getQualityCheck, redirectMockCopy }

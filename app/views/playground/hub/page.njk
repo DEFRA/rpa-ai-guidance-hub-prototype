@@ -7,8 +7,8 @@
 
   Navigation (see page.notes.md): the side navigation (layouts/main.html,
   partials/side-nav.njk) replaced the context pane. Its lists are filters of
-  this one all-guidance list — ?list= and ?case= (view-model.js), mirrored
-  by the quick-filter row above Filters. Pinned guides carry a star, can be
+  this one all-guidance list — ?list= and ?case= (view-model.js). Pinned
+  guides carry a star, can be
   pinned from each row, and sit first whenever nothing narrows the list.
 
   Layout: the green hero now sits at the top of the main column, beside the
@@ -73,22 +73,21 @@
   <div class="defra-home-header">
     <div class="govuk-width-container govuk-!-margin-bottom-6">
       <h1 class="defra-home-header__title">RPA Guidance hub</h1>
-      <p class="defra-home-header__description">Find guidance to help you review and process claims, or manage guidance documents if you're responsible for keeping them up to date.</p>
     </div>
 
     <div class="govuk-width-container">
       <form class="defra-home-header__search" method="get" action="/playground/hub" role="search">
-        <label class="defra-home-header__search-label" for="defra-home-header-search-input">Search hub</label>
-        <div class="defra-search-bar">
-          <input class="govuk-input defra-search-bar__input" id="defra-home-header-search-input" name="q" type="search" autocomplete="off" value="{{ initialSearchQuery }}">
+        <label class="govuk-visually-hidden" for="defra-home-header-search-input">Search all guidance</label>
+        <div class="defra-search-bar defra-search-bar--with-kbd">
+          <input class="govuk-input defra-search-bar__input" id="defra-home-header-search-input" name="q" type="search" autocomplete="off" data-page-search placeholder="Search all guidance, or paste an error message or scheme code" value="{{ initialSearchQuery }}">
+          <kbd class="app-search-kbd" data-page-search-kbd hidden></kbd>
           <button class="defra-search-bar__button defra-search-bar__button--on-green" type="submit">
             <span class="govuk-visually-hidden">Search</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" aria-hidden="true" focusable="false"><circle cx="12.0161" cy="11.0161" r="8.51613" stroke="currentColor" stroke-width="3" fill="none"></circle><line x1="17.8668" y1="17.3587" x2="26.4475" y2="25.9393" stroke="currentColor" stroke-width="3"></line></svg>
           </button>
         </div>
-        {% if aiSearchAvailable %}
-          <p class="defra-home-header__description govuk-!-margin-top-2 govuk-!-margin-bottom-0" role="status" data-search-status></p>
-        {% endif %}
+        {# What the hub covers, until a search starts and says so instead. #}
+        <p class="defra-home-header__description govuk-!-margin-top-2 govuk-!-margin-bottom-0" role="status" data-search-status>Currently covers Countryside Stewardship Final Payments</p>
       </form>
     </div>
   </div>
@@ -105,32 +104,20 @@
   {% include "playground/hub/partials/keyword-results.njk" %}
 {% endif %}
 
-<div class="app-quick-filters">
-  <h2 class="app-quick-filters__label" id="quick-filters-heading">Quick filters</h2>
-  <ul class="app-quick-filters__list" aria-labelledby="quick-filters-heading">
-    {% for filter in quickFilters %}
-      <li>
-        <a class="app-quick-filters__chip{% if filter.selected %} app-quick-filters__chip--selected{% endif %}" href="{{ filter.href }}"{% if filter.selected %} aria-current="true"{% endif %}>
-          {% if filter.selected %}<span class="app-quick-filters__tick" aria-hidden="true">&#10003;</span>{% endif %}
-          {{ sideNavIcon(filter.icon) }}
-          <span>{{ filter.text }}</span>
-          <span class="app-quick-filters__count">{{ filter.count }}<span class="govuk-visually-hidden"> guides</span></span>
-          {% if filter.selected %}<span class="govuk-visually-hidden"> (selected, select to remove this filter)</span>{% endif %}
-        </a>
-      </li>
-    {% endfor %}
-  </ul>
-</div>
+<div class="app-hub-columns">
 
-  <div class="app-filter" data-module="app-filter">
-
-    <div class="app-filter__header">
-      <h2 class="govuk-heading-m app-filter__title">Filters</h2>
-      <a class="app-filter__clear" href="{{ clearFiltersHref }}">Clear filters</a>
-    </div>
+  {#
+    Filter results floats beside the guides as a guide's contents list does
+    beside its text (_app-guide.scss): stuck in view as the list scrolls,
+    and scrolling itself if taller than the window. One real GET form, so
+    a no-JS visit still filters; Sort by submits with it (form="hub-filters").
+    The counts are made up for now.
+  #}
+  <aside class="app-hub-filters" aria-labelledby="hub-filters-heading">
+    <h2 class="govuk-heading-m app-hub-filters__title" id="hub-filters-heading">Filter results</h2>
 
     {% if selectedFilters.length %}
-      <div class="app-filter__selected">
+      <div class="app-filter__selected app-hub-filters__selected">
         <h3 class="govuk-visually-hidden">Selected filters</h3>
         <ul class="app-filter__tags">
           {% for filter in selectedFilters %}
@@ -143,160 +130,139 @@
             </li>
           {% endfor %}
         </ul>
+        <a class="govuk-link app-hub-filters__clear" href="{{ clearFiltersHref }}">Clear filters</a>
       </div>
     {% endif %}
 
-    {#
-      A single real <form> — a genuine GET round-trip, no client-side
-      filtering — carries Category/Scheme/Year/State together so a no-JS
-      visit still filters correctly. Sort by (below, in the results header,
-      outside this form's own markup) submits with it too via its
-      form="hub-filters" attribute, so changing sort doesn't need a form of
-      its own. A hidden q field mirrors the current search text so applying
-      a filter doesn't drop whatever's already been searched for.
-    #}
     <form id="hub-filters" method="get" action="/playground/hub#guide-results">
       <input type="hidden" name="q" value="{{ initialSearchQuery }}">
       {% if selectedList %}<input type="hidden" name="list" value="{{ selectedList }}">{% endif %}
       {% if selectedBookmark %}<input type="hidden" name="{{ selectedBookmark.param }}" value="{{ selectedBookmark.ref }}">{% endif %}
 
-      <div class="app-filter__options">
-
-        <div class="app-filter__field">
-          {{ govukSelect({
-            id: "category",
-            name: "category",
-            label: { text: "Category" },
-            items: [
-              { value: "all", text: "All categories", selected: selectedCategory == "all" },
-              { value: "sfi", text: "Sustainable Farming Incentive", selected: selectedCategory == "sfi" },
-              { value: "countryside-stewardship", text: "Countryside Stewardship", selected: selectedCategory == "countryside-stewardship" },
-              { value: "cross-compliance", text: "Cross Compliance", selected: selectedCategory == "cross-compliance" }
-            ]
-          }) }}
-        </div>
-
-        <div class="app-filter__field">
-          {{ govukSelect({
-            id: "scheme",
-            name: "scheme",
-            label: { text: "Scheme" },
-            items: [
-              { value: "all", text: "All schemes", selected: selectedScheme == "all" },
-              { value: "countryside-stewardship", text: "Countryside Stewardship", selected: selectedScheme == "countryside-stewardship" },
-              { value: "sustainable-farming-incentive", text: "Sustainable Farming Incentive", selected: selectedScheme == "sustainable-farming-incentive" }
-            ]
-          }) }}
-        </div>
-
-        <div class="app-filter__field">
-          {{ govukSelect({
-            id: "year",
-            name: "year",
-            label: { text: "Year" },
-            items: [
-              { value: "all", text: "All years", selected: selectedYear == "all" },
-              { value: "2026", text: "2026", selected: selectedYear == "2026" },
-              { value: "2025", text: "2025", selected: selectedYear == "2025" },
-              { value: "2024", text: "2024", selected: selectedYear == "2024" },
-              { value: "2023", text: "2023", selected: selectedYear == "2023" },
-              { value: "2022", text: "2022", selected: selectedYear == "2022" },
-              { value: "2021", text: "2021", selected: selectedYear == "2021" },
-              { value: "2020", text: "2020", selected: selectedYear == "2020" },
-              { value: "2019", text: "2019", selected: selectedYear == "2019" }
-            ]
-          }) }}
-        </div>
-
-        {% if isDesigner %}
-        <div class="app-filter__field">
-          {{ govukCheckboxes({
-            idPrefix: "state",
-            name: "state",
-            classes: "govuk-checkboxes--small",
-            fieldset: {
-              legend: { text: "State" }
-            },
-            items: [
-              { value: "draft", text: "Draft", checked: stateChecked.draft },
-              { value: "awaiting-review", text: "Awaiting review", checked: stateChecked["awaiting-review"] },
-              { value: "live", text: "Live", checked: stateChecked.live }
-            ]
-          }) }}
-        </div>
-        {% endif %}
-
-        <div class="app-filter__actions">
-          {{ govukButton({
-            text: "Apply filters",
-            classes: "govuk-button--secondary govuk-!-margin-bottom-0"
-          }) }}
-        </div>
-
-      </div>
-    </form>
-  </div>
-
-  <div class="app-search-results__header" id="guide-results">
-    <h2 class="govuk-heading-m app-search-results__count">{{ results.length }} guide{{ "s" if results.length != 1 }}</h2>
-
-    <div class="app-search-results__sort">
-      <label class="govuk-label app-search-results__sort-label" for="sort">Sort by</label>
-      {{ govukSelect({
-        id: "sort",
-        name: "sort",
-        classes: "app-search-results__sort-select",
-        formGroup: { classes: "govuk-!-margin-bottom-0" },
-        attributes: { form: "hub-filters", "data-sort-select": true },
-        items: [
-          { value: "most-relevant", text: "Most relevant", selected: selectedSort == "most-relevant" },
-          { value: "updated-newest", text: "Updated (newest)", selected: selectedSort == "updated-newest" },
-          { value: "updated-oldest", text: "Updated (oldest)", selected: selectedSort == "updated-oldest" }
-        ]
+      {{ govukCheckboxes({
+        idPrefix: "audience",
+        name: "audience",
+        classes: "govuk-checkboxes--small",
+        formGroup: { classes: "app-hub-filters__group" },
+        fieldset: { legend: { text: "Who it's for", classes: "govuk-fieldset__legend--s" } },
+        items: audienceItems
       }) }}
+
+      {{ govukCheckboxes({
+        idPrefix: "system",
+        name: "system",
+        classes: "govuk-checkboxes--small",
+        formGroup: { classes: "app-hub-filters__group" },
+        fieldset: { legend: { text: "System used", classes: "govuk-fieldset__legend--s" } },
+        items: systemItems
+      }) }}
+
+      {{ govukCheckboxes({
+        idPrefix: "year",
+        name: "year",
+        classes: "govuk-checkboxes--small",
+        formGroup: { classes: "app-hub-filters__group" },
+        fieldset: { legend: { text: "Scheme year", classes: "govuk-fieldset__legend--s" } },
+        items: yearItems
+      }) }}
+
+      {% if isDesigner %}
+        {{ govukCheckboxes({
+          idPrefix: "state",
+          name: "state",
+          classes: "govuk-checkboxes--small",
+          formGroup: { classes: "app-hub-filters__group" },
+          fieldset: { legend: { text: "State", classes: "govuk-fieldset__legend--s" } },
+          items: [
+            { value: "draft", text: "Draft", checked: stateChecked.draft },
+            { value: "awaiting-review", text: "Awaiting review", checked: stateChecked["awaiting-review"] },
+            { value: "live", text: "Live", checked: stateChecked.live }
+          ]
+        }) }}
+      {% endif %}
+
+      <div class="app-hub-filters__group">
+        <h3 class="govuk-heading-s govuk-!-margin-bottom-1">Scheme</h3>
+        <p class="govuk-hint govuk-!-margin-bottom-0">Hidden while every guide is CS. Appears when a second scheme is added.</p>
+      </div>
+
+      {{ govukButton({
+        text: "Apply filters",
+        classes: "govuk-!-margin-bottom-0"
+      }) }}
+    </form>
+  </aside>
+
+  <div class="app-hub-results">
+    <div class="app-hub-results__header" id="guide-results">
+      <h2 class="govuk-heading-l govuk-!-margin-bottom-1">{{ results.length }} guide{{ "s" if results.length != 1 }}</h2>
+      {% if results.length %}
+        <p class="govuk-body govuk-!-margin-bottom-1 app-hub-results__showing">Showing 1 to {{ results.length }}</p>
+      {% endif %}
+
+      <div class="app-hub-results__sort">
+        <label class="govuk-label app-hub-results__sort-label" for="sort">Sort by:</label>
+        {{ govukSelect({
+          id: "sort",
+          name: "sort",
+          classes: "app-hub-results__sort-select",
+          formGroup: { classes: "govuk-!-margin-bottom-0" },
+          attributes: { form: "hub-filters", "data-sort-select": true },
+          items: [
+            { value: "updated-newest", text: "Recently updated", selected: selectedSort == "updated-newest" },
+            { value: "updated-oldest", text: "Oldest updated", selected: selectedSort == "updated-oldest" },
+            { value: "most-relevant", text: "Most relevant", selected: selectedSort == "most-relevant" }
+          ]
+        }) }}
+        {% if not initialSearchQuery %}
+          <span class="app-hub-results__sort-hint">(Most relevant once you search)</span>
+        {% endif %}
+      </div>
     </div>
+
+    {% if results.length == 0 %}
+      <p class="govuk-body">No guides match your search or filters. Try removing some filters or using different search terms.</p>
+    {% else %}
+      <ul class="app-search-results">
+        {% for result in results %}
+          <li class="app-search-results__item{% if result.pinned %} app-search-results__item--pinned{% endif %}" id="result-{{ result.id }}">
+
+            <div class="app-search-results__top">
+              <div class="govuk-!-margin-bottom-2">
+                {% if result.versionTag %}{{ govukTag(result.versionTag) }}{% endif %}
+                {% for state in result.states %}{{ govukTag(stateTags[state]) }} {% endfor %}
+                {% if result.pinned %}<strong class="govuk-tag govuk-tag--grey app-search-results__pinned-tag">Pinned</strong>{% endif %}
+              </div>
+              <form class="app-pin-toggle" method="post" action="{{ pinToggleHref }}">
+                <input type="hidden" name="documentId" value="{{ result.id }}">
+                <input type="hidden" name="returnTo" value="{{ currentHref }}">
+                <input type="hidden" name="anchor" value="pin-{{ result.id }}">
+                <button type="submit" class="app-pin-toggle__button" id="pin-{{ result.id }}" aria-pressed="{{ 'true' if result.pinned else 'false' }}" data-pin-toggle>
+                  {{ sideNavIcon("star-filled" if result.pinned else "star") }}
+                  <span class="govuk-visually-hidden">Pin {{ result.title }}</span>
+                </button>
+              </form>
+            </div>
+
+            <h3 class="govuk-heading-s app-search-results__name">
+              <a class="govuk-link" href="{{ result.overviewHref }}?from=search&q={{ initialSearchQuery | urlencode }}">{{ result.title }}</a>
+            </h3>
+
+            {% if result.resumeLabel %}
+              <p class="govuk-body-s app-search-results__resume">Continue from <strong>{{ result.resumeLabel }}</strong></p>
+            {% endif %}
+
+            <p class="govuk-body app-search-results__description">{{ result.description }}</p>
+
+            <p class="govuk-body-s app-search-results__dates">Last updated: {{ result.lastUpdated }} &middot; Published: {{ result.published }}</p>
+
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </div>
 
-  {% if results.length == 0 %}
-    <p class="govuk-body">No guides match your search or filters. Try removing some filters or using different search terms.</p>
-  {% else %}
-    <ul class="app-search-results">
-      {% for result in results %}
-        <li class="app-search-results__item{% if result.pinned %} app-search-results__item--pinned{% endif %}" id="result-{{ result.id }}">
-
-          <div class="app-search-results__top">
-            <div class="govuk-!-margin-bottom-2">
-              {% if result.versionTag %}{{ govukTag(result.versionTag) }}{% endif %}
-              {% for state in result.states %}{{ govukTag(stateTags[state]) }} {% endfor %}
-              {% if result.pinned %}<strong class="govuk-tag govuk-tag--grey app-search-results__pinned-tag">Pinned</strong>{% endif %}
-            </div>
-            <form class="app-pin-toggle" method="post" action="{{ pinToggleHref }}">
-              <input type="hidden" name="documentId" value="{{ result.id }}">
-              <input type="hidden" name="returnTo" value="{{ currentHref }}">
-              <input type="hidden" name="anchor" value="pin-{{ result.id }}">
-              <button type="submit" class="app-pin-toggle__button" id="pin-{{ result.id }}" aria-pressed="{{ 'true' if result.pinned else 'false' }}" data-pin-toggle>
-                {{ sideNavIcon("star-filled" if result.pinned else "star") }}
-                <span class="govuk-visually-hidden">Pin {{ result.title }}</span>
-              </button>
-            </form>
-          </div>
-
-          <h3 class="govuk-heading-s app-search-results__name">
-            <a class="govuk-link" href="{{ result.overviewHref }}?from=search&q={{ initialSearchQuery | urlencode }}">{{ result.title }}</a>
-          </h3>
-
-          {% if result.resumeLabel %}
-            <p class="govuk-body-s app-search-results__resume">Continue from <strong>{{ result.resumeLabel }}</strong></p>
-          {% endif %}
-
-          <p class="govuk-body app-search-results__description">{{ result.description }}</p>
-
-          <p class="govuk-body-s app-search-results__dates">Last updated: {{ result.lastUpdated }} &middot; Published: {{ result.published }}</p>
-
-        </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
+</div>
 
 {% endblock %}
 
@@ -310,29 +276,6 @@
       // here is pure progressive enhancement on top of controls that
       // already work without it.
 
-      // Category, Scheme and Year all expect many options in the real
-      // service, so each is progressively enhanced with
-      // accessible-autocomplete rather than left as a plain <select> — the
-      // select stays the source of truth and is what actually submits
-      // (enhanceSelectElement syncs its .value on confirm). cssNamespace
-      // renames the vendor's own "autocomplete" BEM block to
-      // "app-autocomplete" so it can be hand-styled in _app-filter.scss
-      // rather than importing the vendor CSS unmodified. State stays plain
-      // checkboxes — a fixed three-value enum, not a long list — and there
-      // is deliberately no per-facet dropdown/disclosure wrapper around any
-      // of this: GDS doesn't sanction modal-style popover panels, so every
-      // field here is always visible and in-flow.
-      ;['category', 'scheme', 'year'].forEach(function (id) {
-        var select = document.getElementById(id)
-        if (select && window.accessibleAutocomplete) {
-          accessibleAutocomplete.enhanceSelectElement({
-            selectElement: select,
-            cssNamespace: 'app-autocomplete',
-            defaultValue: select.value === 'all' ? '' : undefined
-          })
-        }
-      })
-
       // Sort by already submits with the rest of #hub-filters (via its own
       // form="hub-filters" attribute — see page.njk) once Apply filters is
       // pressed; auto-submitting on change as well just saves that extra
@@ -345,26 +288,28 @@
         if (star) star.focus()
       }
 
-      // Ctrl-F (Cmd-F on a Mac) goes to Search hub rather than the browser's
-      // own find, which would only search this page, not every guide.
+      // Ctrl K (Cmd K on a Mac) searches all guidance everywhere: here it
+      // comes to this box (side-nav.js), and the box says so. Ctrl F is left
+      // to the browser: it searches a guide only on a guide's page.
       var searchInput = document.getElementById('defra-home-header-search-input')
-      if (searchInput) {
-        document.addEventListener('keydown', function (event) {
-          var modified = event.ctrlKey || event.metaKey
-          if (!modified || event.altKey || event.key.toLowerCase() !== 'f') return
-          event.preventDefault()
-          searchInput.focus()
-          searchInput.select()
-        })
+      var searchKbd = document.querySelector('[data-page-search-kbd]')
+      if (searchInput && searchKbd) {
+        var isMac = /Mac|iPhone|iPad/.test(navigator.platform)
+        searchKbd.textContent = isMac ? '\u2318 K' : 'Ctrl K'
+        searchKbd.setAttribute('aria-hidden', 'true')
+        searchKbd.hidden = false
+        searchInput.setAttribute('aria-keyshortcuts', isMac ? 'Meta+K' : 'Control+K')
       }
 
-      // An AI search reads every guide, so the next page takes a while.
+      // A search replaces what the hub covers with what it's doing. An AI
+      // search reads every guide, so its next page takes a while.
       var searchStatus = document.querySelector('[data-search-status]')
       if (searchInput && searchStatus) {
         searchInput.form.addEventListener('submit', function () {
-          if (!window.appQueryKind.isQuestion(searchInput.value)) return
-          searchStatus.textContent =
-            'Searching all guidance. This can take up to a minute.'
+          if (!searchInput.value.trim()) return
+          searchStatus.textContent = window.appQueryKind.isQuestion(searchInput.value)
+            ? 'Searching all guidance. This can take up to a minute.'
+            : 'Searching all guidance.'
         })
       }
 

@@ -1,0 +1,84 @@
+// The hub's Filter results column beside its list of guides
+// (playground/hub/page.njk). Wide enough for it, the filters float beside
+// the list as a guide's contents list floats beside its text
+// (_app-guide.scss): stuck in view as the list scrolls, and scrolling
+// itself when taller than the window. Narrower, they sit above the list.
+$app-hub-filters-width: 340px;
+
+@media (min-width: 1100px) {
+  .app-hub-columns {
+    display: grid;
+    grid-template-columns: $app-hub-filters-width minmax(0, 1fr);
+    column-gap: govuk-spacing(6);
+    align-items: start;
+  }
+
+  // A scrollbar only when the filters are taller than the window. The
+  // padding holds what spills past the column's edges (a small checkbox's
+  // box and hover ring sit left of its row; the button's shadow below it),
+  // which would otherwise make it scroll a few pixels; nothing scrolls
+  // sideways.
+  .app-hub-filters {
+    position: sticky;
+    top: govuk-spacing(4);
+    box-sizing: border-box;
+    max-height: calc(100vh - #{govuk-spacing(8)});
+    margin-left: -(govuk-spacing(3));
+    padding: 0 govuk-spacing(1) govuk-spacing(1) govuk-spacing(3);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+
+.app-hub-filters {
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-hub-filters__title {
+  margin-bottom: govuk-spacing(3);
+}
+
+.app-hub-filters__selected {
+  margin-bottom: govuk-spacing(3);
+}
+
+.app-hub-filters__clear {
+  @include govuk-font($size: 16);
+}
+
+.app-hub-filters__group {
+  margin-bottom: govuk-spacing(4);
+  padding-top: govuk-spacing(3);
+  border-top: 1px solid $govuk-border-colour;
+}
+
+.app-hub-filters__count {
+  color: $govuk-secondary-text-colour;
+}
+
+.app-hub-results__header {
+  margin-bottom: govuk-spacing(4);
+  padding-bottom: govuk-spacing(3);
+  border-bottom: 1px solid $govuk-border-colour;
+}
+
+.app-hub-results__showing {
+  color: $govuk-secondary-text-colour;
+}
+
+.app-hub-results__sort {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: govuk-spacing(2);
+}
+
+.app-hub-results__sort-label {
+  margin-bottom: 0;
+  color: $govuk-secondary-text-colour;
+}
+
+.app-hub-results__sort-hint {
+  @include govuk-font($size: 16);
+  color: $govuk-secondary-text-colour;
+}

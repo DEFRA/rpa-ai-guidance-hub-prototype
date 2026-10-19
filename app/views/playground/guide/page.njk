@@ -91,9 +91,6 @@
       <div class="app-guide-panel__body" id="guide-panel-body">
         {% include "playground/guide/partials/case-bookmarks.njk" %}
 
-        {% if formatHrefs %}
-          {% include "playground/guide/partials/format-toggle.njk" %}
-        {% endif %}
 
         {% include "playground/guide/partials/metadata-list.njk" %}
 
@@ -150,44 +147,65 @@
     {% if versionTag %}{{ govukTag(versionTag) }}{% endif %}
     {% if versionTag or isApiGuide %}{{ govukTag({ text: "Live", classes: "govuk-tag--turquoise" }) }}{% endif %}
     <span class="app-guide-byline__updated">Updated {{ currentVersion.lastUpdated }}</span>
+    {% set pinDocumentId = document.id %}
+    {% include "partials/pin-button.njk" %}
   </div>
 
   <h1 class="app-guide-title">{{ document.name }}</h1>
 
-  <div class="app-guide-tools">
-    {% set pinDocumentId = document.id %}
-    {% include "partials/pin-button.njk" %}
-    {% include "playground/guide/partials/reading-width.njk" %}
-  </div>
+  {% if readingWidthChoice %}
+    <div class="app-guide-tools">
+      {% include "playground/guide/partials/reading-width.njk" %}
+    </div>
+  {% endif %}
+
 
   {#
-    Keyword search in this guide (guide-keyword-search.js): Ctrl+F comes
-    here, and the box stays at the top of the window as the reader scrolls.
-    Opened with ?keywords= (a hub result), it searches for them at once.
-    Above the contents and the text, and outside their columns: a sticky
-    box only sticks within its parent, and a grid cell is only one row.
+    The guide's own tools, at the top of its contents column
+    (reading-content.njk, or the contents list below for a guide without
+    sections): the format toggle, then keyword search in this guide
+    (guide-keyword-search.js). Ctrl+F comes to the search box; opened with
+    ?keywords= (a hub result), it searches for them at once. The column
+    stays in view as the reader scrolls.
   #}
-  <form class="app-guide-keyword-search" role="search" data-guide-keyword-search>
-    <div class="app-guide-keyword-search__bar">
-      {{ govukInput({
-        id: "guide-keywords",
-        name: "keywords",
-        type: "search",
-        value: keywords,
-        label: {
-          text: "Search for keywords in this document",
-          classes: "govuk-visually-hidden"
-        },
-        attributes: {
-          placeholder: "Search for keywords in this document",
-          autocomplete: "off"
-        },
-        formGroup: { classes: "app-guide-keyword-search__field" }
-      }) }}
-      {{ govukButton({ text: "Search", classes: "app-guide-keyword-search__button" }) }}
-    </div>
-    <p class="govuk-body-s app-guide-keyword-search__status" role="status" data-guide-keyword-search-status></p>
-  </form>
+  {% set guideTools %}
+    {% if formatHrefs %}
+      {% include "playground/guide/partials/format-toggle.njk" %}
+    {% endif %}
+    <form class="app-guide-keyword-search" role="search" data-guide-keyword-search>
+      <div class="app-guide-keyword-search__bar">
+        {{ govukInput({
+          id: "guide-keywords",
+          name: "keywords",
+          type: "search",
+          value: keywords,
+          label: {
+            text: "Search this guide",
+            classes: "govuk-visually-hidden"
+          },
+          attributes: {
+            placeholder: "Search this guide",
+            autocomplete: "off"
+          },
+          formGroup: { classes: "app-guide-keyword-search__field" }
+        }) }}
+        {{ govukButton({ text: "Search", classes: "govuk-visually-hidden-focusable app-guide-keyword-search__button" }) }}
+      </div>
+      {#
+        Once searched: how many matches, and in how many sections; then, if
+        there are any, Previous and Next (Shift+Enter and Enter in the box)
+        and which match is shown (guide-keyword-search.js).
+      #}
+      <div class="app-guide-keyword-search__results" data-guide-keyword-search-results hidden>
+        <p class="govuk-body-s govuk-!-font-weight-bold app-guide-keyword-search__status" role="status" data-guide-keyword-search-status></p>
+        <div class="app-guide-keyword-search__controls" data-guide-keyword-search-controls hidden>
+          <button type="button" class="govuk-button govuk-button--secondary app-guide-keyword-search__step" data-module="govuk-button" data-guide-keyword-search-step="previous" aria-keyshortcuts="Shift+Enter">&lsaquo; Previous</button>
+          <button type="button" class="govuk-button govuk-button--secondary app-guide-keyword-search__step" data-module="govuk-button" data-guide-keyword-search-step="next" aria-keyshortcuts="Enter">Next &rsaquo;</button>
+          <span class="govuk-body-s app-guide-keyword-search__position" aria-live="polite" data-guide-keyword-search-position></span>
+        </div>
+      </div>
+    </form>
+  {% endset %}
 
   <div class="app-guide-columns">
 
@@ -215,6 +233,7 @@
     #}
     {% if content.contents.length %}
       <nav class="app-guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
+        {{ guideTools | safe }}
         <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
         <ul class="govuk-list app-guide-contents__list app-guide-contents__list--flat">
           {% for heading in content.contents %}
@@ -222,6 +241,9 @@
           {% endfor %}
         </ul>
       </nav>
+    {% else %}
+      {# No contents column to hold them: the tools sit above the guide. #}
+      <div class="app-guide-tools-inline">{{ guideTools | safe }}</div>
     {% endif %}
     <div class="app-guide-markdown">{{ content.html | safe }}</div>
   {% else %}
@@ -246,7 +268,8 @@
   {% if stepperPages %}<script src="/public/javascripts/guide-pages.js"></script>{% endif %}
   <script src="/public/javascripts/keyword-matches.js"></script>
   <script src="/public/javascripts/guide-keyword-search.js"></script>
-  {% if content.contents %}<script src="/public/javascripts/guide-toc.js"></script>{% endif %}
+  {# Marks the one contents entry for where the reader is, or the current match. #}
+  <script src="/public/javascripts/guide-toc.js"></script>
   {% if positionHref %}<script src="/public/javascripts/guide-position.js"></script>{% endif %}
   {% if isEditor and editorActions.qualityCheckHref %}<script src="/public/javascripts/guide-comments.js"></script>{% endif %}
 {% endblock %}

@@ -18,6 +18,7 @@ const {
   hasRequestedEdit
 } = require('../../../data/permissions')
 const lifecycle = require('../../../data/guide-lifecycle')
+const guideAliases = require('../../../data/guide-aliases')
 const { issuesBase, mockIssueCount } = require('../issues/view-model')
 const {
   getBookmarks,
@@ -109,7 +110,13 @@ const READING_WIDTHS = [
   { value: 'full', text: 'Full width' }
 ]
 
+// Whether readers may choose the width. Off since 2026-10-19: every guide
+// shows at Standard and the "Page width" selector is hidden. The selector,
+// its route and the wider styles are kept, to turn back on if wanted.
+const READING_WIDTH_CHOICE = false
+
 function getReadingWidth(req) {
+  if (!READING_WIDTH_CHOICE) return 'standard'
   const width = req.session.data.guideReadingWidth
   return READING_WIDTHS.some((option) => option.value === width)
     ? width
@@ -523,8 +530,11 @@ async function buildMarkdownGuideViewModel(req, document) {
     isEditor,
     editorActions: isEditor
       ? buildEditorActions(req, document.id, {
+          // Its own draft, or one started on a mock copy of it.
           draft: canEdit(req, document.id)
-            ? lifecycle.getDraft(req, document.id)
+            ? [document.id, ...guideAliases.mockIdsOf(document.id)]
+                .map((id) => lifecycle.getDraft(req, id))
+                .find(Boolean) || null
             : null,
           current: lifecycle.getLiveVersion(req, document.id)
         })
@@ -540,6 +550,7 @@ async function buildMarkdownGuideViewModel(req, document) {
     }),
     readingWidth: getReadingWidth(req),
     readingWidths: READING_WIDTHS,
+    readingWidthChoice: READING_WIDTH_CHOICE,
     readingWidthHref: '/playground/guide/reading-width',
     panelCollapsed: getPanelCollapsed(req),
     panelToggleHref: '/playground/guide/panel-toggle',
@@ -615,6 +626,7 @@ async function guideViewModel(req, id) {
     totalPages,
     readingWidth: getReadingWidth(req),
     readingWidths: READING_WIDTHS,
+    readingWidthChoice: READING_WIDTH_CHOICE,
     readingWidthHref: '/playground/guide/reading-width',
     panelCollapsed: getPanelCollapsed(req),
     panelToggleHref: '/playground/guide/panel-toggle',

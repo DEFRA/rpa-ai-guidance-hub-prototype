@@ -54,6 +54,8 @@ body {
 // imported after it so it can reuse the same tokens/mixins.
 @import 'components/app-guide';
 @import 'components/app-guide-comments';
+@import 'components/app-hub';
+@import 'components/app-search-kbd';
 // A converted guide's Markdown, rendered by the TipTap viewer.
 @import 'components/app-guide-markdown';
 

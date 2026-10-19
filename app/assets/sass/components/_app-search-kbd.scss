@@ -1,0 +1,41 @@
+// A search box's keyboard shortcut, shown inside the box at its right, in
+// the side nav's key-cap style (.app-side-nav__kbd): Ctrl K (⌘ K on a Mac)
+// searches all guidance, Ctrl F (⌘ F) the guide being read. Filled in and
+// shown by the page's script, so it never shows without the shortcut.
+.app-search-kbd {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  padding: 1px 6px;
+  transform: translateY(-50%);
+  border: 1px solid $govuk-border-colour;
+  border-radius: 4px;
+  background-color: $govuk-light-grey;
+  color: $govuk-secondary-text-colour;
+  font-family: $govuk-font-family;
+  font-size: 13px;
+  line-height: 18px;
+  pointer-events: none;
+}
+
+// The hub's banner search: the label sits before the search button.
+.defra-search-bar--with-kbd {
+  position: relative;
+
+  .defra-search-bar__input.govuk-input:has(~ .app-search-kbd:not([hidden])) {
+    padding-right: 70px;
+  }
+
+  .app-search-kbd {
+    right: 58px;
+  }
+}
+
+// A guide's keyword search box.
+.app-guide-keyword-search__field {
+  position: relative;
+
+  .govuk-input:has(~ .app-search-kbd:not([hidden])) {
+    padding-right: 64px;
+  }
+}
