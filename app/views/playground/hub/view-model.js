@@ -1,4 +1,5 @@
 const lifecycle = require('../../../data/guide-lifecycle')
+const guideAliases = require('../../../data/guide-aliases')
 const { isDesigner } = require('../../../data/permissions')
 const {
   getPlaygroundApiGuides
@@ -140,9 +141,13 @@ function buildHref({
 // the same row shape (id/title/description/version/lastUpdated/published/
 // category/scheme/year/state/overviewHref) so every filter/sort/pin step
 // below works unchanged regardless of which source built allResults.
-// A designer's draft on an API guide, as a state label (viewers never see one).
+// A designer's draft on an API guide, as a state label (viewers never see
+// one): its own, or one started on a mock copy of it (guide-aliases.js).
 function apiDraftLabels(req, document, designer) {
-  const draft = designer ? lifecycle.getDraft(req, document.id) : null
+  if (!designer) return []
+  const draft = [document.id, ...guideAliases.mockIdsOf(document.id)]
+    .map((id) => lifecycle.getDraft(req, id))
+    .find(Boolean)
   return draft ? [lifecycle.DRAFT_LABELS[draft.state]] : []
 }
 
@@ -278,6 +283,8 @@ async function fromSession(req) {
     ...buildApiSearchResults(req, apiGuides, '/playground/guide', designer),
     ...lifecycle
       .buildHubResults(req, { includeNonLive: designer })
+      // A mock copy of a real guide is listed as the real guide only.
+      .filter((document) => !guideAliases.isReplacedMock(req, document.id))
       .map((document) => ({
         ...document,
         overviewHref: `/playground/guide/${document.id}`

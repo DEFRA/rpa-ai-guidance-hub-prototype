@@ -34,7 +34,7 @@
 <nav class="app-side-nav app-side-nav--rail" aria-label="Guidance hub">
   <ul class="app-side-nav__rail-list">
     <li>{{ railExpand("Expand navigation", "expand", null, expandForm) }}</li>
-    <li>{{ railExpand("Search all guidance", "search", "side-nav-search", expandForm) }}</li>
+    {% if not sideNav.hideSearch %}<li>{{ railExpand("Search all guidance", "search", "side-nav-search", expandForm) }}</li>{% endif %}
   </ul>
 
   <ul class="app-side-nav__rail-list">

@@ -39,10 +39,9 @@
 
     document.querySelectorAll('[data-guide-contents-page]').forEach((entry) => {
       const current = entry.getAttribute('data-guide-contents-page') === number
+      // Tracked by class only: the contents' one aria-current is where the
+      // reader is (guide-toc.js).
       entry.classList.toggle('app-guide-contents__section--current', current)
-      const link = entry.querySelector('a')
-      if (current) link.setAttribute('aria-current', 'true')
-      else link.removeAttribute('aria-current')
     })
 
     document.dispatchEvent(new CustomEvent('guide-pages:shown'))

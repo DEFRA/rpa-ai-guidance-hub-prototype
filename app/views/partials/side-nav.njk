@@ -53,6 +53,7 @@
     </button>
   </div>
 
+  {% if not sideNav.hideSearch %}
   <form class="app-side-nav__search" method="get" action="{{ sideNav.searchAction }}" role="search">
     <label class="govuk-visually-hidden" for="side-nav-search">Search all guidance</label>
     {{ sideNavIcon("search", "app-side-nav__search-icon") }}
@@ -60,6 +61,7 @@
     <kbd class="app-side-nav__kbd" data-side-nav-kbd hidden></kbd>
     <button type="submit" class="govuk-visually-hidden-focusable app-side-nav__search-submit">Search</button>
   </form>
+  {% endif %}
 
   <ul class="app-side-nav__list">
     {% for item in sideNav.coreItems %}

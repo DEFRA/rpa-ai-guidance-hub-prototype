@@ -20,6 +20,7 @@
 
 const { getRole, setRole } = require('./context-pane')
 const guidanceLists = require('./guidance-lists')
+const guideAliases = require('./guide-aliases')
 const guideLifecycle = require('./guide-lifecycle')
 const { getEditRequestIds } = require('./permissions')
 
@@ -263,7 +264,14 @@ function bookmarkFilterHref(hub, type, ref) {
 
 // The id set a quick filter (or a single bookmark) narrows the hub list
 // to, or null for an unknown list name.
+// A list's ids, with mock copies resolved to their real guides
+// (guide-aliases.js).
 function getListIds(req, list, bookmarkFilter) {
+  const ids = listIds(req, list, bookmarkFilter)
+  return ids && guideAliases.resolveGuideIds(req, ids)
+}
+
+function listIds(req, list, bookmarkFilter) {
   if (bookmarkFilter) {
     const bookmark = findBookmark(req, bookmarkFilter.type, bookmarkFilter.ref)
     return bookmark ? bookmark.documentIds.slice() : []
@@ -414,25 +422,32 @@ function buildSideNav(req, base = DEFAULT_BASE) {
           ])
       : []
 
-  const pinned = getPinned(req)
-    .filter((entry) => titles[entry.id])
-    .map((entry) => ({
-      id: entry.id,
-      title: titles[entry.id],
-      href: documentHref(base, entry.id),
-      current: fullPath === documentHref(base, entry.id)
+  const pinned = guideAliases
+    .resolveGuideIds(
+      req,
+      getPinned(req).map((entry) => entry.id)
+    )
+    .filter((id) => titles[id])
+    .map((id) => ({
+      id,
+      title: titles[id],
+      href: documentHref(base, id),
+      current: fullPath === documentHref(base, id)
     }))
 
   const cases = getBookmarks(req).map((bookmark) => {
     const kind = BOOKMARK_TYPES[bookmark.type]
-    const guides = bookmark.documentIds
+    const guides = guideAliases
+      .resolveGuideIds(req, bookmark.documentIds)
       .filter((id) => titles[id])
       .map((id) => ({
         id,
         title: titles[id],
         href: documentHref(base, id),
         sections: bookmark.sections
-          .filter((entry) => entry.documentId === id)
+          .filter(
+            (entry) => guideAliases.resolveGuideId(req, entry.documentId) === id
+          )
           .map((entry) => ({
             label: entry.label,
             href: sectionHref(base, id, entry.anchor)
@@ -472,6 +487,8 @@ function buildSideNav(req, base = DEFAULT_BASE) {
     returnTo: req.originalUrl,
     searchAction: hub,
     searchQuery: onHub && typeof req.query.q === 'string' ? req.query.q : '',
+    // The hub's own banner search covers it there.
+    hideSearch: onHub,
     coreItems,
     designerItems,
     pinned,

@@ -21,12 +21,19 @@
   const { searchTermOf, matchesIn } = window.appKeywordMatches
   const input = form.querySelector('input')
   const status = form.querySelector('[data-guide-keyword-search-status]')
+  const results = form.querySelector('[data-guide-keyword-search-results]')
+  const controls = form.querySelector('[data-guide-keyword-search-controls]')
+  const position = form.querySelector('[data-guide-keyword-search-position]')
   const toc = document.querySelector('[data-guide-toc]')
   const highlights = window.CSS && CSS.highlights
 
   // Room between a match brought into view and the edges of the window.
   const MARGIN = 16
+  // While a search has matches, the contents fade the entries with none and
+  // give each other entry a count of the matches under it.
+  const SEARCHING_CLASS = 'app-guide-contents--searching'
   const MATCH_CLASS = 'app-guide-contents__link--match'
+  const COUNTED_CLASS = 'app-guide-contents__entry--counted'
 
   // Text that isn't the guide's own: bookmark controls, hidden labels and
   // the TipTap viewer's Markdown source.
@@ -47,6 +54,15 @@
 
   // Ctrl+F (Cmd+F on a Mac) searches this guide, not just the page shown.
   input.setAttribute('aria-keyshortcuts', 'Control+F Meta+F')
+
+  // The box shows its shortcut, as the all-guidance search shows Ctrl K.
+  const kbd = document.createElement('kbd')
+  kbd.className = 'app-search-kbd'
+  kbd.setAttribute('aria-hidden', 'true')
+  kbd.textContent = /Mac|iPhone|iPad/.test(navigator.platform)
+    ? '\u2318 F'
+    : 'Ctrl F'
+  input.after(kbd)
   document.addEventListener('keydown', (event) => {
     const modified = event.ctrlKey || event.metaKey
     if (!modified || event.altKey || event.key.toLowerCase() !== 'f') return
@@ -169,13 +185,33 @@
 
   function markContents() {
     if (!toc) return
-    const marked = new Set()
+    // Each match counts once, for the entry it comes under: the heading's,
+    // else its section's.
+    const counts = new Map()
     for (const match of matches) {
-      if (match.section) marked.add(match.section.link)
-      if (match.heading) marked.add(match.heading.link)
+      const link = (match.heading || match.section || {}).link
+      if (link) counts.set(link, (counts.get(link) || 0) + 1)
     }
+
+    toc.classList.toggle(SEARCHING_CLASS, counts.size > 0)
+    toc.querySelectorAll('.app-guide-contents__count').forEach((badge) => {
+      badge.parentElement.classList.remove(COUNTED_CLASS)
+      badge.remove()
+    })
     toc.querySelectorAll('[data-guide-toc-target]').forEach((link) => {
-      link.classList.toggle(MATCH_CLASS, marked.has(link))
+      const count = counts.get(link) || 0
+      link.classList.toggle(MATCH_CLASS, count > 0)
+      if (!count) return
+
+      const badge = document.createElement('span')
+      badge.className = 'app-guide-contents__count'
+      badge.textContent = count
+      const label = document.createElement('span')
+      label.className = 'govuk-visually-hidden'
+      label.textContent = count === 1 ? ' match' : ' matches'
+      badge.append(label)
+      link.parentElement.classList.add(COUNTED_CLASS)
+      link.after(badge)
     })
   }
 
@@ -185,19 +221,26 @@
     ).size
   }
 
-  function describe() {
-    if (!searched) return ''
-    if (!matches.length) return 'No matches for ' + input.value.trim()
+  // Once searched: how many matches in how many sections, and, with any,
+  // Previous and Next and which match is shown.
+  function render() {
+    results.hidden = !searched
+    if (!searched) return
+
+    controls.hidden = !matches.length
+    if (!matches.length) {
+      status.textContent = 'No matches for ' + input.value.trim()
+      return
+    }
     const sections = sectionCount()
-    return (
-      'Match ' +
-      (current + 1) +
-      ' of ' +
+    status.textContent =
       matches.length +
-      ', in ' +
+      (matches.length === 1 ? ' match' : ' matches') +
+      ' in ' +
       sections +
       (sections === 1 ? ' section' : ' sections')
-    )
+    position.textContent =
+      current === -1 ? '' : 'Match ' + (current + 1) + ' of ' + matches.length
   }
 
   // A stepper page other than the one shown holds the match: show it.
@@ -244,7 +287,7 @@
     paint()
     bringIntoView(match)
     keepEntryInView(match)
-    status.textContent = describe()
+    render()
 
     // For guide-toc.js, which marks where the reader is.
     document.dispatchEvent(
@@ -280,7 +323,7 @@
     current = -1
     markContents()
     paint()
-    status.textContent = describe()
+    render()
     if (matches.length) show(startingMatch(back))
     else
       document.dispatchEvent(
@@ -313,6 +356,47 @@
     }
   })
 
+  // Previous and Next do what Shift+Enter and Enter do in the box.
+  controls.addEventListener('click', (event) => {
+    const step = event.target.closest('[data-guide-keyword-search-step]')
+    if (!step) return
+    startAt = null
+    move(step.dataset.guideKeywordSearchStep === 'previous')
+  })
+
+  // A clear button in the box once it has text, in place of its shortcut.
+  const clear = document.createElement('button')
+  clear.type = 'button'
+  clear.className = 'app-guide-keyword-search__clear'
+  clear.setAttribute('aria-label', 'Clear search')
+  clear.textContent = '\u00d7'
+  kbd.after(clear)
+
+  function showClear() {
+    const hasText = Boolean(input.value)
+    clear.hidden = !hasText
+    kbd.hidden = hasText
+  }
+
+  clear.addEventListener('click', () => {
+    input.value = ''
+    searched = ''
+    matches = []
+    current = -1
+    startAt = null
+    markContents()
+    paint()
+    render()
+    showClear()
+    document.dispatchEvent(
+      new CustomEvent('guide-keyword-search:match', { detail: {} })
+    )
+    input.focus()
+  })
+
+  input.addEventListener('input', showClear)
+  showClear()
+
   // The TipTap viewer replaces a part's text once it loads, leaving the
   // ranges pointing at nothing: find the matches again, keeping the place,
   // or, on a page opened with a search, starting again where it opened.
@@ -331,7 +415,7 @@
       }
       current = Math.min(place, matches.length - 1)
       paint()
-      status.textContent = describe()
+      render()
     })
   })
   roots().forEach((root) =>
@@ -341,17 +425,6 @@
       characterData: true
     })
   )
-
-  // The contents stay in view below the search box, and jump links land
-  // below it, so the stylesheet needs its height.
-  if (window.ResizeObserver) {
-    new ResizeObserver(() => {
-      document.documentElement.style.setProperty(
-        '--app-guide-keyword-search-height',
-        form.offsetHeight + 'px'
-      )
-    }).observe(form)
-  }
 
   // Opened with a search. Until the page loads, the browser keeps jumping to
   // the address's #anchor, and the jump takes focus from the box (a section

@@ -183,6 +183,14 @@
     if (!modifier || event.altKey || event.key.toLowerCase() !== 'k') return
     event.preventDefault()
 
+    // A page with its own search in place of the nav's (the hub's banner).
+    const pageSearch = document.querySelector('[data-page-search]')
+    if (!searchInput && pageSearch) {
+      pageSearch.focus()
+      pageSearch.select()
+      return
+    }
+
     // Auto-collapsed on a mid-width window: the full nav (and its search box)
     // is display: none, so expand like the collapsed rail does.
     const autoRailShown = shell.querySelector('.app-shell__rail')?.offsetParent

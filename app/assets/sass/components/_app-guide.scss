@@ -127,14 +127,23 @@ $app-guide-panel-max-width: 480px;
   }
 }
 
+// Tags, the date it was updated, then Pin guide, in one row.
 .app-guide-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: govuk-spacing(2);
   margin: 0 0 govuk-spacing(2);
   font-size: 16px;
   color: $govuk-secondary-text-colour;
-}
 
-.app-guide-byline__updated {
-  margin-left: govuk-spacing(2);
+  .app-pin-form {
+    margin-left: govuk-spacing(2);
+  }
+
+  .app-pin-button {
+    margin-bottom: 0 !important;
+  }
 }
 
 // Reading hierarchy — generous line-height and vertical rhythm (the width
@@ -226,10 +235,10 @@ $app-guide-panel-max-width: 480px;
 }
 
 // Wide enough for it, the contents list floats as a sticky sidebar beside
-// the reading column. The guide's heading and the keyword search run across
-// the page above both, as in the PoC. Below them (.app-guide-columns),
-// everything else moves to column 2, and the list spans every row of
-// column 1, sticking just under the search as the reader scrolls.
+// the reading column, with the format toggle and the keyword search at its
+// top. Below the guide's heading (.app-guide-columns), everything else moves
+// to column 2, and the list spans every row of column 1, sticking as the
+// reader scrolls.
 $app-guide-toc-width: 340px;
 
 // The list is pinned to the left of the space available whatever the
@@ -265,13 +274,11 @@ $app-guide-toc-width: 340px;
       grid-row: 1 / span 99;
       align-self: start;
       position: sticky;
-      top: calc(var(--app-guide-keyword-search-height, 0px) + #{govuk-spacing(4)});
+      top: govuk-spacing(4);
       margin-right: 0;
       margin-left: -$app-content-gutter;
       max-width: none;
-      max-height: calc(
-        100vh - var(--app-guide-keyword-search-height, 0px) - #{govuk-spacing(8)}
-      );
+      max-height: calc(100vh - #{govuk-spacing(8)});
       overflow-y: auto;
     }
   }
@@ -283,30 +290,83 @@ $app-guide-toc-width: 340px;
   .app-guide-reading--full {
     --app-guide-width: none;
   }
+}
 
-  // Across both columns, the box keeps a readable length.
-  .app-guide-keyword-search__bar {
-    max-width: 40em;
+// The heading a jump link lands on isn't flush with the top of the window.
+.app-guide-reading [id] {
+  scroll-margin-top: govuk-spacing(4);
+}
+
+// Keyword search in a guide (guide-keyword-search.js), under the format
+// toggle at the top of the contents column. Its Search button shows only
+// when focused: Enter searches.
+.app-guide-keyword-search {
+  margin-bottom: govuk-spacing(5);
+}
+
+// Clears the box, at its right, once it has text (in place of Ctrl F).
+.app-guide-keyword-search__clear {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  bottom: 2px;
+  width: 40px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid $govuk-border-colour;
+  background-color: govuk-colour('white');
+  color: $govuk-text-colour;
+  font-family: $govuk-font-family;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $govuk-light-grey;
+  }
+
+  &:focus {
+    outline: $govuk-focus-width solid $govuk-focus-colour;
+    outline-offset: 0;
+  }
+
+  &[hidden] {
+    display: none;
   }
 }
 
-// The heading a jump link lands on isn't flush with the top of the window,
-// nor under the keyword search that stays there.
-.app-guide-reading [id] {
-  scroll-margin-top: calc(
-    var(--app-guide-keyword-search-height, 0px) + #{govuk-spacing(4)}
-  );
+.app-guide-keyword-search__field
+  .govuk-input:has(~ .app-guide-keyword-search__clear:not([hidden])) {
+  padding-right: 48px;
 }
 
-// Keyword search in a guide (guide-keyword-search.js): stuck to the top of
-// the window, the button beside the box.
-.app-guide-keyword-search {
-  position: sticky;
-  z-index: 5;
-  top: 0;
-  margin-bottom: govuk-spacing(4);
-  padding: govuk-spacing(2) 0;
-  background-color: govuk-colour('white');
+.app-guide-keyword-search__results {
+  margin-top: govuk-spacing(2);
+}
+
+.app-guide-keyword-search__results .app-guide-keyword-search__status {
+  margin: 0 0 govuk-spacing(2);
+}
+
+.app-guide-keyword-search__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: govuk-spacing(2);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.app-guide-keyword-search__step.govuk-button {
+  margin-bottom: 0;
+  padding: govuk-spacing(1) govuk-spacing(2);
+}
+
+.app-guide-keyword-search__position {
+  margin: 0 0 0 govuk-spacing(1);
+  color: $govuk-secondary-text-colour;
 }
 
 .app-guide-keyword-search__bar {
@@ -352,11 +412,47 @@ $app-guide-toc-width: 340px;
   text-decoration: underline 4px $govuk-focus-text-colour;
 }
 
-// A contents entry with a match in it.
-.app-guide-contents__section-link.app-guide-contents__link--match,
-.app-guide-contents__link.app-guide-contents__link--match {
+// While a search has matches (guide-keyword-search.js): entries with none
+// fade but stay links; each with matches keeps its colour and shows how many
+// matches come under it, in a badge at the right.
+.app-guide-contents--searching {
+  .app-guide-contents__section-link,
+  .app-guide-contents__link {
+    // Half way to white: the link colour is a CSS variable here, so mixed
+    // in the browser, with a fixed colour for one that can't mix.
+    color: #8eb5d8;
+    color: color-mix(in srgb, #{$govuk-link-colour} 50%, white);
+  }
+
+  .app-guide-contents__section-link.app-guide-contents__link--match,
+  .app-guide-contents__link.app-guide-contents__link--match {
+    color: $govuk-link-colour;
+  }
+
+  .app-guide-contents__section-link:focus,
+  .app-guide-contents__link:focus {
+    color: $govuk-focus-text-colour;
+  }
+}
+
+.app-guide-contents__entry--counted {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: govuk-spacing(2);
+}
+
+.app-guide-contents__count {
+  @include govuk-font($size: 16, $weight: bold);
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding: 0 4px;
+  border: 2px solid $govuk-text-colour;
+  border-radius: 999px;
   background-color: $govuk-focus-colour;
   color: $govuk-text-colour;
+  line-height: 20px;
+  text-align: center;
 }
 
 // Spacing follows the jump in heading level: a new section (h1 after h1)
@@ -386,12 +482,31 @@ $app-guide-toc-width: 340px;
   margin-top: 0;
 }
 
-.app-guide-contents__link--group,
-.app-guide-contents__link[aria-current='location'],
-.app-guide-contents__section-link[aria-current='location'] {
+// The one "you are here" mark in the contents (guide-toc.js): the entry for
+// the current keyword match while it's in sight, else for the heading being
+// read. Bold, with a bar at its left in the link colour (as in the MOJ side
+// navigation), and its match count inverted. Still a link.
+.app-guide-contents .app-guide-contents__link[aria-current='location'],
+.app-guide-contents .app-guide-contents__section-link[aria-current='location'] {
+  position: relative;
   font-weight: 700;
-  color: $govuk-black;
-  text-decoration: none;
+  color: $govuk-link-colour;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -(govuk-spacing(3));
+    width: 4px;
+    background-color: $govuk-link-colour;
+  }
+}
+
+.app-guide-contents [aria-current='location'] + .app-guide-contents__count {
+  border-color: $govuk-text-colour;
+  background-color: $govuk-text-colour;
+  color: $govuk-focus-colour;
 }
 
 .app-guide-section__eyebrow {
@@ -475,11 +590,6 @@ $app-guide-toc-width: 340px;
 // to its first part.
 .app-guide-contents__list > li + li {
   margin-top: govuk-spacing(2);
-}
-
-.app-guide-contents__section--current .app-guide-contents__section-link {
-  color: $govuk-black;
-  text-decoration: none;
 }
 
 .app-guide-contents__link--current {
@@ -699,4 +809,29 @@ $app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3
   border: 1px solid $govuk-border-colour;
   border-left: govuk-spacing(1) solid $govuk-brand-colour;
   background: govuk-colour('white');
+}
+
+// A stepper page's Previous and Next on one line, Next at the right even
+// when it's the only one. GOV.UK's block pagination stacks them, with a rule
+// between; the page is wide enough for both side by side.
+.app-guide-page .govuk-pagination--block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: govuk-spacing(3);
+
+  .govuk-pagination__prev,
+  .govuk-pagination__next {
+    flex: 0 1 auto;
+    margin: 0;
+  }
+
+  .govuk-pagination__next {
+    margin-left: auto;
+    padding-right: 0;
+  }
+
+  .govuk-pagination__prev + .govuk-pagination__next {
+    border-top: 0;
+  }
 }
