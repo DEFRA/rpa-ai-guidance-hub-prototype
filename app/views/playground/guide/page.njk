@@ -110,6 +110,22 @@
       </div>
     {% endif %}
   </aside>
+
+  {#
+    The quality check comments, Word style (guide-comments.js): in the
+    panel's place while open, opened by the checks widget's "View issues"
+    once the guide has a real check.
+  #}
+  {% if isEditor and editorActions.qualityCheckHref %}
+    <aside class="app-guide-comments" aria-label="Quality check comments" data-guide-comments data-quality-check-href="{{ editorActions.qualityCheckHref }}" hidden>
+      <div class="app-guide-panel__header">
+        <h2 class="govuk-heading-s govuk-!-margin-bottom-0">Quality check comments</h2>
+        <button type="button" class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" data-guide-comments-close>Close comments</button>
+      </div>
+      <div data-guide-comments-unplaced></div>
+      <div class="app-guide-comments__track" data-guide-comments-track></div>
+    </aside>
+  {% endif %}
 {% endset %}
 
 {% block content %}
@@ -232,4 +248,5 @@
   <script src="/public/javascripts/guide-keyword-search.js"></script>
   {% if content.contents %}<script src="/public/javascripts/guide-toc.js"></script>{% endif %}
   {% if positionHref %}<script src="/public/javascripts/guide-position.js"></script>{% endif %}
+  {% if isEditor and editorActions.qualityCheckHref %}<script src="/public/javascripts/guide-comments.js"></script>{% endif %}
 {% endblock %}

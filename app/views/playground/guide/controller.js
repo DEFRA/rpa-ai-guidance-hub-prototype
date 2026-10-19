@@ -6,7 +6,10 @@ const {
   FORMAT_COOKIE_OPTIONS
 } = require('./view-model')
 const guidanceLists = require('../../../data/guidance-lists')
-const { fetchAsset } = require('../../../lib/guidance-api-client')
+const {
+  fetchAsset,
+  fetchLatestQualityCheck
+} = require('../../../lib/guidance-api-client')
 
 async function get(req, res) {
   const viewModel = await guideViewModel(req, req.params.id)
@@ -49,4 +52,25 @@ async function getAsset(req, res) {
   res.send(asset.buffer)
 }
 
-module.exports = { get, getAsset }
+// The guide's latest completed quality check from the API, for the checks
+// widget to show once its pretend run ends and for its comments
+// (guide-comments.js): { issueCount, lastRun, versionId, comments }. 404 when
+// there is none to show (not an API guide, never checked, or a check still
+// running or failed), and the widget keeps its made-up numbers.
+async function getQualityCheck(req, res) {
+  const guide = await findApiGuide(req, req.params.id)
+  const check = guide && (await fetchLatestQualityCheck(guide.apiId))
+  if (!check || check.status !== 'completed' || !check.result) {
+    res.status(404).json({})
+    return
+  }
+
+  res.json({
+    issueCount: check.result.comments.length,
+    lastRun: check.updatedAt,
+    versionId: check.versionId,
+    comments: check.result.comments
+  })
+}
+
+module.exports = { get, getAsset, getQualityCheck }

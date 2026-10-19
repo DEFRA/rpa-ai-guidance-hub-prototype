@@ -53,6 +53,7 @@ body {
 // The guide page's own right-hand panel, styled after the side nav above —
 // imported after it so it can reuse the same tokens/mixins.
 @import 'components/app-guide';
+@import 'components/app-guide-comments';
 // A converted guide's Markdown, rendered by the TipTap viewer.
 @import 'components/app-guide-markdown';
 

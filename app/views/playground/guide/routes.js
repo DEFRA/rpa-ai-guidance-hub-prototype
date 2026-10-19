@@ -4,4 +4,5 @@ const controller = require('./controller')
 const router = govukPrototypeKit.requests.setupRouter('/playground/guide')
 
 router.get('/:id/assets/:assetId', controller.getAsset)
+router.get('/:id/quality-check', controller.getQualityCheck)
 router.get('/:id', controller.get)

@@ -54,7 +54,44 @@
 
     try { showLastRun(window.localStorage.getItem(STORAGE_KEY)) } catch (e) {}
 
+    // The guide's real latest quality check, asked for when the run starts so
+    // it is usually back by the time the pretend run ends. Resolves null when
+    // there is none (or no href), and the widget makes its numbers up.
+    function fetchRealCheck () {
+      var href = checksCell.dataset.qualityCheckHref
+      if (!href || !window.fetch) return Promise.resolve(null)
+      return window.fetch(href, { headers: { Accept: 'application/json' } })
+        .then(function (response) { return response.ok ? response.json() : null })
+        .catch(function () { return null })
+    }
+
+    function showResult (total, severity) {
+      headline.textContent = total === 0 ? 'No issues found' : total + ' issue' + (total !== 1 ? 's' : '') + ' found'
+      breakdown.hidden = !severity
+      breakdown.textContent = severity
+        ? severity.high + ' high priority, ' + severity.medium + ' medium priority, ' + severity.low + ' low priority'
+        : ''
+      runningState.hidden = true
+      completeState.hidden = false
+    }
+
+    // With a real check, "View issues" shows its comments on the guide
+    // (guide-comments.js) rather than the made-up issues page, where the
+    // page has them.
+    var viewIssues = completeState.querySelector('a.govuk-button')
+    var commentsShown = false
+
+    function showCommentsFrom (link) {
+      if (!link || commentsShown || !document.querySelector('[data-guide-comments]')) return
+      commentsShown = true
+      link.addEventListener('click', function (event) {
+        event.preventDefault()
+        document.dispatchEvent(new CustomEvent('app:show-guide-comments'))
+      })
+    }
+
     startButton.addEventListener('click', function () {
+      var realCheck = fetchRealCheck()
       idleState.hidden = true
       completeState.hidden = true
       runningState.hidden = false
@@ -77,18 +114,23 @@
       window.setTimeout(function () {
         window.clearInterval(tick)
 
-        var total = issueCount()
-        var severity = splitBySeverity(total)
+        realCheck.then(function (check) {
+          // A real check has no severities, so it shows no breakdown, and
+          // its last run is when it really ran.
+          if (check) {
+            showResult(check.issueCount, null)
+            showLastRun(check.lastRun)
+            showCommentsFrom(viewIssues)
+            return
+          }
 
-        headline.textContent = total === 0 ? 'No issues found' : total + ' issue' + (total !== 1 ? 's' : '') + ' found'
-        breakdown.textContent = severity.high + ' high priority, ' + severity.medium + ' medium priority, ' + severity.low + ' low priority'
+          var total = issueCount()
+          showResult(total, splitBySeverity(total))
 
-        runningState.hidden = true
-        completeState.hidden = false
-
-        var now = new Date().toISOString()
-        showLastRun(now)
-        try { window.localStorage.setItem(STORAGE_KEY, now) } catch (e) {}
+          var now = new Date().toISOString()
+          showLastRun(now)
+          try { window.localStorage.setItem(STORAGE_KEY, now) } catch (e) {}
+        })
       }, DURATION_SECONDS * 1000)
     })
   })()
