@@ -289,7 +289,9 @@ function buildEditorActions(req, id, overview) {
         : null,
     publishingChecks: mockIssueCount(),
     nextVersionLabel: `Version ${current ? current.number + 1 : 1}`,
-    issuesHref: issuesBase(id)
+    issuesHref: issuesBase(id),
+    // Where the checks widget asks for the guide's real latest quality check.
+    qualityCheckHref: `${guideHref}/quality-check`
   }
 }
 

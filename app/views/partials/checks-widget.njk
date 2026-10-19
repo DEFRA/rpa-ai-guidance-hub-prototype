@@ -5,10 +5,14 @@
   `publishingChecks` and `issuesHref`. Shared by document/page.njk and the
   guide page's editor controls (playground/guide/**) — extracted here so
   both render and behave identically rather than keeping two copies.
+
+  Given `qualityCheckHref` (the playground guide page), the widget asks
+  there for the guide's real latest quality check when the pretend run ends,
+  and shows its real issue count and last run instead of made-up ones.
 #}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 
-<div data-checks-cell data-issue-count="{{ publishingChecks }}">
+<div data-checks-cell data-issue-count="{{ publishingChecks }}"{% if qualityCheckHref %} data-quality-check-href="{{ qualityCheckHref }}"{% endif %}>
 
   <div class="app-manage-guidance-checks-row" data-checks-idle>
     <span>Checks not run</span>

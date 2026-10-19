@@ -139,9 +139,38 @@ async function searchGuidance(query) {
   }
 }
 
+// A guide's latest quality check, from the API's quality-checks jobs:
+// { jobId, status, updatedAt, sectionsTotal, sectionsDone, result, ... }, or
+// null. A 404 means the guide has never been checked, so nothing is logged.
+async function fetchLatestQualityCheck(documentId) {
+  const url = buildUrl(
+    `/quality-checks/documents/${encodeURIComponent(documentId)}/latest`
+  )
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(TIMEOUT_MS)
+    })
+    if (response.status === 404) return null
+    if (!response.ok) {
+      console.error(
+        `[guidance-api-client] quality check fetch failed for ${documentId}: ${response.status} ${response.statusText}`
+      )
+      return null
+    }
+    return await response.json()
+  } catch (error) {
+    console.error(
+      `[guidance-api-client] quality check fetch failed for ${documentId}:`,
+      error.message
+    )
+    return null
+  }
+}
+
 module.exports = {
   fetchManifest,
   fetchGuideContent,
   fetchAsset,
+  fetchLatestQualityCheck,
   searchGuidance
 }
