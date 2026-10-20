@@ -77,9 +77,9 @@
 
     <div class="govuk-width-container">
       <form class="defra-home-header__search" method="get" action="/playground/hub" role="search">
-        <label class="govuk-visually-hidden" for="defra-home-header-search-input">Search all guidance</label>
+        <label class="govuk-visually-hidden" for="defra-home-header-search-input">Search or ask question</label>
         <div class="defra-search-bar defra-search-bar--with-kbd">
-          <input class="govuk-input defra-search-bar__input" id="defra-home-header-search-input" name="q" type="search" autocomplete="off" data-page-search placeholder="Search all guidance, or paste an error message or scheme code" value="{{ initialSearchQuery }}">
+          <input class="govuk-input defra-search-bar__input" id="defra-home-header-search-input" name="q" type="search" autocomplete="off" data-page-search placeholder="Search or ask a question about all guidance" value="{{ initialSearchQuery }}">
           <kbd class="app-search-kbd" data-page-search-kbd hidden></kbd>
           <button class="defra-search-bar__button defra-search-bar__button--on-green" type="submit">
             <span class="govuk-visually-hidden">Search</span>
@@ -227,7 +227,7 @@
         {% for result in results %}
           <li class="app-search-results__item{% if result.pinned %} app-search-results__item--pinned{% endif %}" id="result-{{ result.id }}">
 
-            <div class="app-search-results__top">
+            <div class="app-search-results__top app-hub-results__top">
               <div class="govuk-!-margin-bottom-2">
                 {% if result.versionTag %}{{ govukTag(result.versionTag) }}{% endif %}
                 {% for state in result.states %}{{ govukTag(stateTags[state]) }} {% endfor %}
@@ -248,11 +248,26 @@
               <a class="govuk-link" href="{{ result.overviewHref }}?from=search&q={{ initialSearchQuery | urlencode }}">{{ result.title }}</a>
             </h3>
 
+            {% if result.metadata.goal %}
+              <p class="govuk-body-s app-hub-results__facets">{{ result.metadata.goal }}</p>
+            {% endif %}
+
             {% if result.resumeLabel %}
               <p class="govuk-body-s app-search-results__resume">Continue from <strong>{{ result.resumeLabel }}</strong></p>
             {% endif %}
 
             <p class="govuk-body app-search-results__description">{{ result.description }}</p>
+
+            {% if result.metadata.requirements %}
+              <p class="govuk-body-s app-hub-results__facets"><strong>Required knowledge:</strong> {{ result.metadata.requirements }}</p>
+            {% endif %}
+
+            <p class="govuk-body-s app-hub-results__facets">
+              {%- if result.audienceLabels.length %}<span class="app-hub-results__facet"><strong>For:</strong> {{ result.audienceLabels | join(", ") }}</span>{% endif -%}
+              {%- if result.scheme %}<span class="app-hub-results__facet"><strong>Scheme:</strong> {{ result.scheme }}</span>{% endif -%}
+              {%- if result.systemLabels.length %}<span class="app-hub-results__facet"><strong>Systems:</strong> {{ result.systemLabels | join(", ") }}</span>{% endif -%}
+              {%- if result.metadata.owner %}<span class="app-hub-results__facet"><strong>Owner:</strong> {{ result.metadata.owner }}</span>{% endif -%}
+            </p>
 
             <p class="govuk-body-s app-search-results__dates">Last updated: {{ result.lastUpdated }} &middot; Published: {{ result.published }}</p>
 

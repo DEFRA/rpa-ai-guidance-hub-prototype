@@ -34,7 +34,7 @@
 <nav class="app-side-nav app-side-nav--rail" aria-label="Guidance hub">
   <ul class="app-side-nav__rail-list">
     <li>{{ railExpand("Expand navigation", "expand", null, expandForm) }}</li>
-    {% if not sideNav.hideSearch %}<li>{{ railExpand("Search all guidance", "search", "side-nav-search", expandForm) }}</li>{% endif %}
+    {% if not sideNav.hideSearch %}<li>{{ railExpand("Search or ask question", "search", "side-nav-search", expandForm) }}</li>{% endif %}
   </ul>
 
   <ul class="app-side-nav__rail-list">
@@ -44,6 +44,23 @@
     {% for item in sideNav.designerItems %}
       <li>{{ railItem(item.text, item.icon, item.href, item.current, item.badge) }}</li>
     {% endfor %}
+    {% if sideNav.designerItems.length %}
+      {% for item in sideNavPageItems %}
+        <li>
+          {% if item.href %}
+            {{ railItem(item.text, item.icon, item.href) }}
+          {% else %}
+            {% if item.action %}<form class="app-side-nav__form" method="post" action="{{ item.action }}">{% endif %}
+            <button type="{{ 'submit' if item.action else 'button' }}" class="app-side-nav__rail-item" {% if not item.action %}{% for name, value in item.attributes %} {{ name }}="{{ value }}"{% endfor %}{% endif %} data-side-nav-tooltip>
+              {{ sideNavIcon(item.icon) }}
+              <span class="app-side-nav__rail-label">{{ item.text }}</span>
+              <span class="app-side-nav__tooltip" aria-hidden="true">{{ item.text }}</span>
+            </button>
+            {% if item.action %}</form>{% endif %}
+          {% endif %}
+        </li>
+      {% endfor %}
+    {% endif %}
   </ul>
 
   <ul class="app-side-nav__rail-list">

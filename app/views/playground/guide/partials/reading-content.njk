@@ -197,7 +197,7 @@
   state — the sections on the page being shown; in traditional everything
   is on the one page, so nothing is current.
 #}
-<nav class="app-guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
+<nav class="app-guide-contents" id="guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
   {# The format toggle and keyword search (page.njk's guideTools), when given. #}
   {{ guideTools | safe if guideTools }}
   <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
