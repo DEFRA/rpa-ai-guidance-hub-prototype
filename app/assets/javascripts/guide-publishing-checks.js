@@ -9,7 +9,9 @@
 //
 // Where the checks are is kept for the guide in sessionStorage, so it
 // survives the page reloading — collapsing or expanding the side nav is a
-// form post — and a run in progress carries on where it was.
+// form post — and a run in progress carries on where it was. Whether there
+// is a real check is not kept: Show publishing checks asks for it again, so
+// a run that couldn't get it (the PoC slow or down) doesn't hide it later.
 ;(function () {
   const buttons = Array.from(document.querySelectorAll('[data-start-checks]'))
   if (!buttons.length) return
@@ -21,7 +23,6 @@
   const DURATION_SECONDS = 8
 
   let state = 'idle'
-  let realCheckFound = false
 
   const STORAGE_KEY = `publishing-checks:${window.location.pathname}`
 
@@ -58,6 +59,10 @@
   // The number of issues as the nav's lists show theirs: a badge, or the
   // rail's dot (its label then says it).
   function addBadge(button, issues) {
+    const old = button.querySelector(
+      '.app-side-nav__badge, .app-side-nav__rail-dot'
+    )
+    if (old) old.remove()
     const inRail = button.classList.contains('app-side-nav__rail-item')
     const badge = document.createElement('span')
     badge.textContent = issues
@@ -114,7 +119,7 @@
 
   function finish(issues, lastRun) {
     state = 'complete'
-    remember({ state, issues, lastRun, realCheckFound })
+    remember({ state, issues, lastRun })
     buttons.forEach((button) => {
       setLabel(button, 'Show publishing checks')
       button.removeAttribute('aria-disabled')
@@ -145,7 +150,6 @@
       () => {
         window.clearInterval(tick)
         realCheck.then((check) => {
-          realCheckFound = Boolean(check)
           if (check) {
             finish(check.issueCount, check.lastRun)
           } else {
@@ -157,12 +161,17 @@
     )
   }
 
+  // The real check's comments on the guide, its numbers brought up to date;
+  // with none, the made-up issues page.
   function showChecks() {
-    if (realCheckFound && document.querySelector('[data-guide-comments]')) {
-      document.dispatchEvent(new CustomEvent('app:show-guide-comments'))
-    } else {
-      window.location.href = issuesHref
-    }
+    fetchRealCheck().then((check) => {
+      if (check && document.querySelector('[data-guide-comments]')) {
+        finish(check.issueCount, check.lastRun)
+        document.dispatchEvent(new CustomEvent('app:show-guide-comments'))
+      } else {
+        window.location.href = issuesHref
+      }
+    })
   }
 
   buttons.forEach((button) => {
@@ -177,9 +186,6 @@
   })
 
   const saved = recall()
-  if (saved.state === 'complete') {
-    realCheckFound = Boolean(saved.realCheckFound)
-    finish(saved.issues, saved.lastRun)
-  }
+  if (saved.state === 'complete') finish(saved.issues, saved.lastRun)
   if (saved.state === 'running') run(saved.startedAt)
 })()
