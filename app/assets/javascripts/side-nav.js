@@ -223,12 +223,13 @@
   // attached, the native corner grip (the no-JS fallback) is switched off
   // so there's one control, not two.
   //
-  // Shared by the nav's own handle and the guide panel's
-  // (app/views/playground/guide/page.njk) — same behaviour, opposite edge:
-  // `direction` is which arrow key (and which way a drag) grows the
+  // Shared by the nav's own handle, the guide panel's
+  // (app/views/playground/editor/page.njk) and the guide's Contents
+  // column's (app/views/playground/guide/page.njk) — same behaviour, either
+  // edge: `direction` is which arrow key (and which way a drag) grows the
   // target, +1 when its handle is on the target's trailing (right) edge
-  // like the nav's, -1 when it's on the leading (left) edge like the
-  // panel's.
+  // like the nav's and the Contents column's, -1 when it's on the leading
+  // (left) edge like the panel's.
   function setupResize({
     handle,
     target,
@@ -333,6 +334,20 @@
       guidePanel.style.setProperty('--app-guide-panel-width', `${px}px`),
     defaultWidth: 320,
     direction: -1
+  })
+
+  // The guide page's Contents column (playground/guide/page.njk): its handle
+  // is on its trailing edge, like the nav's.
+  const guideColumns = shell.querySelector('.app-guide-columns')
+  setupResize({
+    handle: shell.querySelector('[data-guide-contents-resize]'),
+    target:
+      guideColumns &&
+      guideColumns.querySelector(':scope > .app-guide-contents'),
+    applyWidth: (px) =>
+      guideColumns.style.setProperty('--app-guide-toc-width', `${px}px`),
+    defaultWidth: 340,
+    direction: 1
   })
 
   // --- Size the nav to the visible viewport --------------------------------

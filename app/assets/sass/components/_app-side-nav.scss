@@ -528,6 +528,35 @@ details:not([open]) > summary .app-side-nav__chevron {
   }
 }
 
+// Edit this guide is a form's button (partials/side-nav.njk), drawn as a link.
+.app-side-nav__form {
+  margin: 0;
+}
+
+.app-side-nav__link--button[aria-disabled='true'],
+.app-side-nav__rail-item[aria-disabled='true'] {
+  cursor: progress;
+}
+
+.app-side-nav__link--button {
+  width: 100%;
+  font: inherit;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+// Under a nav button, what it has done (Start publishing checks: "Checks not
+// run", then running, then what they found), lined up with its text.
+.app-side-nav__status {
+  margin: 0 0 govuk-spacing(1);
+  padding-left: 42px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: $app-side-nav-muted;
+}
+
 .app-side-nav__link--current {
   background-color: $defra-light-green;
   font-weight: 700;

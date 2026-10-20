@@ -115,15 +115,17 @@ $app-guide-panel-max-width: 480px;
   }
 }
 
-// Title/byline.
+// Title/byline. A step above the guide's own headings (22px and 19px,
+// .app-guide-heading-1/-2), not a page-wide banner.
 .app-guide-title {
   margin: 0 0 govuk-spacing(2);
   font-family: $govuk-font-family;
   font-weight: 700;
-  font-size: 32px;
+  font-size: 24px;
+  line-height: 1.25;
 
   @include govuk-media-query($from: tablet) {
-    font-size: 40px;
+    font-size: 28px;
   }
 }
 
@@ -157,7 +159,7 @@ $app-guide-panel-max-width: 480px;
   margin-bottom: govuk-spacing(4);
 }
 
-// The reading "page": centred in the space between the side nav and the
+// The reading "page": aligned left in the space between the side nav and the
 // panel, one width for everything on it (title, contents, headings, body)
 // so it all lines up like a Word page, rather than each block capping
 // itself at its own em-based measure. The reader picks the width
@@ -166,7 +168,7 @@ $app-guide-panel-max-width: 480px;
 .app-guide-reading {
   max-width: 960px;
   margin-right: auto;
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .app-guide-reading--wide {
@@ -236,14 +238,14 @@ $app-guide-panel-max-width: 480px;
 
 // Wide enough for it, the contents list floats as a sticky sidebar beside
 // the reading column, with the format toggle and the keyword search at its
-// top. Below the guide's heading (.app-guide-columns), everything else moves
-// to column 2, and the list spans every row of column 1, sticking as the
-// reader scrolls.
+// top. In .app-guide-columns, everything else, the guide's heading included,
+// moves to column 2, and the list spans every row of column 1 from the top of
+// the window, sticking there as the reader scrolls.
 $app-guide-toc-width: 340px;
 
 // The list is pinned to the left of the space available whatever the
 // reader's page width: the container fills it, and the width option caps
-// (and centres) the column beside the list instead. It sits flush against
+// the column beside the list instead, aligned left against the list. It sits flush against
 // the side nav, out through the main column's gutter
 // ($app-content-gutter, _app-side-nav.scss).
 @media (min-width: 1100px) {
@@ -255,9 +257,14 @@ $app-guide-toc-width: 340px;
     margin-left: 0;
   }
 
+  // --app-guide-toc-width is set by the list's resize handle (side-nav.js),
+  // and from then on by the page.
   .app-guide-columns {
     display: grid;
-    grid-template-columns: $app-guide-toc-width minmax(0, 1fr);
+    grid-template-columns: var(--app-guide-toc-width, $app-guide-toc-width) minmax(
+        0,
+        1fr
+      );
     column-gap: govuk-spacing(6);
 
     > * {
@@ -265,7 +272,7 @@ $app-guide-toc-width: 340px;
       width: 100%;
       max-width: var(--app-guide-width, 960px);
       margin-right: auto;
-      margin-left: auto;
+      margin-left: 0;
     }
 
     > .app-guide-contents {
@@ -274,13 +281,33 @@ $app-guide-toc-width: 340px;
       grid-row: 1 / span 99;
       align-self: start;
       position: sticky;
-      top: govuk-spacing(4);
+      top: 0;
+      // From the top of the window, out through the main wrapper's padding
+      // (_app-side-nav.scss).
+      margin-top: -(govuk-spacing(3));
       margin-right: 0;
       margin-left: -$app-content-gutter;
       max-width: none;
-      max-height: calc(100vh - #{govuk-spacing(8)});
+      max-height: 100vh;
       overflow-y: auto;
     }
+  }
+
+  // The Contents column's resize handle, over the list's right-hand edge
+  // (the two right-hand edges coincide, as the side nav's do), from the top
+  // of the window (the list's own negative top margin), sticking as the
+  // list does. The list is pulled left by the gutter but keeps the column's
+  // width, so its right-hand edge is short of the column's by the gutter.
+  // Styled as the side nav's (.app-shell__resize).
+  .app-guide-columns > .app-guide-contents-resize {
+    grid-column: 1;
+    grid-row: 1 / span 99;
+    justify-self: end;
+    align-self: start;
+    width: 8px;
+    max-width: none;
+    height: 100vh;
+    margin: (-(govuk-spacing(3))) $app-content-gutter 0 0;
   }
 
   .app-guide-reading--wide {
@@ -289,6 +316,13 @@ $app-guide-toc-width: 340px;
 
   .app-guide-reading--full {
     --app-guide-width: none;
+  }
+}
+
+// Narrower, there's no column to resize.
+@media (max-width: 1099px) {
+  .app-guide-contents-resize {
+    display: none;
   }
 }
 

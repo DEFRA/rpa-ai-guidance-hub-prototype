@@ -16,7 +16,14 @@
       const heading = document.getElementById(
         link.getAttribute('data-guide-toc-target')
       )
-      if (heading && heading.getClientRects().length) {
+      // A stepper page not being read is hidden="until-found", which
+      // still lays its headings out (for the browser's find), so a layout
+      // box alone doesn't mean the heading is on the page shown.
+      if (
+        heading &&
+        !heading.closest('[hidden]') &&
+        heading.getClientRects().length
+      ) {
         entries.push({ heading, link, parent: parentLink(link) })
       }
     })

@@ -24,11 +24,6 @@
         classes: "govuk-!-margin-bottom-0"
       }) }}
     {% endif %}
-    {% if editorActions.startEditingHref %}
-      <form method="post" action="{{ editorActions.startEditingHref }}">
-        {{ govukButton({ text: "Edit this guide", classes: "govuk-!-margin-bottom-0" }) }}
-      </form>
-    {% endif %}
     {% if editorActions.approveHref %}
       <form method="post" action="{{ editorActions.approveHref }}">
         {{ govukButton({

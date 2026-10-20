@@ -22,6 +22,7 @@ const { GUIDANCE_API_CONFIGURED } = require('../../../lib/feature-flags')
 const { isDottedNumber } = require('../../../lib/section-numbers')
 const { isQuestion } = require('../../../assets/javascripts/query-kind')
 const { searchEveryGuide } = require('./keyword-search')
+const { getGuideMetadata } = require('../guide/guide-metadata')
 
 // Slug (querystring/form value) -> full label (the value buildManageGuidance
 // SearchResults' documents actually carry) for each single-choice facet.
@@ -61,6 +62,13 @@ const YEARS = [
   { value: '2026', text: '2026', count: 21 },
   { value: '2025', text: '2025', count: 13 }
 ]
+
+// A result's facet values as the filters label them (For, Systems).
+function labelsOf(values, options) {
+  return options
+    .filter((option) => values.indexOf(option.value) !== -1)
+    .map((option) => option.text)
+}
 
 // The values of a checkbox facet that are among its options.
 function readChecked(value, options) {
@@ -303,7 +311,10 @@ async function fromSession(req) {
       resumeLabel: position ? position.label : null,
       pinned: isPinned(req, document.id),
       audiences: audiencesOf(document.id),
-      systems: systemsOf(document.id)
+      systems: systemsOf(document.id),
+      audienceLabels: labelsOf(audiencesOf(document.id), AUDIENCES),
+      systemLabels: labelsOf(systemsOf(document.id), SYSTEMS),
+      metadata: getGuideMetadata(document.id)
     }
   })
 

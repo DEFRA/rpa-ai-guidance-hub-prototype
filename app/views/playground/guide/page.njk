@@ -1,20 +1,14 @@
 {#
-  The merged guide page — settled on the side-panel direction after
-  comparing it against a top-toolbar and an inline layout (see
-  page.notes.md). Reading column plus a persistent right-hand panel
-  holding case bookmarks, the reader-facing metadata (metadata-list.njk)
-  and, for a designer only, an "Editor tools" section (editor-controls.njk)
-  — version switching, publishing checks and Continue editing sit
-  alongside the guide rather than gating it behind a separate screen,
-  without costing a viewer a click.
+  The merged guide page: the reading column on its own. There is no
+  "About this guide" panel any more: editing and publishing checks are in
+  the side nav's Designing group (sideNavPageItems, below), and the guide's
+  metadata (who it's for, scheme, systems, owner, purpose, required
+  knowledge) is on its hub result (playground/hub/page.njk).
 
-  The panel is a third column in the side-nav shell itself
-  (layouts/main.html's shellAside block), not part of this page's own
-  content column — a mirror image of .app-shell__nav (same full-height,
-  sticky, flush-right column; _app-guide.scss reuses its tokens). Without
-  the shell (sideNav unset — a future frozen snapshot), the same markup
-  renders inline instead, stacked below the reading column, so a snapshot
-  never silently loses it.
+  The quality check comments (guideComments, below) are a third column in
+  the side-nav shell itself (layouts/main.html's shellAside block) while
+  open. Without the shell (sideNav unset — a future frozen snapshot), the
+  same markup renders inline instead, stacked below the reading column.
 #}
 {% extends "common/layouts/base.njk" %}
 
@@ -22,108 +16,66 @@
 {% from "govuk/components/input/macro.njk" import govukInput %}
 {% from "govuk/components/tag/macro.njk" import govukTag %}
 {% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
 {% from "partials/side-nav-icon.njk" import sideNavIcon %}
 
 {% set bodyClasses = "app-full-width" %}
 {% set pageName = document.name %}
 
-{% set guidePanel %}
-  <form id="guide-panel-toggle-form" method="post" action="{{ panelToggleHref }}" hidden>
-    <input type="hidden" name="collapsed" value="{{ 'false' if panelCollapsed else 'true' }}">
-    <input type="hidden" name="returnTo" value="{{ returnTo }}">
-  </form>
-
-  {% if not panelCollapsed %}
-    {#
-      Drag/arrow-key resize handle, [hidden] until side-nav.js attaches
-      (its own setupResize, shared with the nav's own handle below) —
-      without JS the native corner grip (_app-guide.scss's `resize:
-      horizontal`) still works. Sits before the aside, mirroring the nav's
-      own handle sitting before .app-shell__main in layouts/main.html —
-      side-nav.js drags it in the opposite direction (this edge is the
-      panel's left, not its right).
-    #}
-    <div class="app-shell__resize app-shell__resize--aside" role="separator" aria-orientation="vertical"
-         aria-label="Resize guide details" aria-controls="guide-panel-body"
-         aria-valuemin="{{ panelWidthLimits.min }}" aria-valuemax="{{ panelWidthLimits.max }}"
-         data-guide-panel-resize data-width-href="{{ panelWidthHref }}" tabindex="0" hidden></div>
+{#
+  Edit this guide, then Start publishing checks, last in the side nav's
+  Designing group (designers only; partials/side-nav.njk). Edit starts a
+  draft, or opens the one in progress. Start publishing checks runs the
+  checks and shows them (guide-publishing-checks.js).
+#}
+{% set sideNavPageItems = [] %}
+{% if sideNav.designerItems.length and editorActions %}
+  {% if editorActions.startEditingHref %}
+    {% set pushed = sideNavPageItems.push({ text: "Edit this guide", icon: "edit", action: editorActions.startEditingHref }) %}
+  {% elif editorActions.continueEditingHref %}
+    {% set pushed = sideNavPageItems.push({ text: "Edit this guide", icon: "edit", href: editorActions.continueEditingHref }) %}
   {% endif %}
+  {% set pushed = sideNavPageItems.push({
+    text: "Start publishing checks",
+    icon: "microscope",
+    attributes: {
+      "data-start-checks": "",
+      "data-issue-count": editorActions.publishingChecks,
+      "data-quality-check-href": editorActions.qualityCheckHref,
+      "data-issues-href": editorActions.issuesHref
+    },
+    status: { text: "Checks not run", data: "data-checks-nav-status" }
+  }) %}
+  {% set publishingChecksInNav = true %}
+{% endif %}
 
-  <aside class="app-guide-panel{% if panelCollapsed %} app-guide-panel--collapsed{% endif %}" aria-label="About this guide"{% if panelWidth and not panelCollapsed %} style="--app-guide-panel-width: {{ panelWidth }}px"{% endif %}>
-    {% if panelCollapsed %}
-      {#
-        The collapsed rail — the side nav's own rail component
-        (partials/side-nav-rail.njk, _app-side-nav.scss) reused directly
-        rather than a single full-width button, so there's a jump straight
-        to Case bookmarks as well as a plain expand (crit: unreachable when
-        collapsed). Both submit guide-panel-toggle-form; the bookmarks item
-        overrides its returnTo with a #fragment the same way the nav
-        rail's own railExpand does (panel-toggle/routes.js's own
-        [].concat(...).pop()).
-      #}
-      <nav class="app-side-nav app-side-nav--rail" aria-label="About this guide">
-        <ul class="app-side-nav__rail-list">
-          <li>
-            <button type="submit" form="guide-panel-toggle-form" class="app-side-nav__rail-item" data-side-nav-tooltip>
-              {{ sideNavIcon("collapse") }}
-              <span class="app-side-nav__rail-label">Show guide details</span>
-              <span class="app-side-nav__tooltip" aria-hidden="true">Show guide details</span>
-            </button>
-          </li>
-          <li>
-            <button type="submit" form="guide-panel-toggle-form" name="returnTo" value="{{ returnTo.split('#')[0] }}#guide-case-bookmarks" class="app-side-nav__rail-item" data-side-nav-tooltip>
-              {{ sideNavIcon("bookmark") }}
-              <span class="app-side-nav__rail-label">Case bookmarks</span>
-              <span class="app-side-nav__tooltip" aria-hidden="true">Case bookmarks</span>
-            </button>
-          </li>
-        </ul>
-      </nav>
-    {% else %}
-      <div class="app-guide-panel__header">
-        <h2 class="govuk-heading-s govuk-!-margin-bottom-0">About this guide</h2>
-        <button type="submit" form="guide-panel-toggle-form" class="app-side-nav__icon-button" aria-controls="guide-panel-body">
-          {{ sideNavIcon("expand") }}
-          <span class="govuk-visually-hidden">Hide guide details</span>
-        </button>
-      </div>
-
-      <div class="app-guide-panel__body" id="guide-panel-body">
-        {% include "playground/guide/partials/case-bookmarks.njk" %}
-
-
-        {% include "playground/guide/partials/metadata-list.njk" %}
-
-        {% include "playground/guide/partials/versions.njk" %}
-
-        {% if canRequestEdit %}
-          {% include "playground/guide/partials/request-edit.njk" %}
-        {% endif %}
-
-        {% if isEditor %}
-          <h2 class="govuk-heading-s govuk-!-margin-top-6">Editor tools</h2>
-          {% include "playground/guide/partials/editor-controls.njk" %}
-        {% endif %}
-      </div>
-    {% endif %}
-  </aside>
-
+{% set guideComments %}
   {#
-    The quality check comments, Word style (guide-comments.js): in the
-    panel's place while open, opened by the checks widget's "View issues"
-    once the guide has a real check.
+    The quality check comments, Word style (guide-comments.js): a
+    right-hand column while open, opened by the side nav's Show publishing
+    checks (guide-publishing-checks.js) once the guide has a real check.
   #}
   {% if isEditor and editorActions.qualityCheckHref %}
     <aside class="app-guide-comments" aria-label="Quality check comments" data-guide-comments data-quality-check-href="{{ editorActions.qualityCheckHref }}" hidden>
       <div class="app-guide-panel__header">
-        <h2 class="govuk-heading-s govuk-!-margin-bottom-0">Quality check comments</h2>
-        <button type="button" class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" data-guide-comments-close>Close comments</button>
+        <h2 class="govuk-body-s govuk-!-font-weight-bold govuk-!-margin-bottom-0">Quality check comments</h2>
+        <button type="button" class="app-side-nav__icon-button" data-guide-comments-close>
+          {{ sideNavIcon("close") }}
+          <span class="govuk-visually-hidden">Close comments</span>
+        </button>
       </div>
       <div data-guide-comments-unplaced></div>
       <div class="app-guide-comments__track" data-guide-comments-track></div>
     </aside>
   {% endif %}
 {% endset %}
+
+{#
+  The phase banner normally renders in beforeContent, above everything; on a
+  guide it heads the reading column instead (below), so the contents column
+  starts at the top of the page.
+#}
+{% block beforeContent %}{% endblock %}
 
 {% block content %}
 
@@ -142,23 +94,6 @@
       <p class="govuk-body"><a class="govuk-notification-banner__link" href="{{ currentVersionHref }}">View the current version</a></p>
     {% endcall %}
   {% endif %}
-
-  <div class="app-guide-byline">
-    {% if versionTag %}{{ govukTag(versionTag) }}{% endif %}
-    {% if versionTag or isApiGuide %}{{ govukTag({ text: "Live", classes: "govuk-tag--turquoise" }) }}{% endif %}
-    <span class="app-guide-byline__updated">Updated {{ currentVersion.lastUpdated }}</span>
-    {% set pinDocumentId = document.id %}
-    {% include "partials/pin-button.njk" %}
-  </div>
-
-  <h1 class="app-guide-title">{{ document.name }}</h1>
-
-  {% if readingWidthChoice %}
-    <div class="app-guide-tools">
-      {% include "playground/guide/partials/reading-width.njk" %}
-    </div>
-  {% endif %}
-
 
   {#
     The guide's own tools, at the top of its contents column
@@ -207,7 +142,46 @@
     </form>
   {% endset %}
 
-  <div class="app-guide-columns">
+  <div class="app-guide-columns"{% if contentsWidth %} style="--app-guide-toc-width: {{ contentsWidth }}px"{% endif %}>
+
+  {#
+    Drag/arrow-key resize handle on the Contents column's right-hand edge,
+    as the side nav has (side-nav.js), [hidden] until that attaches. Wide
+    screens only: narrower, the contents sit above the guide.
+  #}
+  <div class="app-shell__resize app-guide-contents-resize" role="separator" aria-orientation="vertical"
+       aria-label="Resize contents" aria-controls="guide-contents"
+       aria-valuemin="{{ contentsWidthLimits.min }}" aria-valuemax="{{ contentsWidthLimits.max }}"
+       data-guide-contents-resize data-width-href="{{ contentsWidthHref }}" tabindex="0" hidden></div>
+
+  {#
+    The phase banner and the guide's heading (byline, title and width
+    choice) head the reading column, so the contents column starts at the
+    top of the page.
+  #}
+  {{ govukPhaseBanner({
+    tag: { text: "Prototype" },
+    text: "This is a prototype for user research. Nothing you enter is saved."
+  }) }}
+
+  <div class="app-guide-byline">
+    {% if versionTag %}{{ govukTag(versionTag) }}{% endif %}
+    {% if versionTag or isApiGuide %}{{ govukTag({ text: "Live", classes: "govuk-tag--turquoise" }) }}{% endif %}
+    <span class="app-guide-byline__updated">Updated {{ currentVersion.lastUpdated }}</span>
+    {% set pinDocumentId = document.id %}
+    {% include "partials/pin-button.njk" %}
+    {% if canRequestEdit %}
+      {% include "playground/guide/partials/request-edit.njk" %}
+    {% endif %}
+  </div>
+
+  <h1 class="app-guide-title">{{ document.name }}</h1>
+
+  {% if readingWidthChoice %}
+    <div class="app-guide-tools">
+      {% include "playground/guide/partials/reading-width.njk" %}
+    </div>
+  {% endif %}
 
   {#
     Resume reading: where this reader last was (saved as they scroll by
@@ -232,7 +206,7 @@
       section/part/pagination markup.
     #}
     {% if content.contents.length %}
-      <nav class="app-guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
+      <nav class="app-guide-contents" id="guide-contents" aria-labelledby="guide-contents-heading" data-guide-toc>
         {{ guideTools | safe }}
         <h2 class="govuk-heading-s" id="guide-contents-heading">Contents</h2>
         <ul class="govuk-list app-guide-contents__list app-guide-contents__list--flat">
@@ -254,14 +228,14 @@
 
 </div>
 
-{% if not sideNav %}{{ guidePanel | safe }}{% endif %}
+{% if not sideNav %}{{ guideComments | safe }}{% endif %}
 
 {% endblock %}
 
-{% block shellAside %}{% if sideNav %}{{ guidePanel | safe }}{% endif %}{% endblock %}
+{% block shellAside %}{% if sideNav %}{{ guideComments | safe }}{% endif %}{% endblock %}
 
 {% block pageScripts %}
-  {% include "partials/checks-widget-script.njk" %}
+  {% if publishingChecksInNav %}<script src="/public/javascripts/guide-publishing-checks.js"></script>{% endif %}
   {% if isMarkdown %}<script src="/public/javascripts/vendor/tiptap-viewer.js"></script>{% endif %}
   {% if isMarkdown %}<script src="/public/javascripts/guide-links.js"></script>{% endif %}
   <script src="/public/javascripts/guide-images.js"></script>

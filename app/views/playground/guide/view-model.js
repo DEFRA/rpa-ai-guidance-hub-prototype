@@ -99,6 +99,26 @@ function setPanelWidth(req, value) {
   )
 }
 
+// The Contents column's width, dragged (or arrow-keyed) by its resize
+// handle on wide screens: global like the panel's, saved by
+// contents-width/routes.js (_app-guide.scss's --app-guide-toc-width). null
+// means the stylesheet default (CONTENTS_WIDTH.default).
+const CONTENTS_WIDTH = { min: 240, max: 560, default: 340 }
+
+function getContentsWidth(req) {
+  const width = req.session.data.guideContentsWidth
+  return typeof width === 'number' ? width : null
+}
+
+function setContentsWidth(req, value) {
+  const width = Math.round(Number(value))
+  if (!Number.isFinite(width)) return
+  req.session.data.guideContentsWidth = Math.min(
+    CONTENTS_WIDTH.max,
+    Math.max(CONTENTS_WIDTH.min, width)
+  )
+}
+
 // The reading page's width (_app-guide.scss's .app-guide-reading--*),
 // after feedback that guides were easier to read in Word: a reader's own
 // preference, so global rather than per-guide, saved by
@@ -557,6 +577,9 @@ async function buildMarkdownGuideViewModel(req, document) {
     panelWidth: getPanelWidth(req),
     panelWidthLimits: PANEL_WIDTH,
     panelWidthHref: '/playground/guide/panel-width',
+    contentsWidth: getContentsWidth(req),
+    contentsWidthLimits: CONTENTS_WIDTH,
+    contentsWidthHref: '/playground/guide/contents-width',
     returnTo: req.originalUrl
   }
 }
@@ -633,6 +656,9 @@ async function guideViewModel(req, id) {
     panelWidth: getPanelWidth(req),
     panelWidthLimits: PANEL_WIDTH,
     panelWidthHref: '/playground/guide/panel-width',
+    contentsWidth: getContentsWidth(req),
+    contentsWidthLimits: CONTENTS_WIDTH,
+    contentsWidthHref: '/playground/guide/contents-width',
     returnTo: req.originalUrl
   }
 }
@@ -680,6 +706,7 @@ module.exports = {
   locateAnchor,
   buildMetadata,
   buildPanelState,
+  setContentsWidth,
   readFormat,
   chosenFormat,
   FORMAT_COOKIE,

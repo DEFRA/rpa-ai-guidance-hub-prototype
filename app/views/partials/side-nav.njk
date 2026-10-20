@@ -55,9 +55,9 @@
 
   {% if not sideNav.hideSearch %}
   <form class="app-side-nav__search" method="get" action="{{ sideNav.searchAction }}" role="search">
-    <label class="govuk-visually-hidden" for="side-nav-search">Search all guidance</label>
+    <label class="govuk-visually-hidden" for="side-nav-search">Search or ask question</label>
     {{ sideNavIcon("search", "app-side-nav__search-icon") }}
-    <input class="app-side-nav__search-input" id="side-nav-search" name="q" type="search" autocomplete="off" placeholder="Search all guidance" value="{{ sideNav.searchQuery }}" data-side-nav-search>
+    <input class="app-side-nav__search-input" id="side-nav-search" name="q" type="search" autocomplete="off" placeholder="Search or ask question" value="{{ sideNav.searchQuery }}" data-side-nav-search>
     <kbd class="app-side-nav__kbd" data-side-nav-kbd hidden></kbd>
     <button type="submit" class="govuk-visually-hidden-focusable app-side-nav__search-submit">Search</button>
   </form>
@@ -74,6 +74,35 @@
     <ul class="app-side-nav__list" aria-labelledby="side-nav-designing">
       {% for item in sideNav.designerItems %}
         <li>{{ navLink(item) }}</li>
+      {% endfor %}
+      {#
+        Actions on the page itself, last (sideNavPageItems — the guide
+        page's Edit this guide and Start publishing checks): a link, a
+        form's POST (`action`), or a button a page script listens for
+        (`attributes`, its data-* attributes). A `status` is a line of text
+        under it that the script keeps up to date.
+      #}
+      {% for item in sideNavPageItems %}
+        <li>
+          {% if item.href %}
+            {{ navLink(item) }}
+          {% elif item.action %}
+            <form class="app-side-nav__form" method="post" action="{{ item.action }}">
+              <button type="submit" class="app-side-nav__link app-side-nav__link--button">
+                {{ sideNavIcon(item.icon) }}
+                <span class="app-side-nav__text">{{ item.text }}</span>
+              </button>
+            </form>
+          {% else %}
+            <button type="button" class="app-side-nav__link app-side-nav__link--button"{% for name, value in item.attributes %} {{ name }}="{{ value }}"{% endfor %}>
+              {{ sideNavIcon(item.icon) }}
+              <span class="app-side-nav__text">{{ item.text }}</span>
+            </button>
+          {% endif %}
+          {% if item.status %}
+            <p class="app-side-nav__status" role="status" {{ item.status.data }}>{{ item.status.text }}</p>
+          {% endif %}
+        </li>
       {% endfor %}
     </ul>
   {% endif %}

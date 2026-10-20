@@ -56,10 +56,32 @@ $app-hub-filters-width: 340px;
   color: $govuk-secondary-text-colour;
 }
 
+// No rule of its own: the first result's top border is the line under it.
 .app-hub-results__header {
   margin-bottom: govuk-spacing(4);
-  padding-bottom: govuk-spacing(3);
-  border-bottom: 1px solid $govuk-border-colour;
+}
+
+// A result's pin star sits beside its publishing status, not out at the
+// right-hand edge.
+.app-hub-results__top {
+  justify-content: flex-start;
+
+  .app-pin-toggle {
+    margin: -6px 0 0 (-(govuk-spacing(2)));
+  }
+}
+
+// A guide's purpose, on its own line under its title; its required
+// knowledge under its description; who it's for, its scheme, systems and
+// owner on the next line.
+.app-hub-results__facets {
+  margin-bottom: govuk-spacing(2);
+}
+
+.app-hub-results__facet:not(:last-child)::after {
+  content: ' \00b7 ';
+  padding: 0 govuk-spacing(1);
+  color: $govuk-secondary-text-colour;
 }
 
 .app-hub-results__showing {
