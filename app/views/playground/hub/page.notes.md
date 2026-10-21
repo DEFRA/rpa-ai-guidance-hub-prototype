@@ -158,3 +158,11 @@ Search hub now sends only a question to the AI search; other words are counted i
 - Results are a guide's sections and parts, most matches first, each with its first sentence holding a match, marked; a result opens the guide with the search done, at that part's first match
 - Mock guides are left out: their content is placeholder
 - The guide list still filters on the same words, as a mock only
+
+---
+
+**Tim Gordon — 21 October 2026**
+
+A guide's result in the list shows only its title, its purpose and its dates.
+
+- The description, required knowledge, who it's for, scheme, systems and owner are gone from the result. The metadata that production records is in the guide's information panel, opened from the info button beside the guide's title. The description isn't part of production's metadata, so the panel doesn't show it.

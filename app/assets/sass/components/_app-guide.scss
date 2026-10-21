@@ -261,10 +261,10 @@ $app-guide-toc-width: 340px;
   // and from then on by the page.
   .app-guide-columns {
     display: grid;
-    grid-template-columns: var(--app-guide-toc-width, $app-guide-toc-width) minmax(
-        0,
-        1fr
-      );
+    grid-template-columns: var(
+        --app-guide-toc-width,
+        $app-guide-toc-width
+      ) minmax(0, 1fr);
     column-gap: govuk-spacing(6);
 
     > * {
@@ -349,7 +349,7 @@ $app-guide-toc-width: 340px;
   border: 0;
   border-left: 1px solid $govuk-border-colour;
   background-color: govuk-colour('white');
-  color: $govuk-text-colour;
+  color: $govuk-black;
   font-family: $govuk-font-family;
   font-size: 24px;
   line-height: 1;
@@ -430,19 +430,19 @@ $app-guide-toc-width: 340px;
 // Each match, and the current one set apart in the GOV.UK focus style.
 ::highlight(guide-keyword-match) {
   background-color: $govuk-focus-colour;
-  color: $govuk-text-colour;
+  color: $govuk-black;
 }
 
 // A hub keyword result's matches (hub/partials/keyword-results.njk), as the
 // guide page paints them.
 .app-keyword-match {
   background-color: $govuk-focus-colour;
-  color: $govuk-text-colour;
+  color: $govuk-black;
 }
 
 ::highlight(guide-keyword-current) {
   background-color: $govuk-focus-colour;
-  color: $govuk-text-colour;
+  color: $govuk-black;
   text-decoration: underline 4px $govuk-focus-text-colour;
 }
 
@@ -481,10 +481,10 @@ $app-guide-toc-width: 340px;
   flex: 0 0 auto;
   min-width: 22px;
   padding: 0 4px;
-  border: 2px solid $govuk-text-colour;
+  border: 2px solid $govuk-black;
   border-radius: 999px;
   background-color: $govuk-focus-colour;
-  color: $govuk-text-colour;
+  color: $govuk-black;
   line-height: 20px;
   text-align: center;
 }
@@ -538,8 +538,8 @@ $app-guide-toc-width: 340px;
 }
 
 .app-guide-contents [aria-current='location'] + .app-guide-contents__count {
-  border-color: $govuk-text-colour;
-  background-color: $govuk-text-colour;
+  border-color: $govuk-black;
+  background-color: $govuk-black;
   color: $govuk-focus-colour;
 }
 
@@ -868,4 +868,120 @@ $app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3
   .govuk-pagination__prev + .govuk-pagination__next {
     border-top: 0;
   }
+}
+
+// The sharing link in the guide's left margin (guide-share-link.js), which
+// places it beside the block under the pointer. Styled as the heading's
+// bookmark: an icon that becomes a button on hover, with the side nav's
+// tooltip saying what a click does.
+.app-guide-share-link {
+  position: absolute;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: $govuk-secondary-text-colour;
+  cursor: pointer;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &:hover {
+    background-color: $govuk-light-grey;
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    @include govuk-focused-text;
+  }
+
+  &:hover .app-guide-share-link__tooltip,
+  &:focus-visible .app-guide-share-link__tooltip {
+    display: block;
+  }
+}
+
+// The guide's title with its info button beside it (page.njk).
+.app-guide-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: govuk-spacing(2);
+  margin: 0 0 govuk-spacing(2);
+
+  .app-guide-title {
+    margin-bottom: 0;
+  }
+}
+
+// Rolled over, it looks like a button; open, it stays pressed in.
+.app-guide-info-toggle {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: $govuk-secondary-text-colour;
+  cursor: pointer;
+
+  &[hidden] {
+    display: none;
+  }
+
+  .app-side-nav-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  &:hover {
+    border-color: $govuk-mid-grey;
+    background-color: $govuk-light-grey;
+    color: $govuk-black;
+  }
+
+  &[aria-expanded='true'] {
+    border-color: $govuk-mid-grey;
+    background-color: mix($govuk-black, $govuk-light-grey, 10%);
+    box-shadow: inset 0 2px 4px rgba($govuk-black, 0.25);
+    color: $govuk-black;
+  }
+
+  // Keyboard focus only, so a click leaves it looking pressed.
+  &:focus-visible {
+    @include govuk-focused-text;
+  }
+
+  &:hover .app-guide-info-toggle__tooltip,
+  &:focus-visible .app-guide-info-toggle__tooltip {
+    display: block;
+  }
+}
+
+// The guide's information, under the title: as wide as the guide's text,
+// its padding inside that width.
+.app-guide-info {
+  box-sizing: border-box;
+  margin: 0 0 govuk-spacing(4);
+  padding: govuk-spacing(3) govuk-spacing(4);
+  background-color: $govuk-light-grey;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.app-guide-info__list {
+  margin-bottom: 0;
 }

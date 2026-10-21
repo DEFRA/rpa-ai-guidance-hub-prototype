@@ -215,3 +215,21 @@ Keyword search matches whole words and whole phrases, and a page opened with `?k
 - One word matches as a whole word ("pay" no longer matches "payment"); several match as the whole phrase, across bold and links but not from one paragraph into the next
 - Opened with a search, the page starts at the first match in the part it opened at, keeps it in view while images load, and keeps the box focused so Enter goes on
 - Stepper or traditional is kept in a cookie for a year, for every guide, not per guide in the session: a reader who prefers one format shouldn't have to choose it on each guide
+
+---
+
+**Tim Gordon — 21 October 2026**
+
+A sharing link in the guide's left margin, for any place in the guide, not only its headings.
+
+- A link icon follows the pointer: centred in the margin, level with the first line of the paragraph, list item, heading, table row or image under it, and still following while the pointer is in the margin, so it can be reached.
+- On hover it becomes a button, like the heading's bookmark, with the tooltip "Click to copy sharing link". A click copies the link and the tooltip changes to "Copied to clipboard". No separate step to create the link first: it added a click for nothing.
+- The link goes through guide/section/ (so it lands on the right stepper page) with a URL text fragment for the block's text, which the browser highlights.
+- Open question: it is pointer-only. Keyboard and touch users have no way to reach it yet.
+
+A guide information panel, opened from an info button beside the title.
+
+- On hover the icon looks like a button, with the tooltip "Show guide information". A click opens a grey panel under the title, and the button stays pressed in until it is clicked again.
+- The panel names each field, in the order of the upload journey's check answers page in the hub ("The guide's details", then "Owner and purpose"): last modified date, scheme, owner email, purpose of guidance, required knowledge and training, systems, and who the guidance is for. The title and version number are left out, since both are just above. The guide's description is left out too: it isn't part of production's metadata.
+- Who it's for and its systems now come from the same data as the hub's filters, so the guide page and the hub agree.
+- The panel starts closed in the page itself, not closed by script once the page has loaded, so it no longer shows and then vanishes. Without JavaScript the button does nothing.

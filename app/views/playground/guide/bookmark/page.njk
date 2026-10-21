@@ -2,14 +2,17 @@
   Bookmarking a guide to a case, pulled out of the guide's own right-hand
   panel into its own question page (see page.notes.md for why) — the
   radios/conditional-reveal pattern from gds-components, not the old
-  radios-then-separate-input shape. Two named inputs (caseRef/sbiRef), not
-  one shared field, because a conditional reveal only hides the other
-  input with CSS — it still submits (see view-model.js).
+  radios-then-separate-input shape. Separately named fields for each type
+  (caseRef/sbiRef and so on), not shared ones, because a conditional reveal
+  only hides the other type's fields with CSS — they still submit (see
+  view-model.js). Each type asks, when it has any, whether to use an
+  existing reference (a dropdown of them) or a new one.
 #}
 {% extends "common/layouts/content.njk" %}
 
 {% from "govuk/components/radios/macro.njk" import govukRadios %}
 {% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
 {% from "govuk/components/button/macro.njk" import govukButton %}
 {% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
 
@@ -22,33 +25,48 @@
     {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
   {% endif %}
 
-  {% set caseHtml %}
-    {{ govukInput({
-      id: "bookmark-ref-case",
-      name: "caseRef",
-      value: caseRef,
-      classes: "govuk-!-width-one-third",
-      spellcheck: false,
-      autocomplete: "off",
-      label: { text: "Case ID" },
-      hint: { text: types[0].hint },
-      errorMessage: errors.caseRef
-    }) }}
-  {% endset %}
-
-  {% set sbiHtml %}
-    {{ govukInput({
-      id: "bookmark-ref-sbi",
-      name: "sbiRef",
-      value: sbiRef,
-      classes: "govuk-!-width-one-third",
-      spellcheck: false,
-      autocomplete: "off",
-      label: { text: "SBI application number" },
-      hint: { text: types[1].hint },
-      errorMessage: errors.sbiRef
-    }) }}
-  {% endset %}
+  {% macro refFields(t, errors) %}
+    {% set newHtml %}
+      {{ govukInput({
+        id: "bookmark-ref-" + t.value,
+        name: t.fields.ref,
+        value: t.ref,
+        classes: "govuk-!-width-one-third",
+        spellcheck: false,
+        autocomplete: "off",
+        label: { text: "New " + t.label },
+        hint: { text: t.hint },
+        errorMessage: errors[t.fields.ref]
+      }) }}
+    {% endset %}
+    {% if t.hasExisting %}
+      {% set existingHtml %}
+        {{ govukSelect({
+          id: "bookmark-existing-" + t.value,
+          name: t.fields.existing,
+          label: { text: t.label },
+          items: t.existingItems,
+          errorMessage: errors[t.fields.existing]
+        }) }}
+      {% endset %}
+      {{ govukRadios({
+        idPrefix: "bookmark-" + t.value + "-choice",
+        name: t.fields.choice,
+        value: t.choice,
+        classes: "govuk-radios--small",
+        fieldset: {
+          legend: { text: "Existing or new " + t.label + "?", classes: "govuk-fieldset__legend--s" }
+        },
+        errorMessage: errors[t.fields.choice],
+        items: [
+          { value: "existing", text: "Existing " + t.label, conditional: { html: existingHtml } },
+          { value: "new", text: "New " + t.label, conditional: { html: newHtml } }
+        ]
+      }) }}
+    {% else %}
+      {{ newHtml | safe }}
+    {% endif %}
+  {% endmacro %}
 
   <form method="post" action="/playground/guide/{{ id }}/bookmark" novalidate>
     {% if section %}<input type="hidden" name="section" value="{{ section.anchor }}">{% endif %}
@@ -67,8 +85,8 @@
       hint: { text: hintText },
       errorMessage: errors.type,
       items: [
-        { value: "case", text: types[0].label, conditional: { html: caseHtml } },
-        { value: "sbi", text: types[1].label, conditional: { html: sbiHtml } }
+        { value: "case", text: types[0].label, conditional: { html: refFields(types[0], errors) } },
+        { value: "sbi", text: types[1].label, conditional: { html: refFields(types[1], errors) } }
       ]
     }) }}
 

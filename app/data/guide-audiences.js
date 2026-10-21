@@ -74,9 +74,22 @@ const AUDIENCES_BY_GUIDE = {
   'cs-ma-claim-refresh-signoff-check-2026': [PROCESSORS, TEAM_LEADERS]
 }
 
+// What the hub's filter calls each audience.
+const AUDIENCE_LABELS = {
+  [PROCESSORS]: 'Processors',
+  [TEAM_LEADERS]: 'Team leaders',
+  [EDITORS]: 'Editors'
+}
+
 // A guide's audiences, or [] if it has none yet.
 function audiencesOf(id) {
   return AUDIENCES_BY_GUIDE[id] || []
 }
 
-module.exports = { audiencesOf, PROCESSORS, TEAM_LEADERS, EDITORS }
+module.exports = {
+  audiencesOf,
+  AUDIENCE_LABELS,
+  PROCESSORS,
+  TEAM_LEADERS,
+  EDITORS
+}

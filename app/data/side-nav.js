@@ -130,6 +130,27 @@ function togglePin(req, id) {
   else pinned.splice(index, 1)
 }
 
+// Puts the pins in the order of `ids` (the nav's ids, so mock copies are
+// matched by their real guide). Pins not in `ids` keep their order, last.
+function setPinOrder(req, ids) {
+  const rank = (entry) => {
+    const index = ids.indexOf(guideAliases.resolveGuideId(req, entry.id))
+    return index === -1 ? ids.length : index
+  }
+  getPinned(req).sort((a, b) => rank(a) - rank(b))
+}
+
+// The order with the item at `index` swapped with its neighbour `step` away,
+// for the nav's Move up / Move down; null when there's no neighbour there.
+function swappedOrder(ids, index, step) {
+  const other = index + step
+  if (other < 0 || other >= ids.length) return null
+  const order = ids.slice()
+  order[index] = ids[other]
+  order[other] = ids[index]
+  return order.join(',')
+}
+
 // `guideBookmarks`, not the first build's `caseBookmarks` (case ID only), so
 // an older session's differently shaped data is simply ignored.
 function getBookmarks(req) {
@@ -144,6 +165,22 @@ function getBookmarks(req) {
     bookmark.sections = bookmark.sections || []
   })
   return req.session.data.guideBookmarks
+}
+
+// A bookmark's id in the nav's order: its type and reference, which can't
+// hold a comma or a colon.
+function bookmarkKey(bookmark) {
+  return `${bookmark.type}:${bookmark.ref}`
+}
+
+// Puts the case bookmarks in the order of `keys` (bookmarkKey); those not
+// in `keys` keep their order, last.
+function setBookmarkOrder(req, keys) {
+  const rank = (bookmark) => {
+    const index = keys.indexOf(bookmarkKey(bookmark))
+    return index === -1 ? keys.length : index
+  }
+  getBookmarks(req).sort((a, b) => rank(a) - rank(b))
 }
 
 function findBookmark(req, type, ref) {
@@ -422,20 +459,23 @@ function buildSideNav(req, base = DEFAULT_BASE) {
           ])
       : []
 
-  const pinned = guideAliases
+  const pinnedIds = guideAliases
     .resolveGuideIds(
       req,
       getPinned(req).map((entry) => entry.id)
     )
     .filter((id) => titles[id])
-    .map((id) => ({
-      id,
-      title: titles[id],
-      href: documentHref(base, id),
-      current: fullPath === documentHref(base, id)
-    }))
+  const pinned = pinnedIds.map((id, index) => ({
+    id,
+    title: titles[id],
+    href: documentHref(base, id),
+    current: fullPath === documentHref(base, id),
+    moveUpOrder: swappedOrder(pinnedIds, index, -1),
+    moveDownOrder: swappedOrder(pinnedIds, index, 1)
+  }))
 
-  const cases = getBookmarks(req).map((bookmark) => {
+  const caseKeys = getBookmarks(req).map(bookmarkKey)
+  const cases = getBookmarks(req).map((bookmark, index) => {
     const kind = BOOKMARK_TYPES[bookmark.type]
     const guides = guideAliases
       .resolveGuideIds(req, bookmark.documentIds)
@@ -454,6 +494,9 @@ function buildSideNav(req, base = DEFAULT_BASE) {
           }))
       }))
     return {
+      key: caseKeys[index],
+      moveUpOrder: swappedOrder(caseKeys, index, -1),
+      moveDownOrder: swappedOrder(caseKeys, index, 1),
       type: bookmark.type,
       typeLabel: kind.short,
       typeFullLabel: kind.label,
@@ -493,8 +536,12 @@ function buildSideNav(req, base = DEFAULT_BASE) {
     designerItems,
     pinned,
     pinToggleHref: `${base}/pin-toggle`,
+    // Frozen snapshots have no order routes, so they can't reorder.
+    pinOrderHref: base === DEFAULT_BASE ? `${base}/pin-order` : null,
     cases,
     removeBookmarkHref: `${base}/case-bookmarks/remove`,
+    caseOrderHref:
+      base === DEFAULT_BASE ? `${base}/case-bookmarks/order` : null,
     footerItems: [{ text: 'Help', href: '#', icon: 'help' }]
   }
 }
@@ -508,7 +555,9 @@ module.exports = {
   getPinned,
   isPinned,
   togglePin,
+  setPinOrder,
   getBookmarks,
+  setBookmarkOrder,
   findBookmark,
   normaliseReference,
   addBookmark,

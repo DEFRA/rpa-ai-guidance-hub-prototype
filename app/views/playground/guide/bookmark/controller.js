@@ -1,5 +1,9 @@
 const { documentOverviewViewModel } = require('../../document/view-model')
-const { addBookmark, normaliseReference } = require('../../../../data/side-nav')
+const {
+  addBookmark,
+  getBookmarks,
+  normaliseReference
+} = require('../../../../data/side-nav')
 const { locateAnchor, findApiGuide } = require('../view-model')
 const {
   bookmarkPageViewModel,
@@ -35,7 +39,7 @@ async function get(req, res) {
   res.locals.backHref = returnHref(id, section)
   res.render(
     'playground/guide/bookmark/page.njk',
-    bookmarkPageViewModel(id, guide.name, section, {}, null)
+    bookmarkPageViewModel(id, guide.name, section, getBookmarks(req), {}, null)
   )
 }
 
@@ -49,14 +53,22 @@ async function post(req, res) {
 
   const section = await sectionFrom(req, id, req.body.section)
   const type = req.body.type
-  const ref = refFromBody(type, req.body)
-  const error = addBookmark(req, type, ref, id, section)
+  const chosen = refFromBody(type, req.body, getBookmarks(req))
+  const ref = chosen.ref
+  const error = chosen.error || addBookmark(req, type, ref, id, section)
 
   if (error) {
     res.locals.backHref = returnHref(id, section)
     res.render(
       'playground/guide/bookmark/page.njk',
-      bookmarkPageViewModel(id, guide.name, section, req.body, error)
+      bookmarkPageViewModel(
+        id,
+        guide.name,
+        section,
+        getBookmarks(req),
+        req.body,
+        error
+      )
     )
     return
   }
