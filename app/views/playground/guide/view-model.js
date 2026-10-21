@@ -11,6 +11,11 @@ const {
 const { resolveHashLinks } = require('../../../lib/heading-links')
 const { getGuideMetadata, getStepperPages } = require('./guide-metadata')
 const { getGuidePosition } = require('../../../data/guide-positions')
+const {
+  audiencesOf,
+  AUDIENCE_LABELS
+} = require('../../../data/guide-audiences')
+const { systemsOf, SYSTEM_LABELS } = require('../../../data/guide-systems')
 const { documentOverviewViewModel } = require('../document/view-model')
 const {
   canEdit,
@@ -181,14 +186,15 @@ function buildMetadata(req, id, document) {
     }
   }
 
+  // Who it's for and its systems as the hub lists them, so the two agree.
   const base = getGuideMetadata(id)
   return {
     scheme: document.scheme || null,
     owner: base.owner,
     goal: base.goal,
     requirements: base.requirements,
-    systems: labelAll(base.systems, V4_SYSTEMS),
-    audience: labelAll(base.audience, V4_AUDIENCE)
+    systems: labelAll(systemsOf(id), SYSTEM_LABELS),
+    audience: labelAll(audiencesOf(id), AUDIENCE_LABELS)
   }
 }
 

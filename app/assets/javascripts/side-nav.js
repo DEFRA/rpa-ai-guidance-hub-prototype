@@ -216,6 +216,171 @@
     searchInput.focus()
   }
 
+  // --- Reorder pinned guides and case bookmarks by dragging ----------------
+  // A pointer drag on an item's row (past a few pixels, so a click still
+  // opens it) moves the item; a bar shows where it will land, and Esc
+  // cancels. The order is saved with fetch to the list's data-reorder-list
+  // URL. Move up / Move down in the "…" menu are the way to do it without
+  // dragging.
+
+  const DRAG_THRESHOLD = 5
+  const DRAGGING = 'app-side-nav__reorder--dragging'
+  const DROP_BEFORE = 'app-side-nav__reorder--drop-before'
+  const DROP_AFTER = 'app-side-nav__reorder--drop-after'
+
+  function setupReorder(list) {
+    const status = list.parentElement.querySelector('[data-reorder-status]')
+    let press = null
+    let drag = null
+    let suppressClick = false
+
+    const items = () => Array.from(list.children)
+    const itemIds = () =>
+      items().map((item) => item.getAttribute('data-reorder-id'))
+
+    function clearDropBar() {
+      items().forEach((item) => item.classList.remove(DROP_BEFORE, DROP_AFTER))
+    }
+
+    // Where the dragged item would land, as an index into the other items.
+    function dropIndex(clientY) {
+      const others = items().filter((item) => item !== drag.item)
+      const index = others.findIndex((item) => {
+        const box = item.getBoundingClientRect()
+        return clientY < box.top + box.height / 2
+      })
+      return { others, index: index === -1 ? others.length : index }
+    }
+
+    function showDropBar(clientY) {
+      clearDropBar()
+      const { others, index } = dropIndex(clientY)
+      drag.index = index
+      if (index === drag.startIndex) return
+      if (index < others.length) others[index].classList.add(DROP_BEFORE)
+      else others[others.length - 1].classList.add(DROP_AFTER)
+    }
+
+    // Keep each "…" menu's Move up / Move down posting the order as it now is.
+    function refreshMoveForms() {
+      const ids = itemIds()
+      items().forEach((item, index) => {
+        item.querySelectorAll('[data-reorder-move]').forEach((form) => {
+          const other = index + Number(form.getAttribute('data-reorder-move'))
+          form.hidden = other < 0 || other >= ids.length
+          if (form.hidden) return
+          const order = ids.slice()
+          order[index] = ids[other]
+          order[other] = ids[index]
+          form.querySelector('[name="order"]').value = order.join(',')
+        })
+      })
+    }
+
+    function endDrag() {
+      clearDropBar()
+      drag.item.classList.remove(DRAGGING)
+      shell.classList.remove('app-shell--reordering')
+      drag = null
+    }
+
+    function dropItem() {
+      const { item, index, startIndex } = drag
+      const others = items().filter((other) => other !== item)
+      endDrag()
+      if (index === startIndex) return
+      list.insertBefore(item, others[index] || null)
+      refreshMoveForms()
+      const body = new URLSearchParams({ order: itemIds().join(',') })
+      window
+        .fetch(list.getAttribute('data-reorder-list'), { method: 'POST', body })
+        .catch(() => {})
+      if (status) {
+        const label = item.getAttribute('data-reorder-label')
+        status.textContent = `Moved ${label} to position ${index + 1} of ${items().length}.`
+      }
+    }
+
+    function onPointerMove(event) {
+      if (!drag) {
+        const moved = Math.hypot(
+          event.clientX - press.x,
+          event.clientY - press.y
+        )
+        if (moved < DRAG_THRESHOLD) return
+        const startIndex = items().indexOf(press.item)
+        drag = { item: press.item, startIndex, index: startIndex }
+        drag.item.classList.add(DRAGGING)
+        shell.classList.add('app-shell--reordering')
+        window.getSelection().removeAllRanges()
+      }
+      showDropBar(event.clientY)
+    }
+
+    function stopListening() {
+      press = null
+      document.removeEventListener('pointermove', onPointerMove)
+      document.removeEventListener('pointerup', onPointerUp)
+      document.removeEventListener('pointercancel', onPointerCancel)
+    }
+
+    function onPointerUp() {
+      stopListening()
+      if (!drag) return
+      dropItem()
+      // The click that may follow a drag shouldn't follow the link.
+      suppressClick = true
+      window.setTimeout(() => {
+        suppressClick = false
+      }, 0)
+    }
+
+    function onPointerCancel() {
+      stopListening()
+      if (drag) endDrag()
+    }
+
+    // Only the item's label (data-reorder-handle) starts a drag: not its "…"
+    // menu, and not a case's guides and sections under it.
+    list.addEventListener('pointerdown', (event) => {
+      const handle = event.target.closest('[data-reorder-handle]')
+      const item = handle && handle.closest('[data-reorder-id]')
+      if (event.button !== 0 || !item || item.parentElement !== list) return
+      press = { item, x: event.clientX, y: event.clientY }
+      document.addEventListener('pointermove', onPointerMove)
+      document.addEventListener('pointerup', onPointerUp)
+      document.addEventListener('pointercancel', onPointerCancel)
+    })
+
+    // No native link dragging anywhere in the list, so nothing but the label
+    // looks draggable.
+    list.addEventListener('dragstart', (event) => event.preventDefault())
+
+    list.addEventListener(
+      'click',
+      (event) => {
+        if (!suppressClick) return
+        event.preventDefault()
+        event.stopPropagation()
+      },
+      true
+    )
+
+    // Capture, so a cancelled drag doesn't also close the drawer.
+    document.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key !== 'Escape' || !drag) return
+        event.stopPropagation()
+        stopListening()
+        endDrag()
+      },
+      true
+    )
+  }
+
+  shell.querySelectorAll('[data-reorder-list]').forEach(setupReorder)
+
   // --- Resize (expanded nav / guide panel, desktop) ------------------------
   // Same approach as the context pane's resize: a full-height separator,
   // draggable, with Left/Right (Home/End) keys. The width is saved to the

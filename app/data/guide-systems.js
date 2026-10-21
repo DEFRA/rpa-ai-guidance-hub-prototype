@@ -54,9 +54,15 @@ const SYSTEMS_BY_GUIDE = {
   'cs-ma-claim-refresh-signoff-check-2026': SITI_ONLY
 }
 
+// What the hub's filter calls each system.
+const SYSTEM_LABELS = {
+  [CRM]: 'CRM',
+  [SITI_AGRI]: 'SITI Agri'
+}
+
 // The systems a guide needs, or [] if none is known.
 function systemsOf(id) {
   return SYSTEMS_BY_GUIDE[id] || []
 }
 
-module.exports = { systemsOf, CRM, SITI_AGRI }
+module.exports = { systemsOf, SYSTEM_LABELS, CRM, SITI_AGRI }

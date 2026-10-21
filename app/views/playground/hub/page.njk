@@ -256,19 +256,6 @@
               <p class="govuk-body-s app-search-results__resume">Continue from <strong>{{ result.resumeLabel }}</strong></p>
             {% endif %}
 
-            <p class="govuk-body app-search-results__description">{{ result.description }}</p>
-
-            {% if result.metadata.requirements %}
-              <p class="govuk-body-s app-hub-results__facets"><strong>Required knowledge:</strong> {{ result.metadata.requirements }}</p>
-            {% endif %}
-
-            <p class="govuk-body-s app-hub-results__facets">
-              {%- if result.audienceLabels.length %}<span class="app-hub-results__facet"><strong>For:</strong> {{ result.audienceLabels | join(", ") }}</span>{% endif -%}
-              {%- if result.scheme %}<span class="app-hub-results__facet"><strong>Scheme:</strong> {{ result.scheme }}</span>{% endif -%}
-              {%- if result.systemLabels.length %}<span class="app-hub-results__facet"><strong>Systems:</strong> {{ result.systemLabels | join(", ") }}</span>{% endif -%}
-              {%- if result.metadata.owner %}<span class="app-hub-results__facet"><strong>Owner:</strong> {{ result.metadata.owner }}</span>{% endif -%}
-            </p>
-
             <p class="govuk-body-s app-search-results__dates">Last updated: {{ result.lastUpdated }} &middot; Published: {{ result.published }}</p>
 
           </li>

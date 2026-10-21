@@ -71,17 +71,10 @@ $app-hub-filters-width: 340px;
   }
 }
 
-// A guide's purpose, on its own line under its title; its required
-// knowledge under its description; who it's for, its scheme, systems and
-// owner on the next line.
+// A guide's purpose, on its own line under its title. The rest of its
+// metadata is in the guide's information panel (guide/page.njk).
 .app-hub-results__facets {
   margin-bottom: govuk-spacing(2);
-}
-
-.app-hub-results__facet:not(:last-child)::after {
-  content: ' \00b7 ';
-  padding: 0 govuk-spacing(1);
-  color: $govuk-secondary-text-colour;
 }
 
 .app-hub-results__showing {

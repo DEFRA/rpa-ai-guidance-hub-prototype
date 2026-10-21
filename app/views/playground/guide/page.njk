@@ -3,7 +3,8 @@
   "About this guide" panel any more: editing and publishing checks are in
   the side nav's Designing group (sideNavPageItems, below), and the guide's
   metadata (who it's for, scheme, systems, owner, purpose, required
-  knowledge) is on its hub result (playground/hub/page.njk).
+  knowledge) is in the information panel the title's info button opens, as
+  well as on its hub result (playground/hub/page.njk).
 
   The quality check comments (guideComments, below) are a third column in
   the side-nav shell itself (layouts/main.html's shellAside block) while
@@ -175,7 +176,50 @@
     {% endif %}
   </div>
 
-  <h1 class="app-guide-title">{{ document.name }}</h1>
+  {#
+    The guide's information: its metadata, named and in the order of the
+    upload journey's check answers page, in a grey panel under the title.
+    Not the title or the version: both are just above.
+    The info button beside the title opens and closes it (guide-info.js).
+    The panel starts closed in the page itself, so it doesn't show and then
+    vanish as the page loads.
+  #}
+  <div class="app-guide-title-row">
+    <h1 class="app-guide-title">{{ document.name }}</h1>
+    <button type="button" class="app-guide-info-toggle" aria-expanded="false" aria-controls="guide-info" data-guide-info-toggle>
+      {{ sideNavIcon("info") }}
+      <span class="govuk-visually-hidden">Guide information</span>
+      <span class="app-side-nav__tooltip app-guide-info-toggle__tooltip" aria-hidden="true" data-guide-info-tooltip>Show guide information</span>
+    </button>
+  </div>
+
+  <div class="app-guide-info" id="guide-info" data-guide-info hidden>
+    <dl class="govuk-summary-list govuk-summary-list--no-border app-guide-info__list">
+      {% set infoRows = [
+        ["Last modified date", currentVersion.lastUpdated if currentVersion],
+        ["Scheme", metadata.scheme],
+        ["Owner email", metadata.owner],
+        ["Purpose of guidance", metadata.goal],
+        ["Required knowledge and training", metadata.requirements],
+        ["Systems", metadata.systems | join(", ")],
+        ["Who is this guidance for?", metadata.audience | join(", ")]
+      ] %}
+      {% for row in infoRows %}
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">{{ row[0] }}</dt>
+          <dd class="govuk-summary-list__value">
+            {%- if not row[1] -%}
+              Not provided
+            {%- elif row[0] == "Owner email" -%}
+              <a class="govuk-link" href="mailto:{{ row[1] }}">{{ row[1] }}</a>
+            {%- else -%}
+              {{ row[1] }}
+            {%- endif -%}
+          </dd>
+        </div>
+      {% endfor %}
+    </dl>
+  </div>
 
   {% if readingWidthChoice %}
     <div class="app-guide-tools">
@@ -230,6 +274,18 @@
 
 {% if not sideNav %}{{ guideComments | safe }}{% endif %}
 
+{#
+  The sharing link in the guide's left margin: guide-share-link.js moves it
+  beside whichever element the pointer is over, and a click copies a link
+  to that place (guide/section/, with a text fragment).
+#}
+<button type="button" class="app-guide-share-link" data-guide-share-link data-section-href="/playground/guide/{{ document.id | urlencode }}/section/" hidden>
+  {{ sideNavIcon("link") }}
+  <span class="govuk-visually-hidden" data-guide-share-link-name>Click to copy sharing link</span>
+  <span class="app-side-nav__tooltip app-guide-share-link__tooltip" aria-hidden="true" data-guide-share-link-tooltip>Click to copy sharing link</span>
+</button>
+<p class="govuk-visually-hidden" role="status" data-guide-share-link-status></p>
+
 {% endblock %}
 
 {% block shellAside %}{% if sideNav %}{{ guideComments | safe }}{% endif %}{% endblock %}
@@ -245,5 +301,7 @@
   {# Marks the one contents entry for where the reader is, or the current match. #}
   <script src="/public/javascripts/guide-toc.js"></script>
   {% if positionHref %}<script src="/public/javascripts/guide-position.js"></script>{% endif %}
+  <script src="/public/javascripts/guide-info.js"></script>
+  <script src="/public/javascripts/guide-share-link.js"></script>
   {% if isEditor and editorActions.qualityCheckHref %}<script src="/public/javascripts/guide-comments.js"></script>{% endif %}
 {% endblock %}
