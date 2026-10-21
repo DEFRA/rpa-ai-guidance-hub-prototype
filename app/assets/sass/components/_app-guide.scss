@@ -898,7 +898,16 @@ $app-guide-image-spinner-static: "data:image/svg+xml,%3Csvg xmlns='http://www.w3
     color: $govuk-link-hover-colour;
   }
 
-  &:focus {
+  // Pressed in while the mouse button is held, as the info button is
+  // while its panel is open.
+  &:active {
+    background-color: mix($govuk-black, $govuk-light-grey, 10%);
+    box-shadow: inset 0 2px 4px rgba($govuk-black, 0.25);
+  }
+
+  // Keyboard focus only, so once a click is released it looks as it does
+  // under the pointer again.
+  &:focus-visible {
     @include govuk-focused-text;
   }
 
