@@ -22,17 +22,24 @@
     "marked": "18.0.14"
   },
   "devDependencies": {
-    "@tiptap/core": "3.29.2",
-    "@tiptap/extension-highlight": "3.29.2",
-    "@tiptap/extension-image": "3.29.2",
-    "@tiptap/extension-table": "3.29.2",
-    "@tiptap/extension-text-style": "3.29.2",
-    "@tiptap/markdown": "3.29.2",
-    "@tiptap/pm": "3.29.2",
-    "@tiptap/starter-kit": "3.29.2",
+    "@tiptap/core": "3.32.0",
+    "@tiptap/extension-highlight": "3.32.0",
+    "@tiptap/extension-image": "3.32.0",
+    "@tiptap/extension-table": "3.32.0",
+    "@tiptap/extension-text-style": "3.32.0",
+    "@tiptap/markdown": "3.32.0",
+    "@tiptap/pm": "3.32.0",
+    "@tiptap/starter-kit": "3.32.0",
     "accessible-autocomplete": "3.0.1",
     "esbuild": "0.28.2",
     "material-symbols": "0.47.5",
     "prettier": "3.9.8"
+  },
+  "overrides": {
+    "brace-expansion@1": "1.1.21",
+    "engine.io": "6.6.11",
+    "follow-redirects": "1.16.1",
+    "proxy-addr": "2.0.8",
+    "source-map-js": "1.2.2"
   }
 }
