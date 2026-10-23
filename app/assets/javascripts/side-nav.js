@@ -167,6 +167,17 @@
 
   const searchInput = shell.querySelector('[data-side-nav-search]')
   const kbd = shell.querySelector('[data-side-nav-kbd]')
+  const searchStatus = shell.querySelector('[data-side-nav-search-status]')
+
+  // A search of every guide may be an AI search, which takes a while: say so
+  // while the next page loads, as the hub's own search box does.
+  if (searchInput && searchStatus) {
+    searchInput.form.addEventListener('submit', () => {
+      if (!searchInput.value.trim()) return
+      searchStatus.textContent =
+        'Searching all guidance. This can take up to a minute.'
+    })
+  }
 
   if (searchInput && kbd) {
     kbd.textContent = isMac ? '⌘ K' : 'Ctrl K'

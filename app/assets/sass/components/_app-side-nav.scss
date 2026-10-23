@@ -425,6 +425,16 @@ details:not([open]) > summary .app-side-nav__chevron {
   margin: 0 0 govuk-spacing(3);
 }
 
+.app-side-nav__search-status {
+  @include govuk-font($size: 16);
+  margin: govuk-spacing(2) 0 0;
+  color: $app-side-nav-muted;
+
+  &:empty {
+    display: none;
+  }
+}
+
 .app-side-nav__search-icon {
   position: absolute;
   top: 10px;

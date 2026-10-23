@@ -487,6 +487,12 @@ $app-guide-toc-width: 340px;
   color: $govuk-black;
   line-height: 20px;
   text-align: center;
+  text-decoration: none;
+
+  &:hover {
+    background-color: $govuk-black;
+    color: $govuk-focus-colour;
+  }
 }
 
 // Spacing follows the jump in heading level: a new section (h1 after h1)

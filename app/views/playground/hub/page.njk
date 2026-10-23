@@ -95,8 +95,8 @@
 {#
   A question (query-kind.js) gets the guides API's AI search of every indexed
   guide (partials/search-results.njk); other words are counted in every API
-  guide (partials/keyword-results.njk). The guide list below still filters on
-  the same words, as a mock.
+  guide (partials/keyword-results.njk). While a search's results are shown,
+  the guide list and its filters are hidden: the results are the answer.
 #}
 {% if aiSearch %}
   {% include "playground/hub/partials/search-results.njk" %}
@@ -104,6 +104,7 @@
   {% include "playground/hub/partials/keyword-results.njk" %}
 {% endif %}
 
+{% if not (aiSearch or keywordSearch) %}
 <div class="app-hub-columns">
 
   {#
@@ -265,12 +266,12 @@
   </div>
 
 </div>
+{% endif %}
 
 {% endblock %}
 
 {% block pageScripts %}
   {# accessible-autocomplete is loaded by layouts/main.html on side-nav pages. #}
-  <script src="/public/javascripts/query-kind.js"></script>
   <script>
     (function () {
       // Filtering itself is a real GET round-trip now (view-model.js), not
@@ -303,15 +304,14 @@
         searchInput.setAttribute('aria-keyshortcuts', isMac ? 'Meta+K' : 'Control+K')
       }
 
-      // A search replaces what the hub covers with what it's doing. An AI
-      // search reads every guide, so its next page takes a while.
+      // A search replaces what the hub covers with what it's doing. Whether
+      // it's an AI search, which reads every guide and takes a while, is
+      // decided on the server (the API's model), so the message covers both.
       var searchStatus = document.querySelector('[data-search-status]')
       if (searchInput && searchStatus) {
         searchInput.form.addEventListener('submit', function () {
           if (!searchInput.value.trim()) return
-          searchStatus.textContent = window.appQueryKind.isQuestion(searchInput.value)
-            ? 'Searching all guidance. This can take up to a minute.'
-            : 'Searching all guidance.'
+          searchStatus.textContent = 'Searching all guidance. This can take up to a minute.'
         })
       }
 
