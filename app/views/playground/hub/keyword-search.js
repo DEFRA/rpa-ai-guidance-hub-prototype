@@ -1,7 +1,7 @@
 //
 // The hub's search of every guide for words rather than a question: every
-// section and part of every API guide holding them (one word as a whole word,
-// several as the whole phrase, as the guide page's own search finds them), the
+// section and part of every API guide holding them (anywhere in the text, in
+// any case, as the guide page's own search finds them), the
 // most matches first, then in guide and section order.
 //
 // Mock guides are left out: their content is placeholder (see page.notes.md).

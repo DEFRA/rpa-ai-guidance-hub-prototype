@@ -166,3 +166,29 @@ Search hub now sends only a question to the AI search; other words are counted i
 A guide's result in the list shows only its title, its purpose and its dates.
 
 - The description, required knowledge, who it's for, scheme, systems and owner are gone from the result. The metadata that production records is in the guide's information panel, opened from the info button beside the guide's title. The description isn't part of production's metadata, so the panel doesn't show it.
+
+---
+
+**Tim Gordon — 23 October 2026**
+
+A search for words now matches them anywhere in the text, in any case, as Word's Find does: "pay" finds "payment" and "repay". It is the same rule as a guide's own search (`keyword-matches.js`).
+
+An AI search result now shows the passage of the guide that answers the question, with its links, instead of a sentence about the section.
+
+- The AI marks where the passage starts and ends; the API cuts it from the guide's own text, so its words and links are the guide's, never the AI's
+- "Where are the option compatibility tables?" now shows the line with the link to the Option Compatibility Tables
+- Where no passage is marked, the result shows the sentence about the section, as before
+
+The AI summary now answers the question itself, in its first sentence, instead of saying where the answer is.
+
+- Asked where something is, it gives the link to it, rendered as Markdown so the link works
+- It is given the passages from the guides, and the API checks that every link in it is one a passage gives, so it can't invent an address
+
+While a search's results are shown, the guide list and its filters are hidden: the results are the answer. Clearing the search box shows the list again.
+
+The AI decides whether a search goes to the AI search: a question or an instruction in natural language does, keywords don't.
+
+- "NA02 meaning", "show me how to close a case" and "customer has not replied after 10 days" now go to the AI search, though none ends in "?" or starts with a question word
+- "NA02", "land use matrix" and "option compatibility tables" stay keyword searches
+- The API asks its model in one quick call; if the API can't answer within 10 seconds, the old rule decides (`query-kind.js`)
+- While any search runs, the hub's search box and the side nav's say "Searching all guidance. This can take up to a minute.", since the page can't know in advance which search it will be

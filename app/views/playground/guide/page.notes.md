@@ -233,3 +233,24 @@ A guide information panel, opened from an info button beside the title.
 - The panel names each field, in the order of the upload journey's check answers page in the hub ("The guide's details", then "Owner and purpose"): last modified date, scheme, owner email, purpose of guidance, required knowledge and training, systems, and who the guidance is for. The title and version number are left out, since both are just above. The guide's description is left out too: it isn't part of production's metadata.
 - Who it's for and its systems now come from the same data as the hub's filters, so the guide page and the hub agree.
 - The panel starts closed in the page itself, not closed by script once the page has loaded, so it no longer shows and then vanishes. Without JavaScript the button does nothing.
+
+---
+
+**Tim Gordon — 23 October 2026**
+
+Keyword search now matches anywhere in the text, in any case, as Word's Find does.
+
+- "pay" finds "payment" and "repay" as well as "pay": readers write and read these guides in Word, so its Find is the search they know
+- Several words still match as that phrase, across bold and links but not from one paragraph into the next
+- The Search hub's search of every guide uses the same rule, so a result still opens on the matches it counted
+
+Guides now open in the traditional format, the whole guide on one page, unless the reader has chosen the stepper.
+
+- User research asked for this: "We need to default to traditional view"
+- A reader's choice is still kept in a cookie for a year, for every guide, so a reader who prefers the stepper keeps it
+
+While a search has matches, the contents take you to them.
+
+- Selecting a section or heading in the contents goes to its first match, as Next does, and the search box shows which ("Match 4 of 12"); Next and Previous carry on from there
+- A section's match count is a link too, and does the same
+- A section with no match, or a Ctrl-, Shift- or middle-click, still opens the section as before
