@@ -25,6 +25,8 @@ const CONTENT_TIMEOUT_MS = 10000
 // A search makes several model calls over the whole index, so it takes tens
 // of seconds; this only stops a hung one holding the page for ever.
 const SEARCH_TIMEOUT_MS = 120000
+// Deciding the kind of search is one quick model call; past this, guess.
+const KIND_TIMEOUT_MS = 10000
 
 function buildUrl(pathname, versionId) {
   const url = new URL(pathname, GUIDANCE_API_BASE_URL)
@@ -139,6 +141,29 @@ async function searchGuidance(query) {
   }
 }
 
+// Whether a search is natural language (a question or an instruction, for the
+// AI search) or keywords to find, as the API's model reads it: true, false,
+// or null when the API can't say, so the caller falls back to its own guess.
+async function isNaturalLanguage(query) {
+  const url = buildUrl('/guidance/search/kind')
+  url.searchParams.set('q', query)
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(KIND_TIMEOUT_MS)
+    })
+    if (!response.ok) {
+      console.error(
+        `[guidance-api-client] search kind failed: ${response.status} ${response.statusText}`
+      )
+      return null
+    }
+    return (await response.json()).naturalLanguage
+  } catch (error) {
+    console.error('[guidance-api-client] search kind failed:', error.message)
+    return null
+  }
+}
+
 // A guide's latest quality check, from the API's quality-checks jobs:
 // { jobId, status, updatedAt, sectionsTotal, sectionsDone, result, ... }, or
 // null. A 404 means the guide has never been checked, so nothing is logged.
@@ -172,5 +197,6 @@ module.exports = {
   fetchGuideContent,
   fetchAsset,
   fetchLatestQualityCheck,
+  isNaturalLanguage,
   searchGuidance
 }

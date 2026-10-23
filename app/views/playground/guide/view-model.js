@@ -46,7 +46,8 @@ const {
 // side-panel direction after comparing it against a top-toolbar and an
 // inline layout — see page.notes.md.
 const FORMATS = ['stepper', 'traditional']
-const DEFAULT_FORMAT = 'stepper'
+// User research asked for the whole guide first (see page.notes.md).
+const DEFAULT_FORMAT = 'traditional'
 
 // One format for every guide, kept in a cookie for a year: the reader's
 // choice on one guide is how the next opens too (see page.notes.md).

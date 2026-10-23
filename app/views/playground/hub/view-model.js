@@ -17,7 +17,10 @@ const {
 const { getGuidePosition } = require('../../../data/guide-positions')
 const { audiencesOf } = require('../../../data/guide-audiences')
 const { systemsOf } = require('../../../data/guide-systems')
-const { searchGuidance } = require('../../../lib/guidance-api-client')
+const {
+  isNaturalLanguage,
+  searchGuidance
+} = require('../../../lib/guidance-api-client')
 const { GUIDANCE_API_CONFIGURED } = require('../../../lib/feature-flags')
 const { isDottedNumber } = require('../../../lib/section-numbers')
 const { isQuestion } = require('../../../assets/javascripts/query-kind')
@@ -202,7 +205,13 @@ function aiSearchLink(result, apiGuides) {
         ? `${guideHref}/search-section/${encodeURIComponent(number)}`
         : guideHref,
     documentTitle: number ? result.documentTitle : null,
-    reason: result.reason
+    reason: result.reason,
+    // The passage that answers the search, from the guide itself. Its links
+    // to the guide's own headings point at the guide, not at this page.
+    excerpt:
+      result.excerpt && guideHref
+        ? result.excerpt.replaceAll('](#', `](${guideHref}#`)
+        : result.excerpt || null
   }
 }
 
@@ -244,11 +253,18 @@ function buildAiSearch(search, apiGuides) {
 // Filtering/sorting is a real querystring round-trip (category/scheme/
 // year/state/sort/q), not client-side JS, so the page works with
 // JavaScript off — see page.notes.md for why that changed.
+async function isSearchQuestion(q) {
+  const naturalLanguage = await isNaturalLanguage(q)
+  return naturalLanguage === null ? isQuestion(q) : naturalLanguage
+}
+
 async function fromSession(req) {
   const q = (req.query.q || '').trim()
-  // A question goes to the AI search, alongside the guide list rather than
-  // after it; other words are counted in every API guide, which needs the list.
-  const question = q && GUIDANCE_API_CONFIGURED && isQuestion(q)
+  // Natural language (a question or an instruction, as the API's model reads
+  // it, or query-kind.js's guess when it can't say) goes to the AI search,
+  // alongside the guide list rather than after it; other words are counted in
+  // every API guide, which needs the list.
+  const question = q && GUIDANCE_API_CONFIGURED && (await isSearchQuestion(q))
   const [apiGuides, search] = await Promise.all([
     getPlaygroundApiGuides(req),
     question ? searchGuidance(q) : null

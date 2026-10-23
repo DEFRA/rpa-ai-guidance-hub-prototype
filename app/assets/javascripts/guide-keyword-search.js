@@ -1,6 +1,6 @@
 //
-// Search for keywords in the guide on the page (guide/page.njk): one word as a
-// whole word, several as that whole phrase, in any case (keyword-matches.js,
+// Search for keywords in the guide on the page (guide/page.njk): anywhere in
+// the text, in any case, several words as that phrase (keyword-matches.js,
 // shared with the hub's search of every guide). Ctrl+F (Cmd+F) comes to the
 // box. Enter highlights every match and, in the contents, every section and
 // part with one, and brings the first into view; Enter again goes to the next,
@@ -203,8 +203,13 @@
       link.classList.toggle(MATCH_CLASS, count > 0)
       if (!count) return
 
-      const badge = document.createElement('span')
+      // A link to where its entry goes, so it does what the entry does (see
+      // the contents' click below). Out of the tab order: the entry is the
+      // one stop for both.
+      const badge = document.createElement('a')
       badge.className = 'app-guide-contents__count'
+      badge.href = link.href
+      badge.tabIndex = -1
       badge.textContent = count
       const label = document.createElement('span')
       label.className = 'govuk-visually-hidden'
@@ -363,6 +368,43 @@
     startAt = null
     move(step.dataset.guideKeywordSearchStep === 'previous')
   })
+
+  // While a search has matches, a contents entry or its count goes to the
+  // first match under it (its section's, or its heading's), as a step of the
+  // search: the match is the current one, and "Match n of m" says which.
+  // Ctrl-, Shift- and middle-clicks still open the link itself.
+  function firstMatchUnder(link) {
+    return matches.findIndex(
+      (match) =>
+        (match.heading && match.heading.link === link) ||
+        (match.section && match.section.link === link)
+    )
+  }
+
+  if (toc) {
+    toc.addEventListener('click', (event) => {
+      const clicked = event.target.closest(
+        '[data-guide-toc-target], .app-guide-contents__count'
+      )
+      const plainClick =
+        event.button === 0 &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        !event.altKey
+      if (!clicked || !plainClick || !matches.length) return
+
+      const link = clicked.hasAttribute('data-guide-toc-target')
+        ? clicked
+        : clicked.previousElementSibling
+      const index = firstMatchUnder(link)
+      if (index === -1) return
+
+      event.preventDefault()
+      startAt = null
+      show(index)
+    })
+  }
 
   // A clear button in the box once it has text, in place of its shortcut.
   const clear = document.createElement('button')

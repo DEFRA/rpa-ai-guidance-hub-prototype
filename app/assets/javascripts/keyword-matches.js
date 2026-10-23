@@ -1,6 +1,7 @@
 //
-// How a keyword search matches: one word as a whole word, several words as
-// that whole phrase, with any space or line break between them, in any case.
+// How a keyword search matches: as Word's Find does, anywhere in the text and
+// in any case ("pay" finds "payment" and "repay"). Several words match as that
+// phrase, with any space or line break between them.
 //
 // One file, loaded by the browser (the guide page's search) and required by
 // the hub's search of every guide, so a result opens on the matches it counted.
@@ -15,15 +16,6 @@
   // A search as the term to find: its words in lower case, one space between.
   function searchTermOf(text) {
     return text.toLowerCase().split(/\s+/).filter(Boolean).join(' ')
-  }
-
-  // Letters (of any alphabet) and digits make up words; anything else ends one.
-  function isWordCharacter(character) {
-    return (
-      character !== undefined &&
-      (character.toLowerCase() !== character.toUpperCase() ||
-        (character >= '0' && character <= '9'))
-    )
   }
 
   function isSpace(character) {
@@ -60,10 +52,8 @@
     let at = lower.indexOf(words[0])
 
     while (at !== -1) {
-      const end = isWordCharacter(lower[at - 1])
-        ? -1
-        : phraseEnd(lower, at, words)
-      const matched = end !== -1 && !isWordCharacter(lower[end])
+      const end = phraseEnd(lower, at, words)
+      const matched = end !== -1
 
       if (matched) matches.push([at, end])
       at = lower.indexOf(words[0], matched ? end : at + 1)

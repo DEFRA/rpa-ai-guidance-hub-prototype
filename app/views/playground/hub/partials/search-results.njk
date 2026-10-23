@@ -9,7 +9,7 @@
   {% if aiSearch.answer %}
     <div class="govuk-inset-text">
       <h3 class="govuk-heading-m govuk-!-margin-bottom-2">AI summary</h3>
-      <p class="govuk-body">{{ aiSearch.answer.text }}</p>
+      <div class="app-guide-markdown app-guide-body-text">{{ aiSearch.answer.text | markdownFallback }}</div>
 
       {% if aiSearch.answer.cited | length %}
         <p class="govuk-body-s govuk-!-margin-bottom-0">
@@ -34,7 +34,11 @@
           {% if link.documentTitle %}
             <p class="govuk-body-s govuk-hint govuk-!-margin-bottom-1">{{ link.documentTitle }}</p>
           {% endif %}
-          <p class="govuk-body">{{ link.reason }}</p>
+          {% if link.excerpt %}
+            <div class="app-guide-markdown app-guide-body-text">{{ link.excerpt | markdownFallback }}</div>
+          {% else %}
+            <p class="govuk-body">{{ link.reason }}</p>
+          {% endif %}
         </li>
       {% endfor %}
     </ul>
